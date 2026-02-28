@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>ShuleAI · Complete School Intelligence System</title>
+    
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+    <!-- ==================== LANDING PAGE ==================== -->
+    <div id="landing-page" class="landing-page"></div>
+
+    <!-- ==================== LOGIN PAGES ==================== -->
+    <div id="admin-login" class="login-page" style="display: none;"></div>
+    <div id="teacher-login" class="login-page" style="display: none;"></div>
+    <div id="parent-login" class="login-page" style="display: none;"></div>
+    <div id="student-login" class="login-page" style="display: none;"></div>
+    <div id="super-login" class="login-page" style="display: none;"></div>
+
+    <!-- ==================== SIGNUP PAGES ==================== -->
+    <div id="admin-signup" class="login-page" style="display: none;"></div>
+    <div id="teacher-signup" class="login-page" style="display: none;"></div>
+    <div id="parent-signup" class="login-page" style="display: none;"></div>
+
+    <!-- ==================== DASHBOARDS ==================== -->
+    <div id="admin-dashboard" class="dashboard admin-dash" style="display: none;"></div>
+    <div id="teacher-dashboard" class="dashboard teacher-dash" style="display: none;"></div>
+    <div id="parent-dashboard" class="dashboard parent-dash" style="display: none;"></div>
+    <div id="student-dashboard" class="dashboard student-dash" style="display: none;"></div>
+    <div id="super-dashboard" class="dashboard super-dash" style="display: none;"></div>
+
+    <!-- ==================== CHAT WIDGET ==================== -->
+    <div id="chat-widget" class="chat-widget draggable" style="display: none;"></div>
+    <button class="chat-toggle" id="chat-toggle" onclick="window.chat.toggle()">
+        <i class="fas fa-comment"></i>
+    </button>
+
+    <!-- ==================== PARENT POPUP ==================== -->
+    <div id="parent-popup" class="parent-popup"></div>
+
+    <!-- ==================== MODALS ==================== -->
+    <div id="admin-profile-modal" class="modal-overlay"></div>
+    <div id="teacher-profile-modal" class="modal-overlay"></div>
+    <div id="parent-profile-modal" class="modal-overlay"></div>
+    <div id="student-profile-modal" class="modal-overlay"></div>
+
+    <!-- Custom JavaScript -->
+    <script src="js/utils.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/admin.js"></script>
+    <script src="js/teacher.js"></script>
+    <script src="js/parent.js"></script>
+    <script src="js/student.js"></script>
+    <script src="js/super.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

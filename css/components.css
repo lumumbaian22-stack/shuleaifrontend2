@@ -1,0 +1,300 @@
+/* ===== LANDING PAGE ===== */
+.landing-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1e40af 0%, #3b0764 100%);
+    padding: 2rem;
+}
+
+.landing-container { max-width: 1200px; margin: 0 auto; }
+
+.landing-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding: 3rem;
+    background: rgba(255,255,255,0.95);
+    border-radius: 2rem;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+    backdrop-filter: blur(8px);
+}
+
+.landing-logo i {
+    font-size: 5rem;
+    background: linear-gradient(135deg, #059669, #2563eb);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    margin-bottom: 1rem;
+}
+
+.landing-logo h1 {
+    font-size: clamp(2.5rem, 8vw, 4rem);
+    font-weight: 800;
+    background: linear-gradient(135deg, #059669, #2563eb);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+.landing-logo .ai { 
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+.hero-card {
+    background: white;
+    border-radius: 2rem;
+    padding: 3rem 2rem;
+    text-align: center;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+}
+
+.hero-card h2 {
+    color: #1e293b;
+    font-size: clamp(1.5rem, 5vw, 2.5rem);
+    margin-bottom: 1rem;
+}
+
+.hero-description {
+    color: #64748b;
+    max-width: 600px;
+    margin: 0 auto 2rem;
+    font-size: 1.1rem;
+}
+
+/* ===== ROLE CARDS ===== */
+.role-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.role-card {
+    background: var(--bg-card);
+    padding: 2rem;
+    border-radius: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 3px solid transparent;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.role-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, currentColor, transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.role-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-md);
+}
+
+.role-card:hover::before { opacity: 1; }
+.role-card.admin { border-color: var(--accent-red); color: var(--accent-red); }
+.role-card.teacher { border-color: var(--accent-blue); color: var(--accent-blue); }
+.role-card.parent { border-color: var(--accent-yellow); color: var(--accent-yellow); }
+.role-card.student { border-color: var(--accent-green); color: var(--accent-green); }
+.role-card.super { border-color: var(--accent-purple); color: var(--accent-purple); background: #f5f3ff; }
+
+.role-card i { font-size: 3rem; margin-bottom: 1rem; }
+.role-card h4 { font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--text-primary); }
+.role-card p { color: var(--text-secondary); font-size: 0.9rem; }
+
+/* ===== LOGIN PAGES ===== */
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+.login-container { width: 100%; max-width: 1000px; }
+
+.login-header { 
+    text-align: center; 
+    margin-bottom: 2rem; 
+    color: white; 
+}
+
+.login-header i { 
+    font-size: 4rem; 
+    margin-bottom: 1rem; 
+    opacity: 0.9; 
+}
+
+.login-header h1 { 
+    font-size: clamp(2rem, 6vw, 3rem); 
+    font-weight: 700; 
+}
+
+.login-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    background: var(--bg-card);
+    border-radius: 2rem;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+}
+
+.login-card {
+    padding: 3rem;
+    background: var(--bg-card);
+}
+
+.login-card h2 {
+    margin-bottom: 2rem;
+    font-size: 1.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--text-primary);
+}
+
+.form-group { margin-bottom: 1.5rem; }
+
+.form-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 1rem 1.25rem;
+    border: 2px solid var(--border-medium);
+    border-radius: 1rem;
+    font-size: 1rem;
+    transition: all 0.2s;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+    background: var(--bg-card);
+}
+
+.btn-login, .btn-primary {
+    width: 100%;
+    padding: 1rem 1.5rem;
+    color: white;
+    border: none;
+    border-radius: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    transition: all 0.3s;
+    background: var(--gradient-primary);
+}
+
+.btn-login:hover, .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -5px rgba(37,99,235,0.5);
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--accent-blue);
+    border: 2px solid var(--accent-blue);
+}
+
+.btn-secondary:hover {
+    background: var(--accent-blue);
+    color: white;
+}
+
+.btn-small {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-medium);
+    padding: 0.6rem 1.2rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+}
+
+.btn-small:hover {
+    background: var(--border-light);
+    transform: translateY(-2px);
+}
+
+.demo-credentials {
+    background: var(--bg-primary);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    border: 1px solid var(--border-medium);
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    margin-top: 1.5rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.back-link:hover { color: var(--text-primary); }
+
+.login-info {
+    padding: 3rem;
+    background: var(--bg-primary);
+}
+
+.login-info h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+}
+
+.login-info p {
+    margin: 0.75rem 0;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.login-info p::before {
+    content: '✓';
+    color: var(--accent-green);
+    font-weight: bold;
+}

@@ -1,0 +1,17 @@
+{
+  "name": "shuleai",
+  "version": "1.0.0",
+  "description": "Complete School Intelligence System",
+  "main": "index.html",
+  "scripts": {
+    "start": "live-server --port=3000 --watch=.",
+    "dev": "live-server --port=3000 --watch=. --verbose",
+    "build": "echo 'No build step required for static site'"
+  },
+  "keywords": ["education", "school", "management", "ai"],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}
