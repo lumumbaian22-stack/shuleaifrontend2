@@ -131,7 +131,7 @@ function loadLandingPage() {
             </header>
             <div class="hero-card">
                 <h2>Welcome to the Future of Education</h2>
-                <p class="hero-description">An integrated platform where administrators supervise, teachers teach effectively, parents stay informed, and students learn with AI-powered assistance.</p>
+                <p class="hero-description">ShuleAI is a modern AI-powered school management system designed for schools, teachers, parents, and students. It simplifies attendance tracking, academic monitoring, analytics, and administration through one intelligent platform.</p>
                 <div class="role-grid">
                     <div class="role-card admin" onclick="showLogin('admin')">
                         <i class="fas fa-user-shield"></i>
@@ -839,4 +839,5 @@ function loadModals() {
             </div>
         </div>
     `;
+
 }
