@@ -22,39 +22,63 @@ window.handleLogin = async function(e, role) {
     e.preventDefault();
     
     let credentials = {};
+    let loginButton = e.target.querySelector('button[type="submit"]');
+    let originalText = loginButton ? loginButton.innerHTML : '';
     
+    // Build credentials based on role
     if (role === 'admin') {
         credentials = {
-            email: document.getElementById('admin-id').value,
-            password: document.getElementById('admin-pass').value,
-            schoolCode: document.getElementById('admin-school').value
+            email: document.getElementById('admin-email')?.value || document.getElementById('admin-id')?.value,
+            password: document.getElementById('admin-password')?.value || document.getElementById('admin-pass')?.value,
+            schoolCode: document.getElementById('admin-school')?.value
         };
     } else if (role === 'teacher') {
         credentials = {
-            email: document.getElementById('teacher-id').value,
-            password: document.getElementById('teacher-pass').value,
-            schoolCode: document.getElementById('teacher-school').value
+            email: document.getElementById('teacher-email')?.value || document.getElementById('teacher-id')?.value,
+            password: document.getElementById('teacher-password')?.value || document.getElementById('teacher-pass')?.value,
+            schoolCode: document.getElementById('teacher-school')?.value
         };
     } else if (role === 'parent') {
         credentials = {
-            email: document.getElementById('parent-id').value,
-            password: document.getElementById('parent-pass').value
+            email: document.getElementById('parent-email')?.value || document.getElementById('parent-id')?.value,
+            password: document.getElementById('parent-password')?.value || document.getElementById('parent-pass')?.value
         };
     } else if (role === 'student') {
         credentials = {
-            elimuid: document.getElementById('student-id').value,
-            password: document.getElementById('student-pass').value,
-            schoolCode: document.getElementById('student-school').value
+            elimuid: document.getElementById('student-elimuid')?.value || document.getElementById('student-id')?.value,
+            password: document.getElementById('student-password')?.value || document.getElementById('student-pass')?.value
         };
     } else if (role === 'super') {
         credentials = {
-            role: 'super_admin',
-            secretKey: document.getElementById('super-key').value
+            secretKey: document.getElementById('super-key')?.value
         };
+    }
+
+    // Validate required fields
+    if (role === 'student' && !credentials.elimuid) {
+        window.showToast('ELIMUID is required', 'warning');
+        return;
+    }
+    if (role !== 'student' && role !== 'super' && !credentials.email) {
+        window.showToast('Email is required', 'warning');
+        return;
+    }
+    if (!credentials.password && role !== 'super') {
+        window.showToast('Password is required', 'warning');
+        return;
+    }
+    if ((role === 'admin' || role === 'teacher') && !credentials.schoolCode) {
+        window.showToast('School code is required', 'warning');
+        return;
     }
 
     try {
         window.showToast('Logging in...', 'info');
+        
+        if (loginButton) {
+            loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+            loginButton.disabled = true;
+        }
         
         const response = await api.login(role, credentials);
         
@@ -102,8 +126,13 @@ window.handleLogin = async function(e, role) {
             }, 500);
         }
     } catch (error) {
-        window.showToast(error.message || 'Login failed', 'error');
         console.error('Login error:', error);
+        window.showToast(error.message || 'Login failed. Check your credentials.', 'error');
+    } finally {
+        if (loginButton) {
+            loginButton.innerHTML = originalText;
+            loginButton.disabled = false;
+        }
     }
 };
 
@@ -123,6 +152,12 @@ window.handleSignup = async function(e, role) {
             qualification: 'Bachelor of Education' // Default
         };
         
+        // Validate
+        if (!data.name || !data.email || !data.password || !data.schoolId) {
+            window.showToast('Please fill all required fields', 'warning');
+            return;
+        }
+        
         try {
             window.showToast('Submitting registration...', 'info');
             const response = await api.teacherSignup(data);
@@ -141,10 +176,10 @@ window.handleSignup = async function(e, role) {
 window.logout = async function() {
     try {
         await api.logout();
+        window.showToast('Logged out', 'info');
     } catch (error) {
         console.error('Logout error:', error);
     } finally {
-        window.showToast('Logged out', 'info'); 
         showLanding(); 
         document.getElementById('chat-widget').style.display = 'none';
         document.getElementById('chat-toggle').style.display = 'none';
