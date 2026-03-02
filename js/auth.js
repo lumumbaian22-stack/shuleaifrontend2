@@ -22,43 +22,46 @@ window.handleLogin = async function(e, role) {
     e.preventDefault();
     
     let credentials = {};
-    let endpoint = '';
     
-    // Build credentials based on role
+    // Build credentials based on role - MATCHING BACKEND EXPECTATIONS
     if (role === 'admin') {
         credentials = {
-            email: document.getElementById('admin-id').value, // Using ID as email for demo
+            email: document.getElementById('admin-id').value + '@school.edu', // Make it a valid email
             password: document.getElementById('admin-pass').value,
-            schoolCode: document.getElementById('admin-school').value
+            role: 'admin'
         };
     } else if (role === 'teacher') {
         credentials = {
-            email: document.getElementById('teacher-id').value,
+            email: document.getElementById('teacher-id').value + '@school.edu',
             password: document.getElementById('teacher-pass').value,
-            schoolCode: document.getElementById('teacher-school').value
+            role: 'teacher'
         };
     } else if (role === 'parent') {
         credentials = {
-            email: document.getElementById('parent-id').value,
-            password: document.getElementById('parent-pass').value
+            email: document.getElementById('parent-id').value + '@parent.com',
+            password: document.getElementById('parent-pass').value,
+            role: 'parent'
         };
     } else if (role === 'student') {
         credentials = {
             elimuid: document.getElementById('student-id').value,
             password: document.getElementById('student-pass').value,
-            schoolCode: document.getElementById('student-school').value
+            role: 'student'
         };
     } else if (role === 'super') {
         credentials = {
             role: 'super_admin',
-            secretKey: document.getElementById('super-key').value
+            password: document.getElementById('super-key').value  // CHANGED: secretKey → password
         };
     }
+
+    // Debug: See what's being sent
+    console.log('📤 Sending login request:', credentials);
 
     try {
         window.showToast('Logging in...', 'info');
         
-        // Call the actual API
+        // Call the API
         const response = await api.login(role, credentials);
         
         if (response) {
@@ -84,7 +87,7 @@ window.handleLogin = async function(e, role) {
                 };
             }
             
-            // Render appropriate dashboard
+            // Show appropriate dashboard
             setTimeout(() => { 
                 hideAll(); 
                 document.getElementById(`${role}-dashboard`).style.display = 'block'; 
@@ -100,8 +103,8 @@ window.handleLogin = async function(e, role) {
             }, 500);
         }
     } catch (error) {
+        console.error('❌ Login error:', error);
         window.showToast(error.message || 'Login failed', 'error');
-        console.error('Login error:', error);
     }
 };
 
@@ -118,7 +121,7 @@ window.handleSignup = async function(e, role) {
             phone: document.getElementById('teacher-phone').value,
             schoolId: document.getElementById('teacher-school-code').value,
             subjects: [document.getElementById('teacher-subject').value],
-            qualification: 'Bachelor of Education' // Default
+            qualification: 'Bachelor of Education'
         };
         
         try {
