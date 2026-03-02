@@ -1,20 +1,13 @@
-// js/api.js - Complete API service for ShuleAI
 window.api = (function() {
     const API_BASE = 'https://shuleaibackend-32h1.onrender.com/api';
     let authToken = localStorage.getItem('shuleai_token') || null;
 
-    // Helper to get headers with auth token
     function getHeaders() {
-        const headers = {
-            'Content-Type': 'application/json',
-        };
-        if (authToken) {
-            headers['Authorization'] = `Bearer ${authToken}`;
-        }
+        const headers = { 'Content-Type': 'application/json' };
+        if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
         return headers;
     }
 
-    // Generic request handler
     async function request(endpoint, options = {}) {
         const url = `${API_BASE}${endpoint}`;
         const config = {
@@ -35,7 +28,7 @@ window.api = (function() {
             }
             
             console.log('✅ API Response:', data);
-            return data.data || data; // Handle both { data: ... } and direct response
+            return data.data || data;
         } catch (err) {
             console.error('❌ Fetch Error:', err);
             window.showToast?.(err.message, 'error');
@@ -43,7 +36,7 @@ window.api = (function() {
         }
     }
 
-    // ==================== AUTH ENDPOINTS ====================
+    // Auth endpoints
     async function login(role, credentials) {
         const response = await request('/auth/login', {
             method: 'POST',
@@ -57,6 +50,13 @@ window.api = (function() {
         return response;
     }
 
+    async function register(userData) {
+        return request('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify(userData)
+        });
+    }
+
     async function logout() {
         try {
             await request('/auth/logout', { method: 'POST' });
@@ -65,13 +65,7 @@ window.api = (function() {
             localStorage.removeItem('shuleai_token');
             localStorage.removeItem('shuleai_user');
             localStorage.removeItem('shuleai_school');
-            localStorage.removeItem('shuleai_children');
-            localStorage.removeItem('shuleai_active_child');
         }
-    }
-
-    async function getCurrentUser() {
-        return request('/auth/me');
     }
 
     async function teacherSignup(data) {
@@ -81,14 +75,60 @@ window.api = (function() {
         });
     }
 
-    async function verifySchool(schoolId) {
-        return request('/auth/verify-school', {
+    // Super Admin endpoints
+    async function getSuperOverview() {
+        return request('/super-admin/overview');
+    }
+
+    async function getSuperSchools() {
+        return request('/super-admin/schools');
+    }
+
+    async function createSchool(data) {
+        return request('/super-admin/schools', {
             method: 'POST',
-            body: JSON.stringify({ schoolId })
+            body: JSON.stringify(data)
         });
     }
 
-    // ==================== ADMIN ENDPOINTS ====================
+    async function updateSchool(schoolId, data) {
+        return request(`/super-admin/schools/${schoolId}`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        });
+    }
+
+    async function deleteSchool(schoolId) {
+        return request(`/super-admin/schools/${schoolId}`, {
+            method: 'DELETE'
+        });
+    }
+
+    async function getSuperPendingRequests() {
+        return request('/super-admin/requests');
+    }
+
+    async function approveNameRequest(requestId) {
+        return request(`/super-admin/requests/${requestId}/approve`, {
+            method: 'POST'
+        });
+    }
+
+    async function rejectNameRequest(requestId, reason) {
+        return request(`/super-admin/requests/${requestId}/reject`, {
+            method: 'POST',
+            body: JSON.stringify({ reason })
+        });
+    }
+
+    async function updateBankDetails(data) {
+        return request('/super-admin/bank-details', {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        });
+    }
+
+    // Admin endpoints
     async function getAdminDashboard() {
         return request('/admin/dashboard');
     }
@@ -127,7 +167,7 @@ window.api = (function() {
         });
     }
 
-    // ==================== TEACHER ENDPOINTS ====================
+    // Teacher endpoints
     async function getTeacherStudents() {
         return request('/teacher/students');
     }
@@ -146,31 +186,7 @@ window.api = (function() {
         });
     }
 
-    async function addComment(data) {
-        return request('/teacher/comment', {
-            method: 'POST',
-            body: JSON.stringify(data)
-        });
-    }
-
-    async function uploadMarksCSV(formData) {
-        const response = await fetch(`${API_BASE}/teacher/upload/marks`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${authToken}`
-            },
-            body: formData
-        });
-        return response.json();
-    }
-
-    async function getTeacherAnalytics(classId, subject) {
-        let url = `/analytics/class/${classId}`;
-        if (subject) url += `?subject=${subject}`;
-        return request(url);
-    }
-
-    // ==================== PARENT ENDPOINTS ====================
+    // Parent endpoints
     async function getChildren() {
         return request('/parent/children');
     }
@@ -186,18 +202,7 @@ window.api = (function() {
         });
     }
 
-    async function makePayment(data) {
-        return request('/parent/pay', {
-            method: 'POST',
-            body: JSON.stringify(data)
-        });
-    }
-
-    async function getPayments() {
-        return request('/parent/payments');
-    }
-
-    // ==================== STUDENT ENDPOINTS ====================
+    // Student endpoints
     async function getStudentDashboard() {
         return request('/student/dashboard');
     }
@@ -210,22 +215,7 @@ window.api = (function() {
         return request('/student/attendance');
     }
 
-    async function getLearningMaterials() {
-        return request('/student/materials');
-    }
-
-    async function sendMessage(data) {
-        return request('/student/message', {
-            method: 'POST',
-            body: JSON.stringify(data)
-        });
-    }
-
-    async function getMessages(otherUserId) {
-        return request(`/student/messages/${otherUserId}`);
-    }
-
-    // ==================== DUTY ENDPOINTS ====================
+    // Duty endpoints
     async function getTodayDuty() {
         return request('/duty/today');
     }
@@ -241,81 +231,24 @@ window.api = (function() {
         });
     }
 
-    async function updateDutyPreferences(data) {
-        return request('/duty/preferences', {
-            method: 'PUT',
-            body: JSON.stringify(data)
-        });
-    }
-
-    // ==================== ANALYTICS ENDPOINTS ====================
-    async function getStudentAnalytics(studentId, curriculum, period) {
-        let url = `/analytics/student/${studentId}`;
-        const params = new URLSearchParams();
-        if (curriculum) params.append('curriculum', curriculum);
-        if (period) params.append('period', period);
-        if (params.toString()) url += `?${params.toString()}`;
-        return request(url);
-    }
-
-    async function getClassAnalytics(classId, subject) {
-        let url = `/analytics/class/${classId}`;
-        if (subject) url += `?subject=${subject}`;
-        return request(url);
-    }
-
-    async function getSchoolAnalytics() {
-        return request('/analytics/school');
-    }
-
-    // ==================== PUBLIC ENDPOINTS ====================
-    async function getPublicDuty(schoolId) {
-        return request(`/public/duty/today?schoolId=${schoolId}`);
-    }
-
-    async function getPublicWeeklyDuty(schoolId) {
-        return request(`/public/duty/week?schoolId=${schoolId}`);
-    }
-
-    async function getSchoolInfo(schoolId) {
-        return request(`/public/school/${schoolId}`);
-    }
-
-    // ==================== UPLOAD ENDPOINTS ====================
-    async function uploadStudents(formData) {
-        const response = await fetch(`${API_BASE}/upload/students`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${authToken}`
-            },
-            body: formData
-        });
-        return response.json();
-    }
-
-    async function uploadMarks(formData) {
-        const response = await fetch(`${API_BASE}/upload/marks`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${authToken}`
-            },
-            body: formData
-        });
-        return response.json();
-    }
-
-    async function getUploadHistory() {
-        return request('/upload/history');
-    }
-
     // Return public API
     return {
         // Auth
         login,
+        register,
         logout,
-        getCurrentUser,
         teacherSignup,
-        verifySchool,
+
+        // Super Admin
+        getSuperOverview,
+        getSuperSchools,
+        createSchool,
+        updateSchool,
+        deleteSchool,
+        getSuperPendingRequests,
+        approveNameRequest,
+        rejectNameRequest,
+        updateBankDetails,
 
         // Admin
         getAdminDashboard,
@@ -331,44 +264,20 @@ window.api = (function() {
         getTeacherStudents,
         enterMarks,
         takeAttendance,
-        addComment,
-        uploadMarksCSV,
-        getTeacherAnalytics,
 
         // Parent
         getChildren,
         getChildSummary,
         reportAbsence,
-        makePayment,
-        getPayments,
 
         // Student
         getStudentDashboard,
         getStudentGrades,
         getStudentAttendance,
-        getLearningMaterials,
-        sendMessage,
-        getMessages,
 
         // Duty
         getTodayDuty,
         getWeeklyDuty,
-        checkInDuty,
-        updateDutyPreferences,
-
-        // Analytics
-        getStudentAnalytics,
-        getClassAnalytics,
-        getSchoolAnalytics,
-
-        // Public
-        getPublicDuty,
-        getPublicWeeklyDuty,
-        getSchoolInfo,
-
-        // Upload
-        uploadStudents,
-        uploadMarks,
-        getUploadHistory
+        checkInDuty
     };
 })();
