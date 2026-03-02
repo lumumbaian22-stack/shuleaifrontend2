@@ -1,30 +1,47 @@
+// ==================== APP INITIALIZATION ====================
+
 document.addEventListener('DOMContentLoaded', function() {
-    loadLandingPage();
-    loadLoginPages();
-    loadSignupPages();
-    loadDashboards();
-    loadModals();
+    console.log('🚀 App initializing...');
     
-    const restored = window.pageState.restore();
-    if (!restored) {
-        showLanding();
-    }
-    
-    window.addEventListener('resize', function() {
-        const chatWidget = document.getElementById('chat-widget');
-        if (window.innerWidth <= 768) {
-            chatWidget.classList.remove('draggable');
-            chatWidget.style.left = 'auto';
-            chatWidget.style.right = 'auto';
-            chatWidget.style.top = 'auto';
-            chatWidget.style.bottom = '0';
-        } else {
-            chatWidget.classList.add('draggable');
-            initDraggableChat();
+    try {
+        // Load HTML content into containers
+        loadLandingPage();
+        loadLoginPages();
+        loadSignupPages();
+        loadDashboards();
+        loadModals();
+        
+        // Try to restore previous session
+        const restored = window.pageState ? window.pageState.restore() : false;
+        if (!restored) {
+            showLanding();
         }
-    });
+        
+        // Set up resize handler
+        window.addEventListener('resize', function() {
+            const chatWidget = document.getElementById('chat-widget');
+            if (!chatWidget) return;
+            
+            if (window.innerWidth <= 768) {
+                chatWidget.classList.remove('draggable');
+                chatWidget.style.left = 'auto';
+                chatWidget.style.right = 'auto';
+                chatWidget.style.top = 'auto';
+                chatWidget.style.bottom = '0';
+            } else {
+                chatWidget.classList.add('draggable');
+                if (window.initDraggableChat) initDraggableChat();
+            }
+        });
+        
+        console.log('✅ App initialized successfully');
+    } catch (error) {
+        console.error('❌ App initialization error:', error);
+        document.body.innerHTML = `<div style="padding:20px; color:red;">Failed to load app: ${error.message}</div>`;
+    }
 });
 
+// Load landing page content
 function loadLandingPage() {
     const landing = document.getElementById('landing-page');
     if (!landing) return;
@@ -77,6 +94,7 @@ function loadLandingPage() {
 }
 
 function loadLoginPages() {
+    // Admin Login
     const adminLogin = document.getElementById('admin-login');
     if (adminLogin) {
         adminLogin.innerHTML = `
@@ -121,6 +139,7 @@ function loadLoginPages() {
         `;
     }
 
+    // Teacher Login
     const teacherLogin = document.getElementById('teacher-login');
     if (teacherLogin) {
         teacherLogin.innerHTML = `
@@ -164,6 +183,7 @@ function loadLoginPages() {
         `;
     }
 
+    // Super Admin Login
     const superLogin = document.getElementById('super-login');
     if (superLogin) {
         superLogin.innerHTML = `
@@ -202,6 +222,7 @@ function loadLoginPages() {
 }
 
 function loadSignupPages() {
+    // Admin Signup (Create School)
     const adminSignup = document.getElementById('admin-signup');
     if (adminSignup) {
         adminSignup.innerHTML = `
@@ -271,6 +292,7 @@ function loadSignupPages() {
         `;
     }
 
+    // Teacher Signup
     const teacherSignup = document.getElementById('teacher-signup');
     if (teacherSignup) {
         teacherSignup.innerHTML = `
@@ -327,6 +349,7 @@ function loadSignupPages() {
 }
 
 function loadDashboards() {
+    // Admin Dashboard
     const adminDash = document.getElementById('admin-dashboard');
     if (adminDash) {
         adminDash.innerHTML = `
@@ -379,58 +402,7 @@ function loadDashboards() {
         `;
     }
 
-    const teacherDash = document.getElementById('teacher-dashboard');
-    if (teacherDash) {
-        teacherDash.innerHTML = `
-            <nav class="dashboard-nav">
-                <div class="nav-left">
-                    <div class="logo">
-                        <i class="fas fa-chalkboard-teacher" style="color: #3b82f6;"></i>
-                        <div>
-                            <h2 id="teacher-school-name">School Name</h2>
-                            <p class="role-tag" id="teacher-info">Teacher</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="nav-center">
-                    <div class="info" id="teacher-class-info">
-                        <i class="fas fa-users"></i>
-                        <span>Loading...</span>
-                    </div>
-                </div>
-                <div class="nav-right">
-                    <button class="theme-toggle" title="Toggle theme">
-                        <i class="fas fa-moon"></i>
-                    </button>
-                    <div class="profile" onclick="showTeacherProfile()">
-                        <img src="https://ui-avatars.com/api/?name=Teacher&background=3b82f6&color=fff&size=40" alt="Teacher">
-                        <div class="profile-info">
-                            <span class="profile-name" id="teacher-name">Teacher</span>
-                            <span class="profile-detail">Subject</span>
-                        </div>
-                    </div>
-                    <button class="btn-icon" onclick="logout()" style="background: rgba(59,130,246,0.1); border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer;">
-                        <i class="fas fa-sign-out-alt" style="color: #3b82f6;"></i>
-                    </button>
-                </div>
-            </nav>
-            <div class="dashboard-container">
-                <aside class="sidebar" id="teacher-sidebar">
-                    <div class="sidebar-menu" id="teacher-menu"></div>
-                    <div class="sidebar-footer">
-                        <a class="back-link" onclick="showLanding()">
-                            <i class="fas fa-home"></i> Back to Home
-                        </a>
-                    </div>
-                </aside>
-                <main class="main-content" id="teacher-content"></main>
-            </div>
-            <button class="mobile-menu-toggle" onclick="toggleSidebar('teacher-sidebar')">
-                <i class="fas fa-bars"></i>
-            </button>
-        `;
-    }
-
+    // Super Admin Dashboard
     const superDash = document.getElementById('super-dashboard');
     if (superDash) {
         superDash.innerHTML = `
@@ -472,6 +444,7 @@ function loadDashboards() {
 }
 
 function loadModals() {
+    // Admin Profile Modal
     const adminModal = document.getElementById('admin-profile-modal');
     if (adminModal) {
         adminModal.innerHTML = `
