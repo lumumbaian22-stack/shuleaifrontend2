@@ -1,5 +1,18 @@
 // ==================== AUTHENTICATION FUNCTIONS ====================
 
+// Load stored user data on page load
+(function loadStoredUser() {
+    const storedUser = localStorage.getItem('shuleai_user');
+    const storedSchool = localStorage.getItem('shuleai_school');
+    const storedChildren = localStorage.getItem('shuleai_children');
+    const storedActiveChild = localStorage.getItem('shuleai_active_child');
+    
+    if (storedUser) window.currentUser = JSON.parse(storedUser);
+    if (storedSchool) window.currentSchool = JSON.parse(storedSchool);
+    if (storedChildren) window.currentChildren = JSON.parse(storedChildren);
+    if (storedActiveChild) window.activeChildId = storedActiveChild;
+})();
+
 window.showLanding = function() {
     hideAll();
     document.getElementById('landing-page').style.display = 'block';
@@ -23,10 +36,10 @@ window.handleLogin = async function(e, role) {
     
     let credentials = {};
     
-    // Build credentials based on role - MATCHING BACKEND EXPECTATIONS
+    // Build credentials based on role
     if (role === 'admin') {
         credentials = {
-            email: document.getElementById('admin-id').value + '@school.edu', // Make it a valid email
+            email: document.getElementById('admin-id').value + '@school.edu',
             password: document.getElementById('admin-pass').value,
             role: 'admin'
         };
@@ -51,31 +64,34 @@ window.handleLogin = async function(e, role) {
     } else if (role === 'super') {
         credentials = {
             role: 'super_admin',
-            password: document.getElementById('super-key').value  // CHANGED: secretKey → password
+            password: document.getElementById('super-key').value
         };
     }
 
-    // Debug: See what's being sent
     console.log('📤 Sending login request:', credentials);
 
     try {
         window.showToast('Logging in...', 'info');
         
-        // Call the API
         const response = await api.login(role, credentials);
         
         if (response) {
             window.showToast('Login successful!', 'success');
             
-            // Store user data globally
+            // Store user data globally and in localStorage
             window.currentUser = response.user;
             window.currentSchool = response.school;
+            
+            localStorage.setItem('shuleai_user', JSON.stringify(response.user));
+            localStorage.setItem('shuleai_school', JSON.stringify(response.school));
             
             // For parent, set children if available
             if (role === 'parent' && response.profile?.children) {
                 window.currentChildren = response.profile.children;
+                localStorage.setItem('shuleai_children', JSON.stringify(response.profile.children));
                 if (window.currentChildren.length > 0) {
                     window.activeChildId = window.currentChildren[0].id;
+                    localStorage.setItem('shuleai_active_child', window.activeChildId);
                 }
             }
             
@@ -85,6 +101,7 @@ window.handleLogin = async function(e, role) {
                     ...response.user,
                     ...response.profile
                 };
+                localStorage.setItem('shuleai_user', JSON.stringify(window.currentUser));
             }
             
             // Show appropriate dashboard
@@ -136,7 +153,6 @@ window.handleSignup = async function(e, role) {
             window.showToast(error.message, 'error');
         }
     }
-    // Add other signup handlers as needed
 };
 
 window.logout = async function() {
@@ -145,6 +161,13 @@ window.logout = async function() {
     } catch (error) {
         console.error('Logout error:', error);
     } finally {
+        // Clear all stored data
+        localStorage.removeItem('shuleai_token');
+        localStorage.removeItem('shuleai_user');
+        localStorage.removeItem('shuleai_school');
+        localStorage.removeItem('shuleai_children');
+        localStorage.removeItem('shuleai_active_child');
+        
         window.showToast('Logged out', 'info'); 
         showLanding(); 
         document.getElementById('chat-widget').style.display = 'none';
