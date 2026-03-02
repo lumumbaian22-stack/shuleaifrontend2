@@ -1,6 +1,6 @@
 // js/api.js - Complete API service for ShuleAI
 window.api = (function() {
-    const API_BASE = 'https://shuleaibackend-32h1.onrender.com/api';
+    const API_BASE = 'https://shuleaibackend-32h1.onrender.com/api'; // Update with your actual backend URL
     let authToken = localStorage.getItem('shuleai_token') || null;
 
     // Helper to get headers with auth token
