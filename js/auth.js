@@ -22,12 +22,10 @@ window.handleLogin = async function(e, role) {
     e.preventDefault();
     
     let credentials = {};
-    let endpoint = '';
     
-    // Build credentials based on role
     if (role === 'admin') {
         credentials = {
-            email: document.getElementById('admin-id').value, // Using ID as email for demo
+            email: document.getElementById('admin-id').value,
             password: document.getElementById('admin-pass').value,
             schoolCode: document.getElementById('admin-school').value
         };
@@ -58,7 +56,6 @@ window.handleLogin = async function(e, role) {
     try {
         window.showToast('Logging in...', 'info');
         
-        // Call the actual API
         const response = await api.login(role, credentials);
         
         if (response) {
@@ -67,6 +64,7 @@ window.handleLogin = async function(e, role) {
             // Store user data globally
             window.currentUser = response.user;
             window.currentSchool = response.school;
+            window.currentProfile = response.profile;
             
             // For parent, set children if available
             if (role === 'parent' && response.profile?.children) {
@@ -76,15 +74,18 @@ window.handleLogin = async function(e, role) {
                 }
             }
             
-            // For student, set student info
-            if (role === 'student') {
-                window.currentUser = {
-                    ...response.user,
-                    ...response.profile
-                };
+            // For teacher, store subject/class
+            if (role === 'teacher' && response.profile) {
+                window.currentUser.subject = response.profile.subjects?.[0] || '';
+                window.currentUser.class = response.profile.classTeacher || '';
             }
             
-            // Render appropriate dashboard
+            // For student, store grade etc.
+            if (role === 'student' && response.profile) {
+                window.currentUser.grade = response.profile.grade;
+                window.currentUser.elimuid = response.profile.elimuid;
+            }
+            
             setTimeout(() => { 
                 hideAll(); 
                 document.getElementById(`${role}-dashboard`).style.display = 'block'; 
@@ -93,6 +94,7 @@ window.handleLogin = async function(e, role) {
                 if (role === 'student') {
                     document.getElementById('chat-toggle').style.display = 'flex';
                     window.initDraggableChat();
+                    window.initSocket(); // Initialize WebSocket for chat
                 } else {
                     document.getElementById('chat-toggle').style.display = 'none';
                     document.getElementById('chat-widget').style.display = 'none';
@@ -149,7 +151,9 @@ window.logout = async function() {
         window.destroyCharts();
         window.currentUser = null;
         window.currentSchool = null;
+        window.currentProfile = null;
         window.currentChildren = [];
         window.activeChildId = null;
+        if (window.socket) window.socket.disconnect();
     }
 };
