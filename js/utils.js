@@ -42,7 +42,7 @@ window.toggleSidebar = function(id) {
     document.getElementById(id).classList.toggle('active');
 };
 
-// Grade calculation engine
+// Grade calculation engine (can be kept for fallback, but backend should provide grades)
 window.calculateGrade = function(score, system = '844') {
     if (system === '844') {
         if (score >= 80) return { grade: 'A', points: 12, remark: 'Excellent' };
