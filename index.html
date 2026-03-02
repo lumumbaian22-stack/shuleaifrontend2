@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>ShuleAI · Complete School Intelligence System</title>
     
+    <!-- Content Security Policy - Allows Chart.js to work -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net https://cdn.socket.io https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self' https://shuleaibackend-32h1.onrender.com wss://shuleaibackend-32h1.onrender.com; img-src 'self' data: https://ui-avatars.com;">
+    
     <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Chart.js -->
@@ -56,7 +59,7 @@
     <div id="parent-profile-modal" class="modal-overlay"></div>
     <div id="student-profile-modal" class="modal-overlay"></div>
 
-    <!-- Custom JavaScript -->
+    <!-- Custom JavaScript - Load in correct order -->
     <script src="js/api.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/auth.js"></script>
