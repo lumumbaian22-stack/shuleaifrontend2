@@ -1,18 +1,3 @@
-// ==================== AUTHENTICATION FUNCTIONS ====================
-
-// Load stored user data on page load
-(function loadStoredUser() {
-    const storedUser = localStorage.getItem('shuleai_user');
-    const storedSchool = localStorage.getItem('shuleai_school');
-    const storedChildren = localStorage.getItem('shuleai_children');
-    const storedActiveChild = localStorage.getItem('shuleai_active_child');
-    
-    if (storedUser) window.currentUser = JSON.parse(storedUser);
-    if (storedSchool) window.currentSchool = JSON.parse(storedSchool);
-    if (storedChildren) window.currentChildren = JSON.parse(storedChildren);
-    if (storedActiveChild) window.activeChildId = storedActiveChild;
-})();
-
 window.showLanding = function() {
     hideAll();
     document.getElementById('landing-page').style.display = 'block';
@@ -36,22 +21,21 @@ window.handleLogin = async function(e, role) {
     
     let credentials = {};
     
-    // Build credentials based on role
     if (role === 'admin') {
         credentials = {
-            email: document.getElementById('admin-id').value + '@school.edu',
+            email: document.getElementById('admin-id').value,
             password: document.getElementById('admin-pass').value,
             role: 'admin'
         };
     } else if (role === 'teacher') {
         credentials = {
-            email: document.getElementById('teacher-id').value + '@school.edu',
+            email: document.getElementById('teacher-id').value,
             password: document.getElementById('teacher-pass').value,
             role: 'teacher'
         };
     } else if (role === 'parent') {
         credentials = {
-            email: document.getElementById('parent-id').value + '@parent.com',
+            email: document.getElementById('parent-id').value,
             password: document.getElementById('parent-pass').value,
             role: 'parent'
         };
@@ -68,8 +52,6 @@ window.handleLogin = async function(e, role) {
         };
     }
 
-    console.log('📤 Sending login request:', credentials);
-
     try {
         window.showToast('Logging in...', 'info');
         
@@ -78,33 +60,12 @@ window.handleLogin = async function(e, role) {
         if (response) {
             window.showToast('Login successful!', 'success');
             
-            // Store user data globally and in localStorage
             window.currentUser = response.user;
             window.currentSchool = response.school;
             
             localStorage.setItem('shuleai_user', JSON.stringify(response.user));
             localStorage.setItem('shuleai_school', JSON.stringify(response.school));
             
-            // For parent, set children if available
-            if (role === 'parent' && response.profile?.children) {
-                window.currentChildren = response.profile.children;
-                localStorage.setItem('shuleai_children', JSON.stringify(response.profile.children));
-                if (window.currentChildren.length > 0) {
-                    window.activeChildId = window.currentChildren[0].id;
-                    localStorage.setItem('shuleai_active_child', window.activeChildId);
-                }
-            }
-            
-            // For student, set student info
-            if (role === 'student') {
-                window.currentUser = {
-                    ...response.user,
-                    ...response.profile
-                };
-                localStorage.setItem('shuleai_user', JSON.stringify(window.currentUser));
-            }
-            
-            // Show appropriate dashboard
             setTimeout(() => { 
                 hideAll(); 
                 document.getElementById(`${role}-dashboard`).style.display = 'block'; 
@@ -113,14 +74,10 @@ window.handleLogin = async function(e, role) {
                 if (role === 'student') {
                     document.getElementById('chat-toggle').style.display = 'flex';
                     window.initDraggableChat();
-                } else {
-                    document.getElementById('chat-toggle').style.display = 'none';
-                    document.getElementById('chat-widget').style.display = 'none';
                 }
             }, 500);
         }
     } catch (error) {
-        console.error('❌ Login error:', error);
         window.showToast(error.message || 'Login failed', 'error');
     }
 };
@@ -128,10 +85,32 @@ window.handleLogin = async function(e, role) {
 window.handleSignup = async function(e, role) {
     e.preventDefault();
     
-    let data = {};
-    
-    if (role === 'teacher') {
-        data = {
+    if (role === 'admin') {
+        const data = {
+            name: document.getElementById('admin-name').value,
+            email: document.getElementById('admin-email').value,
+            password: document.getElementById('admin-password').value,
+            phone: document.getElementById('admin-phone').value,
+            role: 'admin',
+            schoolName: document.getElementById('school-name').value,
+            schoolAddress: document.getElementById('school-address').value,
+            schoolSystem: document.getElementById('school-system').value
+        };
+        
+        try {
+            window.showToast('Creating your school...', 'info');
+            const response = await api.register(data);
+            
+            if (response.success) {
+                window.showToast('School created! You can now login.', 'success');
+                setTimeout(() => showLogin('admin'), 2000);
+            }
+        } catch (error) {
+            window.showToast(error.message, 'error');
+        }
+        
+    } else if (role === 'teacher') {
+        const data = {
             name: document.getElementById('teacher-name').value,
             email: document.getElementById('teacher-email').value,
             password: document.getElementById('teacher-password').value,
@@ -161,13 +140,7 @@ window.logout = async function() {
     } catch (error) {
         console.error('Logout error:', error);
     } finally {
-        // Clear all stored data
-        localStorage.removeItem('shuleai_token');
-        localStorage.removeItem('shuleai_user');
-        localStorage.removeItem('shuleai_school');
-        localStorage.removeItem('shuleai_children');
-        localStorage.removeItem('shuleai_active_child');
-        
+        localStorage.clear();
         window.showToast('Logged out', 'info'); 
         showLanding(); 
         document.getElementById('chat-widget').style.display = 'none';
@@ -175,7 +148,5 @@ window.logout = async function() {
         window.destroyCharts();
         window.currentUser = null;
         window.currentSchool = null;
-        window.currentChildren = [];
-        window.activeChildId = null;
     }
 };
