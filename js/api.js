@@ -1,6 +1,6 @@
 // js/api.js - Complete API service for ShuleAI
 window.api = (function() {
-    const API_BASE = 'https://shuleaibackend-32h1.onrender.com/api'; // Update with your actual backend URL
+    const API_BASE = 'https://shuleaibackend-32h1.onrender.com/api';
     let authToken = localStorage.getItem('shuleai_token') || null;
 
     // Helper to get headers with auth token
@@ -14,7 +14,7 @@ window.api = (function() {
         return headers;
     }
 
-    // Generic request handler
+    // Generic request handler with improved error logging
     async function request(endpoint, options = {}) {
         const url = `${API_BASE}${endpoint}`;
         const config = {
@@ -30,7 +30,7 @@ window.api = (function() {
             const data = await response.json();
             
             if (!response.ok) {
-                console.error('❌ API Error:', data);
+                console.error('❌ API Error Details:', data);
                 throw new Error(data.message || `HTTP ${response.status}`);
             }
             
@@ -45,9 +45,34 @@ window.api = (function() {
 
     // ==================== AUTH ENDPOINTS ====================
     async function login(role, credentials) {
+        // Format credentials based on role
+        let body;
+        if (role === 'student') {
+            body = {
+                elimuid: credentials.elimuid,
+                password: credentials.password,
+                role: 'student'
+            };
+        } else if (role === 'super') {
+            body = {
+                secretKey: credentials.secretKey,
+                role: 'super_admin'
+            };
+        } else {
+            body = {
+                email: credentials.email,
+                password: credentials.password,
+                role: role
+            };
+            // Add schoolCode if provided (for admin/teacher)
+            if (credentials.schoolCode) {
+                body.schoolCode = credentials.schoolCode;
+            }
+        }
+
         const response = await request('/auth/login', {
             method: 'POST',
-            body: JSON.stringify({ role, ...credentials })
+            body: JSON.stringify(body)
         });
         
         if (response.data?.token) {
@@ -258,6 +283,52 @@ window.api = (function() {
         return request('/analytics/school');
     }
 
+    // ==================== SUPER ADMIN ENDPOINTS ====================
+    async function getOverview() {
+        return request('/super-admin/overview');
+    }
+
+    async function getSchools() {
+        return request('/super-admin/schools');
+    }
+
+    async function createSchool(data) {
+        return request('/super-admin/schools', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    }
+
+    async function updateSchool(schoolId, data) {
+        return request(`/super-admin/schools/${schoolId}`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        });
+    }
+
+    async function deleteSchool(schoolId) {
+        return request(`/super-admin/schools/${schoolId}`, {
+            method: 'DELETE'
+        });
+    }
+
+    async function getPendingRequests() {
+        return request('/super-admin/requests');
+    }
+
+    async function approveRequest(requestId) {
+        return request(`/super-admin/requests/${requestId}/approve`, {
+            method: 'POST'
+        });
+    }
+
+    async function rejectRequest(requestId, reason) {
+        return request(`/super-admin/requests/${requestId}/reject`, {
+            method: 'POST',
+            body: JSON.stringify({ reason })
+        });
+    }
+
     // ==================== PUBLIC ENDPOINTS ====================
     async function getPublicDuty(schoolId) {
         return request(`/public/duty/today?schoolId=${schoolId}`);
@@ -355,6 +426,16 @@ window.api = (function() {
         getStudentAnalytics,
         getClassAnalytics,
         getSchoolAnalytics,
+
+        // Super Admin
+        getOverview,
+        getSchools,
+        createSchool,
+        updateSchool,
+        deleteSchool,
+        getPendingRequests,
+        approveRequest,
+        rejectRequest,
 
         // Public
         getPublicDuty,
