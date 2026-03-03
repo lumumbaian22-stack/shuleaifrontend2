@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <meta name="theme-color" content="#3b82f6">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="format-detection" content="telephone=no">
     <title>ShuleAI - School Intelligence System</title>
@@ -333,9 +333,9 @@
         </div>
     </div>
 
-    <!-- LANDING PAGE - FULLY RESTORED WITH ORIGINAL DESIGN -->
+    <!-- LANDING PAGE -->
     <div id="landing-page" class="min-h-screen bg-background">
-        <!-- Hero Section with Stats and CTA buttons -->
+        <!-- Hero Section -->
         <section class="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-violet-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 py-20 lg:py-32">
             <div class="container mx-auto px-4">
                 <div class="flex flex-col items-center text-center">
@@ -355,7 +355,7 @@
                         Empowering educators, students, and parents with data-driven insights. Streamline administration, track performance, and foster collaboration.
                     </p>
                     
-                    <!-- CTA Buttons - RESTORED -->
+                    <!-- CTA Buttons -->
                     <div class="mt-10 flex flex-wrap gap-4 justify-center">
                         <a href="#role-cards" class="rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors shadow-lg">
                             Get Started
@@ -367,18 +367,18 @@
                 </div>
             </div>
             
-            <!-- Subtle background pattern - RESTORED -->
+            <!-- Subtle background pattern -->
             <div class="absolute inset-0 -z-10 h-full w-full bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] dark:bg-[radial-gradient(#1f2937_1px,transparent_1px)] opacity-30"></div>
         </section>
 
-        <!-- Stats / Analytics Section - FULLY RESTORED -->
+        <!-- Stats Section -->
         <section id="stats" class="py-16 lg:py-24 container mx-auto px-4">
             <div class="text-center mb-12">
                 <h2 class="text-3xl font-bold">Trusted by schools across the country</h2>
                 <p class="text-muted-foreground mt-2">Real-time data at your fingertips</p>
             </div>
             
-            <!-- Stats Grid - RESTORED -->
+            <!-- Stats Grid -->
             <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 <div class="rounded-xl border bg-card p-6 card-hover text-center">
                     <div class="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center mx-auto mb-4">
@@ -390,7 +390,7 @@
                 
                 <div class="rounded-xl border bg-card p-6 card-hover text-center">
                     <div class="h-12 w-12 rounded-lg bg-violet-100 flex items-center justify-center mx-auto mb-4">
-                        <i data-lucide="user-plus" class="h-6 w-6 text-violet-600"></i>
+                        <i data-lucide="users" class="h-6 w-6 text-violet-600"></i>
                     </div>
                     <p class="text-3xl font-bold">128+</p>
                     <p class="text-sm text-muted-foreground">Expert Teachers</p>
@@ -413,7 +413,7 @@
                 </div>
             </div>
             
-            <!-- Simple chart placeholder - RESTORED -->
+            <!-- Simple chart placeholder -->
             <div class="mt-12 rounded-xl border bg-card p-6 max-w-2xl mx-auto">
                 <h3 class="font-semibold mb-4 text-center">Enrollment growth (last 6 months)</h3>
                 <div class="h-40 w-full bg-gradient-to-r from-blue-200 to-violet-200 rounded-lg flex items-end justify-around p-2">
@@ -427,7 +427,7 @@
             </div>
         </section>
 
-        <!-- Role Cards Section - FULLY RESTORED with super admin hidden -->
+        <!-- Role Cards Section -->
         <section id="role-cards" class="py-16 lg:py-24 bg-muted/30">
             <div class="container mx-auto px-4">
                 <div class="text-center mb-12">
@@ -435,7 +435,7 @@
                     <p class="text-muted-foreground mt-2">Select your role to sign in or create an account</p>
                 </div>
                 
-                <!-- Role Cards Grid - RESTORED -->
+                <!-- Role Cards Grid -->
                 <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
                     <!-- Super Admin (hidden by default) -->
                     <div id="superadmin-role-card" class="rounded-xl border bg-card p-6 card-hover flex flex-col items-center text-center hidden">
@@ -455,7 +455,7 @@
                         <div class="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center mb-4 shadow-md">
                             <i data-lucide="building-2" class="h-8 w-8 text-white"></i>
                         </div>
-                        <h3 class="semibold text-lg">Admin</h3>
+                        <h3 class="font-semibold text-lg">Admin</h3>
                         <p class="text-xs text-muted-foreground mt-1 mb-4">School management</p>
                         <div class="flex gap-2 w-full">
                             <button onclick="openAuthModal('admin', 'signin')" class="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90">Sign In</button>
@@ -466,9 +466,9 @@
                     <!-- Teacher -->
                     <div class="rounded-xl border bg-card p-6 card-hover flex flex-col items-center text-center">
                         <div class="h-16 w-16 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mb-4 shadow-md">
-                            <i data-lucide="chalkboard-teacher" class="h-8 w-8 text-white"></i>
+                            <i data-lucide="presentation" class="h-8 w-8 text-white"></i>
                         </div>
-                        <h3 class="semibold text-lg">Teacher</h3>
+                        <h3 class="font-semibold text-lg">Teacher</h3>
                         <p class="text-xs text-muted-foreground mt-1 mb-4">Classroom management</p>
                         <div class="flex gap-2 w-full">
                             <button onclick="openAuthModal('teacher', 'signin')" class="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90">Sign In</button>
@@ -479,9 +479,9 @@
                     <!-- Parent -->
                     <div class="rounded-xl border bg-card p-6 card-hover flex flex-col items-center text-center">
                         <div class="h-16 w-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center mb-4 shadow-md">
-                            <i data-lucide="users" class="h-8 w-8 text-white"></i>
+                            <i data-lucide="heart" class="h-8 w-8 text-white"></i>
                         </div>
-                        <h3 class="semibold text-lg">Parent</h3>
+                        <h3 class="font-semibold text-lg">Parent</h3>
                         <p class="text-xs text-muted-foreground mt-1 mb-4">Track your child</p>
                         <div class="flex gap-2 w-full">
                             <button onclick="openAuthModal('parent', 'signin')" class="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90">Sign In</button>
@@ -494,7 +494,7 @@
                         <div class="h-16 w-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center mb-4 shadow-md">
                             <i data-lucide="graduation-cap" class="h-8 w-8 text-white"></i>
                         </div>
-                        <h3 class="semibold text-lg">Student</h3>
+                        <h3 class="font-semibold text-lg">Student</h3>
                         <p class="text-xs text-muted-foreground mt-1 mb-4">Learn & collaborate</p>
                         <div class="flex gap-2 w-full">
                             <button onclick="openAuthModal('student', 'signin')" class="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90">Sign In</button>
@@ -505,7 +505,7 @@
             </div>
         </section>
 
-        <!-- Footer - FULLY RESTORED -->
+        <!-- Footer -->
         <footer class="bg-card border-t border-border py-12">
             <div class="container mx-auto px-4">
                 <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
