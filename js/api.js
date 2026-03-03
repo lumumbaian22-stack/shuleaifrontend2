@@ -11,6 +11,7 @@ async function apiRequest(endpoint, options = {}) {
     
     const headers = {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         ...options.headers
     };
     
@@ -21,24 +22,34 @@ async function apiRequest(endpoint, options = {}) {
     const config = {
         ...options,
         headers,
-        credentials: 'include'
+        mode: 'cors',
+        credentials: 'omit' // Don't send cookies for now
     };
     
     try {
         const response = await fetch(url, config);
         
-        // Handle token refresh
-        if (response.status === 401 && refreshToken) {
-            const refreshed = await refreshAuthToken();
-            if (refreshed) {
-                // Retry the request with new token
-                headers['Authorization'] = `Bearer ${authToken}`;
-                const retryResponse = await fetch(url, {
-                    ...options,
-                    headers
-                });
-                return handleResponse(retryResponse);
+        // Handle 401 Unauthorized - clear token and redirect to login
+        if (response.status === 401) {
+            console.log('Unauthorized access - clearing tokens');
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+            authToken = null;
+            refreshToken = null;
+            
+            // Don't throw error for auth check, just return null
+            if (endpoint === '/api/auth/me') {
+                return null;
             }
+            
+            // For other endpoints, redirect to landing
+            const landingPage = document.getElementById('landing-page');
+            const dashboardContainer = document.getElementById('dashboard-container');
+            if (landingPage) landingPage.style.display = 'block';
+            if (dashboardContainer) dashboardContainer.style.display = 'none';
+            
+            throw new Error('Session expired. Please login again.');
         }
         
         return handleResponse(response);
@@ -49,13 +60,22 @@ async function apiRequest(endpoint, options = {}) {
 }
 
 async function handleResponse(response) {
-    const data = await response.json();
-    
-    if (!response.ok) {
-        throw new Error(data.message || 'API request failed');
+    // Check if response is empty
+    const text = await response.text();
+    if (!text) {
+        return {};
     }
     
-    return data;
+    try {
+        const data = JSON.parse(text);
+        if (!response.ok) {
+            throw new Error(data.message || data.error || 'API request failed');
+        }
+        return data;
+    } catch (e) {
+        console.error('Failed to parse response:', text);
+        throw new Error('Invalid server response');
+    }
 }
 
 async function refreshAuthToken() {
@@ -85,9 +105,9 @@ async function uploadFile(endpoint, file, onProgress) {
     const formData = new FormData();
     formData.append('file', file);
     
-    const xhr = new XMLHttpRequest();
-    
     return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        
         xhr.upload.addEventListener('progress', (e) => {
             if (e.lengthComputable && onProgress) {
                 const percent = (e.loaded / e.total) * 100;
@@ -97,7 +117,12 @@ async function uploadFile(endpoint, file, onProgress) {
         
         xhr.addEventListener('load', () => {
             if (xhr.status >= 200 && xhr.status < 300) {
-                resolve(JSON.parse(xhr.responseText));
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    resolve(response);
+                } catch (e) {
+                    resolve({ success: true });
+                }
             } else {
                 reject(new Error('Upload failed'));
             }
@@ -106,7 +131,9 @@ async function uploadFile(endpoint, file, onProgress) {
         xhr.addEventListener('error', () => reject(new Error('Upload failed')));
         
         xhr.open('POST', `${API_BASE_URL}${endpoint}`);
-        xhr.setRequestHeader('Authorization', `Bearer ${authToken}`);
+        if (authToken) {
+            xhr.setRequestHeader('Authorization', `Bearer ${authToken}`);
+        }
         xhr.send(formData);
     });
 }
