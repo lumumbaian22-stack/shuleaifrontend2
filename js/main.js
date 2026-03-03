@@ -2,6 +2,199 @@
 let currentRole = null;
 let clickCount = 0;
 
+// Check if we're in development mode (backend unreachable)
+const IS_DEV_MODE = true; // Set to false when backend is ready
+
+// Override apiRequest in development mode
+if (IS_DEV_MODE) {
+    const originalApiRequest = window.apiRequest;
+    window.apiRequest = async function(endpoint, options = {}) {
+        console.log('DEV MODE - API Request:', endpoint, options);
+        
+        // Mock successful responses for development
+        if (endpoint === '/api/auth/me') {
+            const user = localStorage.getItem('user');
+            return user ? { user: JSON.parse(user) } : null;
+        }
+        
+        if (endpoint === '/api/auth/login' && options.method === 'POST') {
+            const body = JSON.parse(options.body);
+            return {
+                token: 'mock-token-' + Date.now(),
+                user: {
+                    name: body.email.split('@')[0],
+                    email: body.email,
+                    role: body.role || 'admin'
+                }
+            };
+        }
+        
+        if (endpoint === '/api/auth/register' && options.method === 'POST') {
+            return { success: true, message: 'Registration successful' };
+        }
+        
+        // Mock dashboard data endpoints
+        if (endpoint === '/api/super-admin/overview') {
+            return {
+                totalSchools: 24,
+                newSchoolsThisMonth: 3,
+                activeAdmins: 18,
+                newAdmins: 2,
+                pendingApprovals: 6,
+                revenue: 1240,
+                revenueGrowth: 15,
+                schools: [
+                    { id: 1, name: 'Nairobi High School', adminEmail: 'admin@nairobi.edu', level: 'Secondary', status: 'active' },
+                    { id: 2, name: 'Mombasa Academy', adminEmail: 'admin@mombasa.edu', level: 'Primary', status: 'pending' }
+                ],
+                nameChangeRequests: [
+                    { id: 1, oldName: 'City School', newName: 'City Academy', amount: 50, createdAt: new Date() }
+                ]
+            };
+        }
+        
+        if (endpoint === '/api/admin/dashboard') {
+            return {
+                school: { name: 'Nairobi High School', level: 'Secondary', id: 'NHS-2024-001' },
+                stats: {
+                    totalStudents: 543,
+                    studentGrowth: 12,
+                    totalTeachers: 28,
+                    pendingTeachers: 4,
+                    totalClasses: 16,
+                    totalGrades: 4,
+                    attendanceRate: 94.2,
+                    attendanceVariance: 2
+                },
+                pendingTeachers: [
+                    { id: 1, name: 'Jane Doe', subject: 'Mathematics', appliedAt: new Date() }
+                ],
+                calendar: [
+                    { name: 'Term 1 Start', date: '2024-01-15' },
+                    { name: 'Mid-term Break', date: '2024-03-10' }
+                ],
+                todayDuty: [
+                    { location: 'Main Gate', teacher: 'Mr. Kamau' },
+                    { location: 'Dining Hall', teacher: 'Ms. Atieno' }
+                ],
+                tasks: [
+                    { id: 1, title: 'Review teacher applications', completed: false, dueDate: '2024-03-20' }
+                ],
+                timetable: [
+                    { time: '9:00 AM', title: 'Staff Briefing', description: 'Daily' }
+                ],
+                recentActivity: [
+                    { title: 'New teacher application', description: 'Jane Doe applied', icon: 'user-plus', iconBg: 'bg-blue-100', iconColor: 'text-blue-600', timestamp: new Date() }
+                ]
+            };
+        }
+        
+        if (endpoint === '/api/teacher/dashboard') {
+            return {
+                stats: {
+                    totalStudents: 42,
+                    totalClasses: 2,
+                    classAverage: 78.5,
+                    averageGrowth: 2.5,
+                    attendanceToday: { present: 38, total: 42 },
+                    pendingTasks: 5,
+                    overdueTasks: 3
+                },
+                students: [
+                    { id: 1, name: 'Sarah Johnson', class: 'Grade 10A', elimuid: 'ELI-2024-001', attendance: 95 }
+                ],
+                todayDuty: {
+                    location: 'Main Gate • 7:30 AM - 3:30 PM',
+                    status: 'pending',
+                    lastRating: 4.5
+                },
+                tasks: [
+                    { id: 1, title: 'Grade Mathematics exams', completed: false, dueDate: '2024-03-21', overdue: true }
+                ]
+            };
+        }
+        
+        if (endpoint === '/api/parent/dashboard') {
+            return {
+                children: [
+                    { id: 1, name: 'Sarah', grade: '10' },
+                    { id: 2, name: 'Michael', grade: '8' }
+                ],
+                selectedChild: {
+                    attendance: 95,
+                    average: 82,
+                    aboveAverage: true,
+                    homeworkCount: 3,
+                    homeworkPending: true,
+                    feeBalance: 250,
+                    feeDueDays: 5,
+                    todayAttendance: { checkInTime: '7:45 AM', gate: 'Main Entrance' },
+                    weeklyAttendance: [true, true, true, true, false],
+                    grades: [
+                        { subject: 'Mathematics', score: 85, grade: 'A-', color: 'green', teacher: 'Mr. Kamau', date: new Date() }
+                    ]
+                },
+                plans: [
+                    { id: 'basic', name: 'Basic', price: 0, features: 'Attendance only', current: true },
+                    { id: 'premium', name: 'Premium', price: 5, features: 'Grades + Reports', current: false },
+                    { id: 'elite', name: 'Elite', price: 10, features: 'Live chat + AI tutor', current: false }
+                ],
+                teachers: [
+                    { id: 1, name: 'Mr. Kamau', subject: 'Mathematics' }
+                ],
+                recentMessages: [
+                    { from: 'Mr. Kamau', preview: 'Sarah is doing well in...', timestamp: new Date() }
+                ],
+                dutyRoster: [
+                    { location: 'Main Gate', teacher: 'Mr. Kamau', time: '7:30-10:30' }
+                ]
+            };
+        }
+        
+        if (endpoint === '/api/student/dashboard') {
+            return {
+                elimuid: 'ELI-2024-001',
+                classAverage: 82,
+                attendance: 95,
+                studyGroups: 3,
+                currentGroup: {
+                    name: 'Grade 10 Math Study Group',
+                    id: 'group1',
+                    onlineCount: 5
+                },
+                chatHistory: [
+                    { content: 'Can anyone help with quadratic equations?', sender: 'Alex', sent: false, timestamp: new Date() },
+                    { content: 'Sure! Use the formula x = [-b ± √(b²-4ac)]/2a', sender: 'You', sent: true, timestamp: new Date() }
+                ],
+                schedule: [
+                    { subject: 'Mathematics', time: '8:00 AM - 9:30 AM' },
+                    { subject: 'English', time: '10:00 AM - 11:30 AM' }
+                ],
+                grades: [
+                    { subject: 'Mathematics', score: 85, letter: 'A-', color: 'green' },
+                    { subject: 'English', score: 78, letter: 'B+', color: 'yellow' }
+                ],
+                exams: [
+                    { subject: 'Mathematics', name: 'Mid-term', topics: 'Algebra, Calculus', daysUntil: 3 }
+                ],
+                homework: [
+                    { subject: 'English', title: 'Essay', description: 'Write 1000 words', dueDate: '2024-03-25', urgent: false }
+                ],
+                schoolInfo: {
+                    duty: [
+                        { location: 'Main Gate', teacher: 'Mr. Kamau' }
+                    ],
+                    announcements: ['School closes at 3:30 PM today'],
+                    events: [{ name: 'Sports Day', date: '2024-04-15' }]
+                }
+            };
+        }
+        
+        // For other endpoints, return mock data
+        return { message: 'Mock response' };
+    };
+}
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
     lucide.createIcons();
@@ -532,7 +725,9 @@ function setupPageListeners(role) {
         case 'teacher':
             // Setup file upload if elements exist
             setTimeout(() => {
-                setupFileUpload('csv-drop-zone', 'csv-file-input', 'students');
+                if (typeof setupFileUpload === 'function') {
+                    setupFileUpload('csv-drop-zone', 'csv-file-input', 'students');
+                }
             }, 500);
             break;
     }
