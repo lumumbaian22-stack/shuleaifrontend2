@@ -1,3 +1,5 @@
+// auth.js - Updated with real backend integration
+
 // Auth state management
 let currentUser = null;
 
@@ -6,23 +8,21 @@ async function checkAuth() {
     const token = localStorage.getItem('authToken');
     if (!token) return false;
     
-    authToken = token;
-    
     try {
         const data = await apiRequest('/api/auth/me');
-        if (data && data.user) {
-            currentUser = data.user;
-            localStorage.setItem('user', JSON.stringify(currentUser));
-            return true;
-        }
-        return false;
+        currentUser = data.data?.user || data.user;
+        localStorage.setItem('user', JSON.stringify(currentUser));
+        
+        // Dispatch auth event for WebSocket
+        const event = new CustomEvent('auth-changed', { detail: { authenticated: true } });
+        window.dispatchEvent(event);
+        
+        return true;
     } catch (error) {
         console.error('Auth check failed:', error);
         localStorage.removeItem('authToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
-        authToken = null;
-        refreshToken = null;
         return false;
     }
 }
@@ -30,70 +30,26 @@ async function checkAuth() {
 // Login function
 async function login(email, password, role) {
     try {
-        // Try different possible request formats
-        const payload = {
-            email,
-            password
-        };
-        
-        // Add role if backend expects it
-        if (role) {
-            payload.role = role;
-        }
-        
-        console.log('Login attempt with:', payload);
-        
-        const data = await apiRequest('/api/auth/login', {
+        const response = await apiRequest('/api/auth/login', {
             method: 'POST',
-            body: JSON.stringify(payload)
+            body: JSON.stringify({ email, password, role })
         });
         
-        console.log('Login response:', data);
+        // Handle both response formats
+        const data = response.data || response;
         
-        // Handle different response formats
-        if (data.token) {
-            authToken = data.token;
-            refreshToken = data.refreshToken || data.refresh_token;
-            currentUser = data.user || data.data || { name: email.split('@')[0], email, role };
-        } else if (data.data && data.data.token) {
-            authToken = data.data.token;
-            refreshToken = data.data.refreshToken;
-            currentUser = data.data.user || { name: email.split('@')[0], email, role };
-        } else {
-            // Mock successful login for development
-            console.log('Using mock login');
-            authToken = 'mock-token-' + Date.now();
-            currentUser = {
-                name: email.split('@')[0],
-                email,
-                role: role || 'admin'
-            };
-        }
+        authToken = data.token;
+        currentUser = data.user;
         
-        if (authToken) {
-            localStorage.setItem('authToken', authToken);
-            if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
-            localStorage.setItem('user', JSON.stringify(currentUser));
-        }
+        localStorage.setItem('authToken', authToken);
+        localStorage.setItem('user', JSON.stringify(currentUser));
         
-        return { token: authToken, user: currentUser };
+        // Dispatch auth event for WebSocket
+        const event = new CustomEvent('auth-changed', { detail: { authenticated: true } });
+        window.dispatchEvent(event);
+        
+        return response;
     } catch (error) {
-        console.error('Login error:', error);
-        
-        // For development, allow mock login
-        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-            console.log('Backend unreachable - using mock login');
-            authToken = 'mock-token-' + Date.now();
-            currentUser = {
-                name: email.split('@')[0],
-                email,
-                role: role || 'admin'
-            };
-            localStorage.setItem('authToken', authToken);
-            localStorage.setItem('user', JSON.stringify(currentUser));
-            return { token: authToken, user: currentUser };
-        }
-        
         throw error;
     }
 }
@@ -101,24 +57,12 @@ async function login(email, password, role) {
 // Register function
 async function register(userData) {
     try {
-        console.log('Register attempt with:', userData);
-        
-        const data = await apiRequest('/api/auth/register', {
+        const response = await apiRequest('/api/auth/register', {
             method: 'POST',
             body: JSON.stringify(userData)
         });
-        
-        console.log('Register response:', data);
-        return data;
+        return response;
     } catch (error) {
-        console.error('Register error:', error);
-        
-        // For development, allow mock registration
-        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-            console.log('Backend unreachable - using mock registration');
-            return { success: true, message: 'Registration successful' };
-        }
-        
         throw error;
     }
 }
@@ -126,14 +70,12 @@ async function register(userData) {
 // Teacher signup with school ID
 async function teacherSignup(teacherData) {
     try {
-        const data = await apiRequest('/api/auth/teacher/signup', {
+        const response = await apiRequest('/api/auth/teacher/signup', {
             method: 'POST',
             body: JSON.stringify(teacherData)
         });
-        
-        return data;
+        return response;
     } catch (error) {
-        console.error('Teacher signup error:', error);
         throw error;
     }
 }
@@ -141,14 +83,12 @@ async function teacherSignup(teacherData) {
 // Verify school ID
 async function verifySchoolId(schoolId) {
     try {
-        const data = await apiRequest('/api/auth/verify-school', {
+        const response = await apiRequest('/api/auth/verify-school', {
             method: 'POST',
             body: JSON.stringify({ schoolId })
         });
-        
-        return data;
+        return response;
     } catch (error) {
-        console.error('Verify school ID error:', error);
         throw error;
     }
 }
@@ -156,16 +96,35 @@ async function verifySchoolId(schoolId) {
 // Change password
 async function changePassword(oldPassword, newPassword) {
     try {
-        const data = await apiRequest('/api/auth/change-password', {
+        const response = await apiRequest('/api/auth/change-password', {
             method: 'POST',
             body: JSON.stringify({ oldPassword, newPassword })
         });
-        
-        return data;
+        return response;
     } catch (error) {
-        console.error('Change password error:', error);
         throw error;
     }
+}
+
+// Logout function
+function logout() {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    authToken = null;
+    currentUser = null;
+    
+    // Dispatch auth event for WebSocket
+    const event = new CustomEvent('auth-changed', { detail: { authenticated: false } });
+    window.dispatchEvent(event);
+    
+    const landingPage = document.getElementById('landing-page');
+    const dashboardContainer = document.getElementById('dashboard-container');
+    
+    if (landingPage) landingPage.style.display = 'block';
+    if (dashboardContainer) dashboardContainer.style.display = 'none';
+    
+    showToast('Logged out successfully', 'success');
 }
 
 // Export auth functions
@@ -175,4 +134,4 @@ window.teacherSignup = teacherSignup;
 window.verifySchoolId = verifySchoolId;
 window.changePassword = changePassword;
 window.checkAuth = checkAuth;
-window.currentUser = currentUser;
+window.logout = logout;
