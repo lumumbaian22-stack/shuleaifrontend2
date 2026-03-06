@@ -16,7 +16,23 @@ async function apiRequest(endpoint, options = {}) {
         ...options.headers
     };
     
-    if (authToken) {
+    // CRITICAL: Never send auth token for registration or login
+    const publicEndpoints = [
+        '/api/auth/register', 
+        '/api/auth/login', 
+        '/api/auth/teacher/signup', 
+        '/api/auth/verify-school',
+        '/api/auth/forgot-password',
+        '/api/auth/reset-password',
+        '/health'
+    ];
+    
+    const isPublicEndpoint = publicEndpoints.some(pubEndpoint => 
+        endpoint.startsWith(pubEndpoint)
+    );
+    
+    // Only add auth token for protected endpoints AND if we have a token
+    if (authToken && !isPublicEndpoint) {
         headers['Authorization'] = `Bearer ${authToken}`;
     }
     
@@ -30,17 +46,22 @@ async function apiRequest(endpoint, options = {}) {
         const response = await fetch(url, config);
         const data = await response.json();
         
-        // Handle token refresh
-        if (response.status === 401 && refreshToken && endpoint !== '/api/auth/login') {
+        // Handle token refresh (only for protected endpoints)
+        if (response.status === 401 && !isPublicEndpoint && refreshToken) {
             const refreshed = await refreshAuthToken();
             if (refreshed) {
-                // Retry the request with new token
                 return apiRequest(endpoint, options);
             }
         }
         
         if (!response.ok) {
-            throw new Error(data.message || 'API request failed');
+            // Show more detailed error
+            console.error('API Error Response:', {
+                status: response.status,
+                statusText: response.statusText,
+                data: data
+            });
+            throw new Error(data.message || `API request failed with status ${response.status}`);
         }
         
         return data;
@@ -102,24 +123,18 @@ async function uploadFile(endpoint, file, onProgress) {
     });
 }
 
-// Dashboard data fetching by role
-async function fetchDashboardData(role) {
-    const endpoints = {
-        superadmin: '/api/super-admin/overview',
-        admin: '/api/admin/dashboard',
-        teacher: '/api/teacher/dashboard',
-        parent: '/api/parent/dashboard',
-        student: '/api/student/dashboard'
-    };
-    
-    try {
-        const response = await apiRequest(endpoints[role]);
-        // Handle both { data: ... } and direct response formats
-        return response.data || response;
-    } catch (error) {
-        console.error(`Failed to fetch ${role} dashboard:`, error);
-        throw error;
-    }
+// Get current user data (works after login)
+async function getCurrentUser() {
+    return apiRequest('/api/auth/me');
+}
+
+// Student endpoints - USING CORRECT BACKEND ENDPOINTS
+async function getStudentGrades(studentId) {
+    return apiRequest(`/api/analytics/student/${studentId}`);
+}
+
+async function getStudentAttendance(studentId) {
+    return apiRequest(`/api/analytics/student/${studentId}?period=term`);
 }
 
 // Teacher endpoints
@@ -297,7 +312,9 @@ async function approveNameChange(requestId) {
 // Export all functions to window (preserves your existing calls)
 window.apiRequest = apiRequest;
 window.uploadFile = uploadFile;
-window.fetchDashboardData = fetchDashboardData;
+window.getCurrentUser = getCurrentUser;
+window.getStudentGrades = getStudentGrades;
+window.getStudentAttendance = getStudentAttendance;
 window.getMyStudents = getMyStudents;
 window.enterMarks = enterMarks;
 window.takeAttendance = takeAttendance;
