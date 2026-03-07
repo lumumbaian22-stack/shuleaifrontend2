@@ -95,10 +95,11 @@ async function refreshAuthToken() {
 async function fetchDashboardData(role) {
     console.log('Fetching dashboard for role:', role);
     
-    // Map each role to its correct endpoint
+    // Handle super_admin explicitly
     if (role === 'super_admin') {
         try {
             const response = await apiRequest('/api/super-admin/overview');
+            // IMPORTANT: Return the nested data directly
             return response.data || response;
         } catch (error) {
             console.error('Failed to fetch super_admin dashboard:', error);
@@ -108,7 +109,7 @@ async function fetchDashboardData(role) {
     
     if (role === 'admin') {
         try {
-            const response = await apiRequest('/api/admin/dashboard');  // ✅ CORRECT
+            const response = await apiRequest('/api/admin/dashboard');
             return response.data || response;
         } catch (error) {
             console.error('Failed to fetch admin dashboard:', error);
@@ -118,7 +119,7 @@ async function fetchDashboardData(role) {
     
     if (role === 'teacher') {
         try {
-            const response = await apiRequest('/api/teacher/dashboard'); // ✅ CORRECT
+            const response = await apiRequest('/api/teacher/dashboard');
             return response.data || response;
         } catch (error) {
             console.error('Failed to fetch teacher dashboard:', error);
@@ -128,7 +129,7 @@ async function fetchDashboardData(role) {
     
     if (role === 'parent') {
         try {
-            const response = await apiRequest('/api/parent/dashboard');  // ✅ CORRECT
+            const response = await apiRequest('/api/parent/dashboard');
             return response.data || response;
         } catch (error) {
             console.error('Failed to fetch parent dashboard:', error);
@@ -138,7 +139,7 @@ async function fetchDashboardData(role) {
     
     if (role === 'student') {
         try {
-            const response = await apiRequest('/api/student/dashboard'); // ✅ CORRECT
+            const response = await apiRequest('/api/student/dashboard');
             return response.data || response;
         } catch (error) {
             console.error('Failed to fetch student dashboard:', error);
@@ -400,6 +401,7 @@ window.getSchools = getSchools;
 window.createSchool = createSchool;
 window.getPendingNameRequests = getPendingNameRequests;
 window.approveNameChange = approveNameChange;
+
 
 
 
