@@ -527,13 +527,13 @@ async function showDashboard(role) {
         showToast('Failed to load dashboard data. Please check your connection.', 'error');
         
         // Fallback to mock data if API fails AND dev mode is enabled
-        if (IS_DEV_MODE) {
-            console.log('Using mock data fallback');
-            dashboardData = getMockData(role);
-            updateSidebar(role);
-            updateUserInfo();
-            await showDashboardSection('dashboard');
-        }
+        //if (IS_DEV_MODE) {
+        //    console.log('Using mock data fallback');
+        //    dashboardData = getMockData(role);
+        //    updateSidebar(role);
+        //    updateUserInfo();
+         //   await showDashboardSection('dashboard');
+       // }
     } finally {
         hideLoading();
     }
@@ -3908,4 +3908,3 @@ window.updateStudentGrade = updateStudentGrade;
 window.saveStudentGrade = saveStudentGrade;
 window.initRoleCharts = initRoleCharts;
 window.updateChartTheme = updateChartTheme;
-
