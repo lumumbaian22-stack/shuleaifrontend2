@@ -92,7 +92,7 @@ async function refreshAuthToken() {
     return false;
 }
 
-// ⬇️ ADD THIS MISSING FUNCTION ⬇️
+// ⬇️ REPLACE the existing fetchDashboardData with this improved version ⬇️
 async function fetchDashboardData(role) {
     const endpoints = {
         superadmin: '/api/super-admin/overview',
@@ -102,12 +102,19 @@ async function fetchDashboardData(role) {
         student: '/api/student/dashboard'
     };
     
+    const endpoint = endpoints[role];
+    if (!endpoint) {
+        throw new Error(`Invalid role: ${role}`);
+    }
+    
     try {
-        const response = await apiRequest(endpoints[role]);
+        const response = await apiRequest(endpoint);
+        // Handle both { data: ... } and direct response formats
         return response.data || response;
     } catch (error) {
         console.error(`Failed to fetch ${role} dashboard:`, error);
-        throw error;
+        // Return empty object instead of throwing to prevent dashboard crash
+        return {};
     }
 }
 
@@ -361,4 +368,5 @@ window.getSchools = getSchools;
 window.createSchool = createSchool;
 window.getPendingNameRequests = getPendingNameRequests;
 window.approveNameChange = approveNameChange;
+
 
