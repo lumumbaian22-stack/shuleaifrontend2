@@ -92,8 +92,23 @@ async function refreshAuthToken() {
     return false;
 }
 
-// ⬇️ REPLACE the existing fetchDashboardData with this improved version ⬇️
+// ⬇️ REPLACE your existing fetchDashboardData with this version ⬇️
 async function fetchDashboardData(role) {
+    // Map both possible role formats
+    const roleMap = {
+        'super_admin': 'superadmin',
+        'superadmin': 'superadmin',
+        'admin': 'admin',
+        'teacher': 'teacher',
+        'parent': 'parent',
+        'student': 'student'
+    };
+    
+    const mappedRole = roleMap[role];
+    if (!mappedRole) {
+        throw new Error(`Invalid role: ${role}`);
+    }
+    
     const endpoints = {
         superadmin: '/api/super-admin/overview',
         admin: '/api/admin/dashboard',
@@ -102,18 +117,16 @@ async function fetchDashboardData(role) {
         student: '/api/student/dashboard'
     };
     
-    const endpoint = endpoints[role];
+    const endpoint = endpoints[mappedRole];
     if (!endpoint) {
-        throw new Error(`Invalid role: ${role}`);
+        throw new Error(`No endpoint for role: ${role}`);
     }
     
     try {
         const response = await apiRequest(endpoint);
-        // Handle both { data: ... } and direct response formats
         return response.data || response;
     } catch (error) {
         console.error(`Failed to fetch ${role} dashboard:`, error);
-        // Return empty object instead of throwing to prevent dashboard crash
         return {};
     }
 }
@@ -368,5 +381,6 @@ window.getSchools = getSchools;
 window.createSchool = createSchool;
 window.getPendingNameRequests = getPendingNameRequests;
 window.approveNameChange = approveNameChange;
+
 
 
