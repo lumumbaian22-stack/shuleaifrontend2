@@ -92,11 +92,10 @@ async function refreshAuthToken() {
     return false;
 }
 
-// ⬇️ REPLACE your entire fetchDashboardData with this EXACT code ⬇️
 async function fetchDashboardData(role) {
     console.log('Fetching dashboard for role:', role);
     
-    // Handle super_admin explicitly
+    // Map each role to its correct endpoint
     if (role === 'super_admin') {
         try {
             const response = await apiRequest('/api/super-admin/overview');
@@ -107,10 +106,9 @@ async function fetchDashboardData(role) {
         }
     }
     
-    // Handle other roles
     if (role === 'admin') {
         try {
-            const response = await apiRequest('/api/admin/dashboard');
+            const response = await apiRequest('/api/admin/dashboard');  // ✅ CORRECT
             return response.data || response;
         } catch (error) {
             console.error('Failed to fetch admin dashboard:', error);
@@ -120,7 +118,7 @@ async function fetchDashboardData(role) {
     
     if (role === 'teacher') {
         try {
-            const response = await apiRequest('/api/teacher/dashboard');
+            const response = await apiRequest('/api/teacher/dashboard'); // ✅ CORRECT
             return response.data || response;
         } catch (error) {
             console.error('Failed to fetch teacher dashboard:', error);
@@ -130,7 +128,7 @@ async function fetchDashboardData(role) {
     
     if (role === 'parent') {
         try {
-            const response = await apiRequest('/api/parent/dashboard');
+            const response = await apiRequest('/api/parent/dashboard');  // ✅ CORRECT
             return response.data || response;
         } catch (error) {
             console.error('Failed to fetch parent dashboard:', error);
@@ -140,7 +138,7 @@ async function fetchDashboardData(role) {
     
     if (role === 'student') {
         try {
-            const response = await apiRequest('/api/student/dashboard');
+            const response = await apiRequest('/api/student/dashboard'); // ✅ CORRECT
             return response.data || response;
         } catch (error) {
             console.error('Failed to fetch student dashboard:', error);
@@ -402,6 +400,7 @@ window.getSchools = getSchools;
 window.createSchool = createSchool;
 window.getPendingNameRequests = getPendingNameRequests;
 window.approveNameChange = approveNameChange;
+
 
 
 
