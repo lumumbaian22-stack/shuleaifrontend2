@@ -3336,7 +3336,7 @@ function updateSidebar(role) {
     if (!nav) return;
     
     const sidebarConfig = {
-        superadmin: {
+        super_admin: {
             main: [
                 { icon: 'shield', label: 'Dashboard', section: 'dashboard' },
                 { icon: 'building-2', label: 'Schools', section: 'schools' },
