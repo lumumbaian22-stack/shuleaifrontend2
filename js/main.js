@@ -646,39 +646,40 @@ async function showDashboardSection(section) {
 }
 
 function renderDashboardSection(role, section, data) {
-    console.log('Rendering for role:', role);
+    console.log('🎯 renderDashboardSection called with role:', role);
+    console.log('📦 Available renderers:', {
+        renderSuperAdminSection: typeof renderSuperAdminSection,
+        renderAdminSection: typeof renderAdminSection,
+        renderTeacherSection: typeof renderTeacherSection,
+        renderParentSection: typeof renderParentSection,
+        renderStudentSection: typeof renderStudentSection
+    });
     
-    // Create a map of role to renderer function
-    const renderers = {
-        'super_admin': renderSuperAdminSection,
-        'superadmin': renderSuperAdminSection,
-        'super': renderSuperAdminSection,
-        'admin': renderAdminSection,
-        'teacher': renderTeacherSection,
-        'parent': renderParentSection,
-        'student': renderStudentSection
-    };
-    
-    // Try exact match first
-    let renderer = renderers[role];
-    
-    // If no exact match, try normalized version
-    if (!renderer) {
-        const normalizedRole = role.replace(/_/g, '').toLowerCase();
-        if (normalizedRole === 'superadmin') {
-            renderer = renderSuperAdminSection;
-        }
+    // Direct function calls based on role
+    if (role === 'super_admin' || role === 'superadmin') {
+        console.log('✅ Calling renderSuperAdminSection directly');
+        return renderSuperAdminSection(section, data);
     }
     
-    console.log('Using renderer:', renderer ? 'found' : 'not found');
-    
-    if (renderer) {
-        return renderer(section, data);
+    if (role === 'admin') {
+        return renderAdminSection(section, data);
     }
     
+    if (role === 'teacher') {
+        return renderTeacherSection(section, data);
+    }
+    
+    if (role === 'parent') {
+        return renderParentSection(section, data);
+    }
+    
+    if (role === 'student') {
+        return renderStudentSection(section, data);
+    }
+    
+    console.error('❌ No renderer for role:', role);
     return `<div class="text-center py-12">Section not found for role: ${role}</div>`;
 }
-
 // Settings Renderers
 function renderSettings(role) {
     if (role === 'admin') {
@@ -3907,3 +3908,4 @@ window.updateStudentGrade = updateStudentGrade;
 window.saveStudentGrade = saveStudentGrade;
 window.initRoleCharts = initRoleCharts;
 window.updateChartTheme = updateChartTheme;
+
