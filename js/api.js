@@ -92,42 +92,35 @@ async function refreshAuthToken() {
     return false;
 }
 
-// ⬇️ REPLACE your existing fetchDashboardData with this version ⬇️
+// ⬇️ COMPLETELY REPLACE your existing fetchDashboardData with this ⬇️
 async function fetchDashboardData(role) {
-    // Map both possible role formats
-    const roleMap = {
-        'super_admin': 'superadmin',
-        'superadmin': 'superadmin',
-        'admin': 'admin',
-        'teacher': 'teacher',
-        'parent': 'parent',
-        'student': 'student'
-    };
+    console.log('Fetching dashboard for role:', role);
     
-    const mappedRole = roleMap[role];
-    if (!mappedRole) {
-        throw new Error(`Invalid role: ${role}`);
-    }
+    // Direct mapping - handle super_admin explicitly
+    let endpoint;
     
-    const endpoints = {
-        superadmin: '/api/super-admin/overview',
-        admin: '/api/admin/dashboard',
-        teacher: '/api/teacher/dashboard',
-        parent: '/api/parent/dashboard',
-        student: '/api/student/dashboard'
-    };
-    
-    const endpoint = endpoints[mappedRole];
-    if (!endpoint) {
-        throw new Error(`No endpoint for role: ${role}`);
+    if (role === 'super_admin' || role === 'superadmin') {
+        endpoint = '/api/super-admin/overview';
+    } else if (role === 'admin') {
+        endpoint = '/api/admin/dashboard';
+    } else if (role === 'teacher') {
+        endpoint = '/api/teacher/dashboard';
+    } else if (role === 'parent') {
+        endpoint = '/api/parent/dashboard';
+    } else if (role === 'student') {
+        endpoint = '/api/student/dashboard';
+    } else {
+        console.error('Invalid role:', role);
+        return {};
     }
     
     try {
+        console.log('Fetching from endpoint:', endpoint);
         const response = await apiRequest(endpoint);
         return response.data || response;
     } catch (error) {
         console.error(`Failed to fetch ${role} dashboard:`, error);
-        return {};
+        return {}; // Return empty object to prevent crashes
     }
 }
 
@@ -381,6 +374,7 @@ window.getSchools = getSchools;
 window.createSchool = createSchool;
 window.getPendingNameRequests = getPendingNameRequests;
 window.approveNameChange = approveNameChange;
+
 
 
 
