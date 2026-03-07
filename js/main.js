@@ -3335,75 +3335,75 @@ function updateSidebar(role) {
     
     if (!nav) return;
     
-    const sidebarConfig = {
-        super_admin: {
-            main: [
-                { icon: 'shield', label: 'Dashboard', section: 'dashboard' },
-                { icon: 'building-2', label: 'Schools', section: 'schools' },
-                { icon: 'check-circle', label: 'School Approvals', section: 'school-approvals' },
-                { icon: 'file-edit', label: 'Name Changes', section: 'name-change-requests' },
-                { icon: 'credit-card', label: 'Paid Schools', section: 'paid-schools' },
-                { icon: 'activity', label: 'Platform Health', section: 'platform-health' }
-            ],
-            settings: [
-                { icon: 'settings', label: 'Platform Settings', section: 'settings' },
-                { icon: 'help-circle', label: 'Help', section: 'help' }
-            ]
-        },
-        admin: {
-            main: [
-                { icon: 'school', label: 'Dashboard', section: 'dashboard' },
-                { icon: 'users', label: 'Teachers', section: 'teachers' },
-                { icon: 'calendar', label: 'Calendar', section: 'calendar' },
-                { icon: 'clock', label: 'Duty', section: 'duty' },
-                { icon: 'book-open', label: 'Custom Subjects', section: 'custom-subjects' }
-            ],
-            settings: [
-                { icon: 'settings', label: 'School Settings', section: 'settings' },
-                { icon: 'help-circle', label: 'Help', section: 'help' }
-            ]
-        },
-        teacher: {
-            main: [
-                { icon: 'users', label: 'Dashboard', section: 'dashboard' },
-                { icon: 'user-plus', label: 'Students', section: 'students' },
-                { icon: 'calendar-check', label: 'Attendance', section: 'attendance' },
-                { icon: 'trending-up', label: 'Grades', section: 'grades' },
-                { icon: 'check-square', label: 'Tasks', section: 'tasks' },
-                { icon: 'clock', label: 'My Duty', section: 'duty' },
-                { icon: 'message-circle', label: 'Staff Chat', section: 'chat' }
-            ],
-            settings: [
-                { icon: 'settings', label: 'My Settings', section: 'settings' },
-                { icon: 'help-circle', label: 'Help', section: 'help' }
-            ]
-        },
-        parent: {
-            main: [
-                { icon: 'activity', label: 'Dashboard', section: 'dashboard' },
-                { icon: 'trending-up', label: 'Progress', section: 'progress' },
-                { icon: 'credit-card', label: 'Payments', section: 'payments' },
-                { icon: 'message-circle', label: 'Messages', section: 'chat' }
-            ],
-            settings: [
-                { icon: 'settings', label: 'My Settings', section: 'settings' },
-                { icon: 'help-circle', label: 'Help', section: 'help' }
-            ]
-        },
-        student: {
-            main: [
-                { icon: 'layout-dashboard', label: 'Dashboard', section: 'dashboard' },
-                { icon: 'message-circle', label: 'Study Chat', section: 'chat' },
-                { icon: 'bot', label: 'AI Tutor', section: 'ai-tutor' },
-                { icon: 'calendar', label: 'Schedule', section: 'schedule' },
-                { icon: 'trending-up', label: 'My Grades', section: 'grades' }
-            ],
-            settings: [
-                { icon: 'settings', label: 'My Settings', section: 'settings' },
-                { icon: 'help-circle', label: 'Help', section: 'help' }
-            ]
-        }
-    };
+const sidebarConfig = {
+    'super_admin': {  // ← Notice the quotes and underscore
+        main: [
+            { icon: 'shield', label: 'Dashboard', section: 'dashboard' },
+            { icon: 'building-2', label: 'Schools', section: 'schools' },
+            { icon: 'check-circle', label: 'School Approvals', section: 'school-approvals' },
+            { icon: 'file-edit', label: 'Name Changes', section: 'name-change-requests' },
+            { icon: 'credit-card', label: 'Paid Schools', section: 'paid-schools' },
+            { icon: 'activity', label: 'Platform Health', section: 'platform-health' }
+        ],
+        settings: [
+            { icon: 'settings', label: 'Platform Settings', section: 'settings' },
+            { icon: 'help-circle', label: 'Help', section: 'help' }
+        ]
+    },
+    'admin': {
+        main: [
+            { icon: 'school', label: 'Dashboard', section: 'dashboard' },
+            { icon: 'users', label: 'Teachers', section: 'teachers' },
+            { icon: 'calendar', label: 'Calendar', section: 'calendar' },
+            { icon: 'clock', label: 'Duty', section: 'duty' },
+            { icon: 'book-open', label: 'Custom Subjects', section: 'custom-subjects' }
+        ],
+        settings: [
+            { icon: 'settings', label: 'School Settings', section: 'settings' },
+            { icon: 'help-circle', label: 'Help', section: 'help' }
+        ]
+    },
+    'teacher': {
+        main: [
+            { icon: 'users', label: 'Dashboard', section: 'dashboard' },
+            { icon: 'user-plus', label: 'Students', section: 'students' },
+            { icon: 'calendar-check', label: 'Attendance', section: 'attendance' },
+            { icon: 'trending-up', label: 'Grades', section: 'grades' },
+            { icon: 'check-square', label: 'Tasks', section: 'tasks' },
+            { icon: 'clock', label: 'My Duty', section: 'duty' },
+            { icon: 'message-circle', label: 'Staff Chat', section: 'chat' }
+        ],
+        settings: [
+            { icon: 'settings', label: 'My Settings', section: 'settings' },
+            { icon: 'help-circle', label: 'Help', section: 'help' }
+        ]
+    },
+    'parent': {
+        main: [
+            { icon: 'activity', label: 'Dashboard', section: 'dashboard' },
+            { icon: 'trending-up', label: 'Progress', section: 'progress' },
+            { icon: 'credit-card', label: 'Payments', section: 'payments' },
+            { icon: 'message-circle', label: 'Messages', section: 'chat' }
+        ],
+        settings: [
+            { icon: 'settings', label: 'My Settings', section: 'settings' },
+            { icon: 'help-circle', label: 'Help', section: 'help' }
+        ]
+    },
+    'student': {
+        main: [
+            { icon: 'layout-dashboard', label: 'Dashboard', section: 'dashboard' },
+            { icon: 'message-circle', label: 'Study Chat', section: 'chat' },
+            { icon: 'bot', label: 'AI Tutor', section: 'ai-tutor' },
+            { icon: 'calendar', label: 'Schedule', section: 'schedule' },
+            { icon: 'trending-up', label: 'My Grades', section: 'grades' }
+        ],
+        settings: [
+            { icon: 'settings', label: 'My Settings', section: 'settings' },
+            { icon: 'help-circle', label: 'Help', section: 'help' }
+        ]
+    }
+};
     
     const config = sidebarConfig[role] || sidebarConfig.student;
     
