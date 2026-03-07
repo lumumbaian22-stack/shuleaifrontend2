@@ -92,36 +92,64 @@ async function refreshAuthToken() {
     return false;
 }
 
-// ⬇️ COMPLETELY REPLACE your existing fetchDashboardData with this ⬇️
+// ⬇️ REPLACE your entire fetchDashboardData with this EXACT code ⬇️
 async function fetchDashboardData(role) {
     console.log('Fetching dashboard for role:', role);
     
-    // Direct mapping - handle super_admin explicitly
-    let endpoint;
-    
-    if (role === 'super_admin' || role === 'superadmin') {
-        endpoint = '/api/super-admin/overview';
-    } else if (role === 'admin') {
-        endpoint = '/api/admin/dashboard';
-    } else if (role === 'teacher') {
-        endpoint = '/api/teacher/dashboard';
-    } else if (role === 'parent') {
-        endpoint = '/api/parent/dashboard';
-    } else if (role === 'student') {
-        endpoint = '/api/student/dashboard';
-    } else {
-        console.error('Invalid role:', role);
-        return {};
+    // Handle super_admin explicitly
+    if (role === 'super_admin') {
+        try {
+            const response = await apiRequest('/api/super-admin/overview');
+            return response.data || response;
+        } catch (error) {
+            console.error('Failed to fetch super_admin dashboard:', error);
+            return {};
+        }
     }
     
-    try {
-        console.log('Fetching from endpoint:', endpoint);
-        const response = await apiRequest(endpoint);
-        return response.data || response;
-    } catch (error) {
-        console.error(`Failed to fetch ${role} dashboard:`, error);
-        return {}; // Return empty object to prevent crashes
+    // Handle other roles
+    if (role === 'admin') {
+        try {
+            const response = await apiRequest('/api/admin/dashboard');
+            return response.data || response;
+        } catch (error) {
+            console.error('Failed to fetch admin dashboard:', error);
+            return {};
+        }
     }
+    
+    if (role === 'teacher') {
+        try {
+            const response = await apiRequest('/api/teacher/dashboard');
+            return response.data || response;
+        } catch (error) {
+            console.error('Failed to fetch teacher dashboard:', error);
+            return {};
+        }
+    }
+    
+    if (role === 'parent') {
+        try {
+            const response = await apiRequest('/api/parent/dashboard');
+            return response.data || response;
+        } catch (error) {
+            console.error('Failed to fetch parent dashboard:', error);
+            return {};
+        }
+    }
+    
+    if (role === 'student') {
+        try {
+            const response = await apiRequest('/api/student/dashboard');
+            return response.data || response;
+        } catch (error) {
+            console.error('Failed to fetch student dashboard:', error);
+            return {};
+        }
+    }
+    
+    console.error('Invalid role:', role);
+    return {};
 }
 
 // File upload helper
@@ -374,6 +402,7 @@ window.getSchools = getSchools;
 window.createSchool = createSchool;
 window.getPendingNameRequests = getPendingNameRequests;
 window.approveNameChange = approveNameChange;
+
 
 
 
