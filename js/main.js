@@ -646,18 +646,37 @@ async function showDashboardSection(section) {
 }
 
 function renderDashboardSection(role, section, data) {
+    console.log('Rendering for role:', role);
+    
+    // Create a map of role to renderer function
     const renderers = {
-        super_admin: renderSuperAdminSection,  // ← Add underscore
-        admin: renderAdminSection,
-        teacher: renderTeacherSection,
-        parent: renderParentSection,
-        student: renderStudentSection
+        'super_admin': renderSuperAdminSection,
+        'superadmin': renderSuperAdminSection,
+        'super': renderSuperAdminSection,
+        'admin': renderAdminSection,
+        'teacher': renderTeacherSection,
+        'parent': renderParentSection,
+        'student': renderStudentSection
     };
     
-    // Add debug log
-    console.log('Rendering for role:', role, 'Renderer exists:', !!renderers[role]);
+    // Try exact match first
+    let renderer = renderers[role];
     
-    return renderers[role]?.(section, data) || `<div class="text-center py-12">Section not found</div>`;
+    // If no exact match, try normalized version
+    if (!renderer) {
+        const normalizedRole = role.replace(/_/g, '').toLowerCase();
+        if (normalizedRole === 'superadmin') {
+            renderer = renderSuperAdminSection;
+        }
+    }
+    
+    console.log('Using renderer:', renderer ? 'found' : 'not found');
+    
+    if (renderer) {
+        return renderer(section, data);
+    }
+    
+    return `<div class="text-center py-12">Section not found for role: ${role}</div>`;
 }
 
 // Settings Renderers
@@ -3888,4 +3907,3 @@ window.updateStudentGrade = updateStudentGrade;
 window.saveStudentGrade = saveStudentGrade;
 window.initRoleCharts = initRoleCharts;
 window.updateChartTheme = updateChartTheme;
-
