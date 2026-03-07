@@ -647,12 +647,15 @@ async function showDashboardSection(section) {
 
 function renderDashboardSection(role, section, data) {
     const renderers = {
-        superadmin: renderSuperAdminSection,
+        super_admin: renderSuper_AdminSection,  // ← Add underscore
         admin: renderAdminSection,
         teacher: renderTeacherSection,
         parent: renderParentSection,
         student: renderStudentSection
     };
+    
+    // Add debug log
+    console.log('Rendering for role:', role, 'Renderer exists:', !!renderers[role]);
     
     return renderers[role]?.(section, data) || `<div class="text-center py-12">Section not found</div>`;
 }
@@ -3885,4 +3888,3 @@ window.updateStudentGrade = updateStudentGrade;
 window.saveStudentGrade = saveStudentGrade;
 window.initRoleCharts = initRoleCharts;
 window.updateChartTheme = updateChartTheme;
-
