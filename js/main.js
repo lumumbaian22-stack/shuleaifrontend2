@@ -165,6 +165,17 @@ function getGradeFromScore(score, curriculum, level) {
     return { grade: 'N/A', description: 'Invalid score' };
 }
 
+// DEBUG: Check if API functions are loaded
+console.log('Checking API functions:');
+console.log('- window.fetchDashboardData:', typeof window.fetchDashboardData);
+console.log('- window.apiRequest:', typeof window.apiRequest);
+
+if (typeof window.fetchDashboardData !== 'function') {
+    console.error('❌ fetchDashboardData is NOT defined! api.js may not be loading.');
+} else {
+    console.log('✅ fetchDashboardData is ready!');
+}
+
 // Main application variables
 let currentRole = null;
 let clickCount = 0;
@@ -3874,3 +3885,4 @@ window.updateStudentGrade = updateStudentGrade;
 window.saveStudentGrade = saveStudentGrade;
 window.initRoleCharts = initRoleCharts;
 window.updateChartTheme = updateChartTheme;
+
