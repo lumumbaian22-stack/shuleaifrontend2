@@ -647,7 +647,7 @@ async function showDashboardSection(section) {
 
 function renderDashboardSection(role, section, data) {
     const renderers = {
-        super_admin: renderSuper_AdminSection,  // ← Add underscore
+        super_admin: renderSuperAdminSection,  // ← Add underscore
         admin: renderAdminSection,
         teacher: renderTeacherSection,
         parent: renderParentSection,
@@ -3888,3 +3888,4 @@ window.updateStudentGrade = updateStudentGrade;
 window.saveStudentGrade = saveStudentGrade;
 window.initRoleCharts = initRoleCharts;
 window.updateChartTheme = updateChartTheme;
+
