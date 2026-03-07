@@ -92,6 +92,25 @@ async function refreshAuthToken() {
     return false;
 }
 
+// ⬇️ ADD THIS MISSING FUNCTION ⬇️
+async function fetchDashboardData(role) {
+    const endpoints = {
+        superadmin: '/api/super-admin/overview',
+        admin: '/api/admin/dashboard',
+        teacher: '/api/teacher/dashboard',
+        parent: '/api/parent/dashboard',
+        student: '/api/student/dashboard'
+    };
+    
+    try {
+        const response = await apiRequest(endpoints[role]);
+        return response.data || response;
+    } catch (error) {
+        console.error(`Failed to fetch ${role} dashboard:`, error);
+        throw error;
+    }
+}
+
 // File upload helper
 async function uploadFile(endpoint, file, onProgress) {
     const formData = new FormData();
@@ -311,6 +330,7 @@ async function approveNameChange(requestId) {
 
 // Export all functions to window (preserves your existing calls)
 window.apiRequest = apiRequest;
+window.fetchDashboardData = fetchDashboardData;
 window.uploadFile = uploadFile;
 window.getCurrentUser = getCurrentUser;
 window.getStudentGrades = getStudentGrades;
@@ -341,3 +361,4 @@ window.getSchools = getSchools;
 window.createSchool = createSchool;
 window.getPendingNameRequests = getPendingNameRequests;
 window.approveNameChange = approveNameChange;
+
