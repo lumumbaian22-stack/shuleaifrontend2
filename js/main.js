@@ -417,63 +417,48 @@ async function handleAuthSubmit() {
         } else {
             // SIGNUP - Handle based on role
             if (currentRole === 'teacher') {
-                // TEACHER: Use teacherSignup
+                // TEACHER: Use teacherSignup (NOT register)
+                console.log('📝 Teacher signup with data:');
                 const teacherData = {
                     name: document.getElementById('auth-name')?.value,
-                    email,
-                    password,
+                    email: email,
+                    password: password,
                     schoolId: document.getElementById('auth-school-id')?.value,
                     subjects: [document.getElementById('auth-subject')?.value]
                 };
+                console.log('Teacher data:', teacherData);
                 
                 await teacherSignup(teacherData);
-                showToast('Teacher registration submitted for approval! Please wait for admin approval.', 'success');
+                showToast('Teacher registration submitted for approval!', 'success');
                 openAuthModal(currentRole, 'signin');
             } else {
                 // ADMIN/PARENT/STUDENT: Use register
                 const userData = {
                     name: document.getElementById('auth-name')?.value,
-                    email,
-                    password,
+                    email: email,
+                    password: password,
                     role: currentRole
                 };
                 
                 if (currentRole === 'admin') {
-                    const schoolLevel = document.getElementById('auth-school-level')?.value;
-                    const curriculum = document.getElementById('auth-curriculum')?.value;
-                    
                     userData.schoolName = document.getElementById('auth-school-name')?.value;
-                    userData.schoolLevel = schoolLevel;
-                    userData.curriculum = curriculum;
-                    
-                    // Initialize school settings with curriculum and level
-                    schoolSettings = {
-                        curriculum: curriculum,
-                        schoolName: userData.schoolName,
-                        schoolLevel: schoolLevel,
-                        terms: [
-                            { name: 'Term 1', startDate: '2024-01-15', endDate: '2024-04-12' },
-                            { name: 'Term 2', startDate: '2024-05-06', endDate: '2024-08-09' },
-                            { name: 'Term 3', startDate: '2024-09-02', endDate: '2024-11-29' }
-                        ],
-                        customSubjects: []
-                    };
-                    localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings));
+                    userData.curriculum = document.getElementById('auth-curriculum')?.value || 'cbc';
                 } else if (currentRole === 'parent') {
-                    userData.schoolCode = document.getElementById('auth-school-code')?.value || 'SCH-2026-00005';
+                    userData.schoolCode = 'SCH-2026-00005'; // Use your existing school code
                     userData.elimuid = document.getElementById('auth-elimuid')?.value;
                 } else if (currentRole === 'student') {
-                    userData.schoolCode = document.getElementById('auth-school-code')?.value || 'SCH-2026-00005';
+                    userData.schoolCode = 'SCH-2026-00005'; // Use your existing school code
                     userData.elimuid = document.getElementById('auth-elimuid')?.value;
-                    userData.grade = document.getElementById('auth-grade')?.value || 'Not Assigned';
                 }
                 
+                console.log('Registering with data:', userData);
                 await register(userData);
                 showToast('Registration successful! Please sign in.', 'success');
                 openAuthModal(currentRole, 'signin');
             }
         }
     } catch (error) {
+        console.error('Auth error:', error);
         showToast(error.message || 'Authentication failed', 'error');
     } finally {
         hideLoading();
@@ -3955,3 +3940,4 @@ window.updateStudentGrade = updateStudentGrade;
 window.saveStudentGrade = saveStudentGrade;
 window.initRoleCharts = initRoleCharts;
 window.updateChartTheme = updateChartTheme;
+
