@@ -2941,7 +2941,14 @@ window.updateCurriculumInfo = function(curriculum) {
 
 window.addTerm = function() {
     const termsContainer = document.querySelector('.space-y-4');
-    if (!termsContainer) return;
+    if (!termsContainer) {
+        console.error('Terms container not found');
+        return;
+    }
+    
+    // Find the parent div that contains the terms
+    const termsParent = termsContainer.closest('.space-y-4');
+    if (!termsParent) return;
     
     const termCount = document.querySelectorAll('.grid.grid-cols-3').length;
     const newTermDiv = document.createElement('div');
@@ -2951,7 +2958,14 @@ window.addTerm = function() {
         <input type="date" class="term-start rounded-lg border border-input bg-background px-3 py-2 text-sm">
         <input type="date" class="term-end rounded-lg border border-input bg-background px-3 py-2 text-sm">
     `;
-    termsContainer.insertBefore(newTermDiv, document.querySelector('button[onclick="addTerm()"]').parentNode);
+    
+    // Insert before the "Add Term" button
+    const addButton = termsContainer.querySelector('button[onclick="addTerm()"]');
+    if (addButton && addButton.parentNode) {
+        termsContainer.insertBefore(newTermDiv, addButton.parentNode);
+    } else {
+        termsContainer.appendChild(newTermDiv);
+    }
 };
 
 window.addCustomSubject = function() {
