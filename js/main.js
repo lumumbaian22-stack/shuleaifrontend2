@@ -415,45 +415,63 @@ async function handleAuthSubmit() {
             showToast('Logged in successfully', 'success');
             await showDashboard(currentRole);
         } else {
-            // Handle signup based on role
-            const userData = {
-                name: document.getElementById('auth-name')?.value,
-                email,
-                password,
-                role: currentRole
-            };
-            
-            if (currentRole === 'admin') {
-                const schoolLevel = document.getElementById('auth-school-level')?.value;
-                const curriculum = document.getElementById('auth-curriculum')?.value;
-                
-                userData.schoolName = document.getElementById('auth-school-name')?.value;
-                userData.schoolLevel = schoolLevel;
-                userData.curriculum = curriculum;
-                
-                // Initialize school settings with curriculum and level
-                schoolSettings = {
-                    curriculum: curriculum,
-                    schoolName: userData.schoolName,
-                    schoolLevel: schoolLevel,
-                    terms: [
-                        { name: 'Term 1', startDate: '2024-01-15', endDate: '2024-04-12' },
-                        { name: 'Term 2', startDate: '2024-05-06', endDate: '2024-08-09' },
-                        { name: 'Term 3', startDate: '2024-09-02', endDate: '2024-11-29' }
-                    ],
-                    customSubjects: []
+            // SIGNUP - Handle based on role
+            if (currentRole === 'teacher') {
+                // TEACHER: Use teacherSignup
+                const teacherData = {
+                    name: document.getElementById('auth-name')?.value,
+                    email,
+                    password,
+                    schoolId: document.getElementById('auth-school-id')?.value,
+                    subjects: [document.getElementById('auth-subject')?.value]
                 };
-                localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings));
-            } else if (currentRole === 'teacher') {
-                userData.schoolId = document.getElementById('auth-school-id')?.value;
-                userData.subject = document.getElementById('auth-subject')?.value;
-            } else if (currentRole === 'parent' || currentRole === 'student') {
-                userData.elimuid = document.getElementById('auth-elimuid')?.value;
+                
+                await teacherSignup(teacherData);
+                showToast('Teacher registration submitted for approval! Please wait for admin approval.', 'success');
+                openAuthModal(currentRole, 'signin');
+            } else {
+                // ADMIN/PARENT/STUDENT: Use register
+                const userData = {
+                    name: document.getElementById('auth-name')?.value,
+                    email,
+                    password,
+                    role: currentRole
+                };
+                
+                if (currentRole === 'admin') {
+                    const schoolLevel = document.getElementById('auth-school-level')?.value;
+                    const curriculum = document.getElementById('auth-curriculum')?.value;
+                    
+                    userData.schoolName = document.getElementById('auth-school-name')?.value;
+                    userData.schoolLevel = schoolLevel;
+                    userData.curriculum = curriculum;
+                    
+                    // Initialize school settings with curriculum and level
+                    schoolSettings = {
+                        curriculum: curriculum,
+                        schoolName: userData.schoolName,
+                        schoolLevel: schoolLevel,
+                        terms: [
+                            { name: 'Term 1', startDate: '2024-01-15', endDate: '2024-04-12' },
+                            { name: 'Term 2', startDate: '2024-05-06', endDate: '2024-08-09' },
+                            { name: 'Term 3', startDate: '2024-09-02', endDate: '2024-11-29' }
+                        ],
+                        customSubjects: []
+                    };
+                    localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings));
+                } else if (currentRole === 'parent') {
+                    userData.schoolCode = document.getElementById('auth-school-code')?.value || 'SCH-2026-00005';
+                    userData.elimuid = document.getElementById('auth-elimuid')?.value;
+                } else if (currentRole === 'student') {
+                    userData.schoolCode = document.getElementById('auth-school-code')?.value || 'SCH-2026-00005';
+                    userData.elimuid = document.getElementById('auth-elimuid')?.value;
+                    userData.grade = document.getElementById('auth-grade')?.value || 'Not Assigned';
+                }
+                
+                await register(userData);
+                showToast('Registration successful! Please sign in.', 'success');
+                openAuthModal(currentRole, 'signin');
             }
-            
-            await register(userData);
-            showToast('Registration successful! Please sign in.', 'success');
-            openAuthModal(currentRole, 'signin');
         }
     } catch (error) {
         showToast(error.message || 'Authentication failed', 'error');
