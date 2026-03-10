@@ -415,47 +415,85 @@ async function handleAuthSubmit() {
             showToast('Logged in successfully', 'success');
             await showDashboard(currentRole);
         } else {
-            // SIGNUP - Handle based on role
+            // SIGNUP - Get common fields
+            const name = document.getElementById('auth-name')?.value;
+            
+            // TEACHER signup - use teacherSignup
             if (currentRole === 'teacher') {
-                // TEACHER: Use teacherSignup (NOT register)
-                console.log('📝 Teacher signup with data:');
                 const teacherData = {
-                    name: document.getElementById('auth-name')?.value,
+                    name: name,
                     email: email,
                     password: password,
                     schoolId: document.getElementById('auth-school-id')?.value,
                     subjects: [document.getElementById('auth-subject')?.value]
                 };
-                console.log('Teacher data:', teacherData);
                 
                 await teacherSignup(teacherData);
                 showToast('Teacher registration submitted for approval!', 'success');
                 openAuthModal(currentRole, 'signin');
-            } else {
-                // ADMIN/PARENT/STUDENT: Use register
+                hideLoading();
+                closeAuthModal();
+                return;
+            }
+            
+            // ADMIN signup
+            if (currentRole === 'admin') {
                 const userData = {
-                    name: document.getElementById('auth-name')?.value,
+                    name: name,
                     email: email,
                     password: password,
-                    role: currentRole
+                    role: 'admin',
+                    schoolName: document.getElementById('auth-school-name')?.value,
+                    curriculum: document.getElementById('auth-curriculum')?.value || 'cbc'
                 };
                 
-                if (currentRole === 'admin') {
-                    userData.schoolName = document.getElementById('auth-school-name')?.value;
-                    userData.curriculum = document.getElementById('auth-curriculum')?.value || 'cbc';
-                } else if (currentRole === 'parent') {
-                    userData.schoolCode = 'SCH-2026-00005'; // Use your existing school code
-                    userData.elimuid = document.getElementById('auth-elimuid')?.value;
-                } else if (currentRole === 'student') {
-                    userData.schoolCode = 'SCH-2026-00005'; // Use your existing school code
-                    userData.elimuid = document.getElementById('auth-elimuid')?.value;
-                }
+                await register(userData);
+                showToast('Registration submitted for approval!', 'success');
+                openAuthModal(currentRole, 'signin');
+                hideLoading();
+                closeAuthModal();
+                return;
+            }
+            
+            // PARENT signup
+            if (currentRole === 'parent') {
+                const userData = {
+                    name: name,
+                    email: email,
+                    password: password,
+                    role: 'parent',
+                    schoolCode: 'SCH-2026-00005',
+                    elimuid: document.getElementById('auth-elimuid')?.value
+                };
                 
-                console.log('Registering with data:', userData);
                 await register(userData);
                 showToast('Registration successful! Please sign in.', 'success');
                 openAuthModal(currentRole, 'signin');
+                hideLoading();
+                closeAuthModal();
+                return;
             }
+            
+            // STUDENT signup
+            if (currentRole === 'student') {
+                const userData = {
+                    name: name,
+                    email: email,
+                    password: password,
+                    role: 'student',
+                    schoolCode: 'SCH-2026-00005',
+                    elimuid: document.getElementById('auth-elimuid')?.value
+                };
+                
+                await register(userData);
+                showToast('Registration successful! Please sign in.', 'success');
+                openAuthModal(currentRole, 'signin');
+                hideLoading();
+                closeAuthModal();
+                return;
+            }
+            
+            showToast('Invalid role selected', 'error');
         }
     } catch (error) {
         console.error('Auth error:', error);
