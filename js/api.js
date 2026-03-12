@@ -183,7 +183,6 @@ const superAdminAPI = {
 
 // ============ ADMIN ENDPOINTS ============
 const adminAPI = {
-    getDashboard: () => apiRequest('/api/admin/dashboard'),
     getTeachers: () => apiRequest('/api/admin/teachers'),
     getStudents: () => apiRequest('/api/admin/students'),
     getParents: () => apiRequest('/api/admin/parents'),
@@ -225,7 +224,6 @@ const adminAPI = {
 
 // ============ TEACHER ENDPOINTS ============
 const teacherAPI = {
-    getDashboard: () => apiRequest('/api/teacher/dashboard'),
     getMyStudents: () => apiRequest('/api/teacher/students'),
     addStudent: (data) => 
         apiRequest('/api/teacher/students', {
@@ -271,10 +269,9 @@ const parentAPI = {
 
 // ============ STUDENT ENDPOINTS ============
 const studentAPI = {
-    getDashboard: () => apiRequest('/api/student/dashboard'),
-    getMaterials: () => apiRequest('/api/student/materials'),
     getGrades: () => apiRequest('/api/student/grades'),
     getAttendance: () => apiRequest('/api/student/attendance'),
+    getMaterials: () => apiRequest('/api/student/materials'),
     sendMessage: (receiverId, content) => 
         apiRequest('/api/student/message', {
             method: 'POST',
