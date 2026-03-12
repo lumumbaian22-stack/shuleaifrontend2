@@ -149,12 +149,12 @@ function logout() {
 
 // Get current user
 function getCurrentUser() {
-    return currentUser || JSON.parse(localStorage.getItem('user'));
+    return currentUser || JSON.parse(localStorage.getItem('user') || '{}');
 }
 
 // Get current school
 function getCurrentSchool() {
-    return currentSchool || JSON.parse(localStorage.getItem('school'));
+    return currentSchool || JSON.parse(localStorage.getItem('school') || '{}');
 }
 
 // Export auth functions
