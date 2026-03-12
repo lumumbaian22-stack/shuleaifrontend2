@@ -1,0 +1,281 @@
+<div class="space-y-6 animate-fade-in">
+    <!-- School Profile Card -->
+    <div class="rounded-xl border bg-card p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 card-hover">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <h2 class="text-2xl font-bold" id="school-name">Nairobi High School</h2>
+                    <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full" id="school-level">Secondary</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <p class="text-sm"><span class="font-mono bg-muted px-2 py-1 rounded" id="school-id">SCH-ID: NHS-2024-001</span></p>
+                    <button onclick="showNameChangeModal()" class="text-sm text-primary hover:underline">Change School Name ($50)</button>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
+                <p class="text-xs text-muted-foreground">Share this ID with teachers</p>
+                <p class="text-lg font-mono font-bold" id="display-school-id">NHS-2024-001</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stats Grid -->
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-xl border bg-card p-6 card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-muted-foreground">Total Students</p>
+                    <h3 class="text-2xl font-bold mt-1" id="total-students">543</h3>
+                    <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
+                        <i data-lucide="trending-up" class="h-3 w-3"></i>
+                        +<span id="student-growth">12</span>% from last term
+                    </p>
+                </div>
+                <div class="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="rounded-xl border bg-card p-6 card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-muted-foreground">Teachers</p>
+                    <h3 class="text-2xl font-bold mt-1" id="total-teachers">28</h3>
+                    <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
+                        <i data-lucide="trending-up" class="h-3 w-3"></i>
+                        +<span id="pending-teachers">4</span> pending approval
+                    </p>
+                </div>
+                <div class="h-12 w-12 rounded-lg bg-violet-100 flex items-center justify-center">
+                    <i data-lucide="user-plus" class="h-6 w-6 text-violet-600"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="rounded-xl border bg-card p-6 card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-muted-foreground">Classes</p>
+                    <h3 class="text-2xl font-bold mt-1" id="total-classes">16</h3>
+                    <p class="text-xs text-muted-foreground mt-1">Across <span id="total-grades">4</span> grades</p>
+                </div>
+                <div class="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <i data-lucide="book-open" class="h-6 w-6 text-emerald-600"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="rounded-xl border bg-card p-6 card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-muted-foreground">Attendance Rate</p>
+                    <h3 class="text-2xl font-bold mt-1" id="attendance-rate">94.2%</h3>
+                    <p class="text-xs text-yellow-600 mt-1 flex items-center gap-1">
+                        <i data-lucide="alert-circle" class="h-3 w-3"></i>
+                        -<span id="attendance-variance">2</span>% from target
+                    </p>
+                </div>
+                <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
+                    <i data-lucide="calendar-check" class="h-6 w-6 text-amber-600"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row -->
+    <div class="grid gap-4 lg:grid-cols-2">
+        <div class="rounded-xl border bg-card p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold">Enrollment Trends</h3>
+                <select class="text-sm border rounded-md px-2 py-1 bg-background" onchange="updateAdminChart(this.value)">
+                    <option value="year">This Year</option>
+                    <option value="last-year">Last Year</option>
+                </select>
+            </div>
+            <div class="chart-container h-64">
+                <canvas id="admin-enrollmentChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="rounded-xl border bg-card p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold">Grade Distribution</h3>
+                <select class="text-sm border rounded-md px-2 py-1 bg-background" onchange="updateAdminPieChart(this.value)">
+                    <option value="all">All Grades</option>
+                    <option value="9">Grade 9</option>
+                    <option value="10">Grade 10</option>
+                    <option value="11">Grade 11</option>
+                    <option value="12">Grade 12</option>
+                </select>
+            </div>
+            <div class="chart-container h-64">
+                <canvas id="admin-gradeChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Teacher Approval Queue -->
+    <div class="rounded-xl border bg-card overflow-hidden">
+        <div class="p-4 border-b flex justify-between items-center">
+            <h3 class="font-semibold">Pending Teacher Approvals</h3>
+            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full" id="pending-count">4 new</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-muted/50">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-medium">Teacher</th>
+                        <th class="px-4 py-3 text-left font-medium">Subject</th>
+                        <th class="px-4 py-3 text-left font-medium">Applied</th>
+                        <th class="px-4 py-3 text-right font-medium">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y" id="pending-teachers-table">
+                    <tr class="hover:bg-accent/50 transition-colors">
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-3">
+                                <div class="h-8 w-8 rounded-full bg-violet-100 flex items-center justify-center">
+                                    <span class="font-medium text-violet-700 text-sm">JD</span>
+                                </div>
+                                <span class="font-medium">Jane Doe</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">Mathematics</td>
+                        <td class="px-4 py-3">2 days ago</td>
+                        <td class="px-4 py-3 text-right">
+                            <button onclick="approveTeacher('1')" class="p-2 hover:bg-green-100 rounded-lg text-green-600">
+                                <i data-lucide="check" class="h-4 w-4"></i>
+                            </button>
+                            <button onclick="rejectTeacher('1')" class="p-2 hover:bg-red-100 rounded-lg text-red-600">
+                                <i data-lucide="x" class="h-4 w-4"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Calendar & Duty Management -->
+    <div class="grid gap-4 md:grid-cols-2">
+        <div class="rounded-xl border bg-card p-6">
+            <h3 class="font-semibold mb-4">School Calendar</h3>
+            <div class="space-y-3">
+                <div class="flex items-center gap-2">
+                    <input type="date" id="event-date" class="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                    <input type="text" id="event-name" placeholder="Event" class="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                    <button onclick="addCalendarEvent()" class="px-3 py-2 bg-primary text-primary-foreground rounded-lg">Add</button>
+                </div>
+                <div class="mt-4 space-y-2" id="calendar-events">
+                    <div class="flex justify-between text-sm p-2 bg-muted/30 rounded">
+                        <span>Term 1 Start</span>
+                        <span class="font-mono">2024-01-15</span>
+                    </div>
+                    <div class="flex justify-between text-sm p-2 bg-muted/30 rounded">
+                        <span>Mid-term Break</span>
+                        <span class="font-mono">2024-03-10</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="rounded-xl border bg-card p-6">
+            <h3 class="font-semibold mb-4">Duty Assignment</h3>
+            <div class="space-y-3">
+                <select id="duty-teacher" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                    <option value="">Select Teacher</option>
+                    <option value="1">Mr. Kamau</option>
+                    <option value="2">Ms. Atieno</option>
+                </select>
+                <select id="duty-slot" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                    <option value="">Select Duty</option>
+                    <option value="gate-morning">Main Gate (7:30-10:30)</option>
+                    <option value="gate-afternoon">Main Gate (10:30-13:30)</option>
+                    <option value="dining-morning">Dining Hall (7:30-10:30)</option>
+                    <option value="dining-afternoon">Dining Hall (10:30-13:30)</option>
+                    <option value="library">Library (13:30-16:30)</option>
+                </select>
+                <button onclick="assignDuty()" class="w-full bg-primary text-primary-foreground py-2 rounded-lg">Assign Duty</button>
+            </div>
+            
+            <div class="mt-4">
+                <h4 class="text-sm font-medium mb-2">Today's Duty Roster</h4>
+                <div class="space-y-2" id="today-duty">
+                    <div class="flex justify-between text-sm p-2 bg-muted/30 rounded">
+                        <span>Main Gate</span>
+                        <span>Mr. Kamau</span>
+                    </div>
+                    <div class="flex justify-between text-sm p-2 bg-muted/30 rounded">
+                        <span>Dining Hall</span>
+                        <span>Ms. Atieno</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Personal Tools -->
+    <div class="grid gap-4 md:grid-cols-2">
+        <div class="rounded-xl border bg-card p-6">
+            <h3 class="font-semibold mb-4">My Tasks</h3>
+            <div class="space-y-2" id="my-tasks">
+                <div class="flex items-center gap-2 p-2 hover:bg-accent/50 rounded">
+                    <input type="checkbox" class="rounded">
+                    <span class="text-sm">Review teacher applications</span>
+                </div>
+                <div class="flex items-center gap-2 p-2 hover:bg-accent/50 rounded">
+                    <input type="checkbox" class="rounded">
+                    <span class="text-sm">Prepare staff meeting agenda</span>
+                </div>
+            </div>
+            <button onclick="addTask()" class="mt-4 text-sm text-primary flex items-center gap-1">
+                <i data-lucide="plus" class="h-4 w-4"></i>
+                Add Task
+            </button>
+        </div>
+        
+        <div class="rounded-xl border bg-card p-6">
+            <h3 class="font-semibold mb-4">My Timetable</h3>
+            <div class="space-y-2" id="my-timetable">
+                <div class="p-3 bg-muted/30 rounded">
+                    <p class="text-sm font-medium">9:00 AM - Staff Briefing</p>
+                    <p class="text-xs text-muted-foreground">Daily</p>
+                </div>
+                <div class="p-3 bg-muted/30 rounded">
+                    <p class="text-sm font-medium">2:00 PM - Parent Meeting</p>
+                    <p class="text-xs text-muted-foreground">Today only</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="rounded-xl border bg-card">
+        <div class="p-4 border-b">
+            <h3 class="font-semibold">Recent Activity</h3>
+        </div>
+        <div class="divide-y" id="recent-activity">
+            <div class="p-4 flex items-center gap-4 hover:bg-accent/50 transition-colors">
+                <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <i data-lucide="user-plus" class="h-5 w-5 text-blue-600"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-medium">New teacher application</p>
+                    <p class="text-xs text-muted-foreground">Jane Doe applied for Mathematics</p>
+                </div>
+                <span class="text-xs text-muted-foreground">2 hours ago</span>
+            </div>
+            <div class="p-4 flex items-center gap-4 hover:bg-accent/50 transition-colors">
+                <div class="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                    <i data-lucide="check-circle" class="h-5 w-5 text-green-600"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-medium">Duty roster updated</p>
+                    <p class="text-xs text-muted-foreground">Next week's duties assigned</p>
+                </div>
+                <span class="text-xs text-muted-foreground">5 hours ago</span>
+            </div>
+        </div>
+    </div>
+</div>
