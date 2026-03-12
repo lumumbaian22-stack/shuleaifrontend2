@@ -1008,6 +1008,7 @@ async function renderSuperAdminPendingSchools() {
             </div>
         `;
     } catch (error) {
+        console.error('Error rendering pending schools:', error);
         return `<div class="text-center py-12 text-red-500">Error loading schools: ${error.message}</div>`;
     }
 }
