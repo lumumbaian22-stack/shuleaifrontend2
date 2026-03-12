@@ -196,8 +196,8 @@ function renderPendingSchoolsTable(schools) {
                 </thead>
                 <tbody class="divide-y">
                     ${schools.map(school => {
-                        // Find admin from the Users array if it exists
-                        const admin = school.Users ? school.Users.find(u => u.role === 'admin') : null;
+                        // Find admin from the admins array (using the 'admins' alias from backend)
+                        const admin = school.admins && school.admins.length > 0 ? school.admins[0] : null;
                         return `
                             <tr class="hover:bg-accent/50 transition-colors">
                                 <td class="px-4 py-3 font-medium">${school.name}</td>
@@ -302,7 +302,7 @@ function renderNameChangeRequestsTable(requests) {
                 <tbody class="divide-y">
                     ${requests.map(request => `
                         <tr class="hover:bg-accent/50 transition-colors">
-                            <td class="px-4 py-3 font-medium">${request.school?.name || 'N/A'}</td>
+                            <td class="px-4 py-3 font-medium">${request.School?.name || 'N/A'}</td>
                             <td class="px-4 py-3">${request.currentName}</td>
                             <td class="px-4 py-3 font-semibold text-primary">${request.newName}</td>
                             <td class="px-4 py-3">${request.User?.name || 'N/A'}</td>
@@ -365,7 +365,6 @@ function showCreateSchoolModal() {
     if (modal) {
         modal.classList.remove('hidden');
     } else {
-        // Create modal if it doesn't exist
         createCreateSchoolModal();
     }
 }
@@ -456,13 +455,11 @@ async function handleCreateSchool() {
 // View school details
 function viewSchoolDetails(schoolId) {
     showToast(`Viewing school ${schoolId}`, 'info');
-    // Implement school details view
 }
 
 // Edit school
 function editSchool(schoolId) {
     showToast(`Editing school ${schoolId}`, 'info');
-    // Implement school edit modal
 }
 
 // Export functions
