@@ -1003,7 +1003,7 @@ async function renderSuperAdminPendingSchools() {
             <div class="space-y-6 animate-fade-in">
                 <h2 class="text-2xl font-bold">Pending School Approvals</h2>
                 <div id="pending-schools-container" class="rounded-xl border bg-card overflow-hidden">
-                    ${renderPendingSchoolsTable(schools)}
+                    ${typeof renderPendingSchoolsTable === 'function' ? renderPendingSchoolsTable(schools) : '<div class="p-8 text-center">Loading...</div>'}
                 </div>
             </div>
         `;
