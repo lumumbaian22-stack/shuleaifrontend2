@@ -707,58 +707,32 @@ async function approveNameChange(requestId) {
         const approvedRequest = requests.find(r => r.id === requestId);
         
         if (approvedRequest) {
-            // Get the new school name
             const newSchoolName = approvedRequest.newName;
             const schoolCode = approvedRequest.schoolCode;
             
             console.log('School name changed to:', newSchoolName);
             
-            // METHOD 1: Update via getCurrentSchool (if available)
-            if (typeof getCurrentSchool === 'function') {
-                const currentSchool = getCurrentSchool();
-                if (currentSchool && currentSchool.schoolId === schoolCode) {
-                    currentSchool.name = newSchoolName;
-                }
-            }
+            // CRITICAL FIX: Save to localStorage
+            const schoolData = {
+                id: approvedRequest.School?.id,
+                schoolId: schoolCode,
+                shortCode: approvedRequest.School?.shortCode,
+                name: newSchoolName,
+                status: 'active',
+                settings: approvedRequest.School?.settings || {}
+            };
             
-            // METHOD 2: Update localStorage directly
-            const storedSchool = JSON.parse(localStorage.getItem('school') || '{}');
-            if (storedSchool && storedSchool.schoolId === schoolCode) {
-                storedSchool.name = newSchoolName;
-                localStorage.setItem('school', JSON.stringify(storedSchool));
-            }
+            localStorage.setItem('school', JSON.stringify(schoolData));
             
-            // METHOD 3: Update schoolSettings
-            const storedSettings = JSON.parse(localStorage.getItem('schoolSettings') || '{}');
-            storedSettings.schoolName = newSchoolName;
-            localStorage.setItem('schoolSettings', JSON.stringify(storedSettings));
+            // Update schoolSettings
+            const settings = JSON.parse(localStorage.getItem('schoolSettings') || '{}');
+            settings.schoolName = newSchoolName;
+            localStorage.setItem('schoolSettings', JSON.stringify(settings));
             
-            // METHOD 4: Update all possible HTML elements that might show school name
-            const possibleSelectors = [
-                '#school-name',
-                '.school-name',
-                '[id*="school-name"]',
-                '[class*="school-name"]',
-                '.text-2xl.font-bold', // The heading in admin dashboard
-                '.school-profile .text-2xl' // School profile heading
-            ];
-            
-            possibleSelectors.forEach(selector => {
-                document.querySelectorAll(selector).forEach(el => {
-                    if (el && el.textContent) {
-                        // Only update if it looks like a school name (not "ShuleAI")
-                        if (!el.textContent.includes('ShuleAI')) {
-                            el.textContent = newSchoolName;
-                        }
-                    }
-                });
-            });
-            
-            // METHOD 5: Force reload of the current section
-            if (typeof showDashboardSection === 'function' && window.currentSection) {
-                setTimeout(() => {
-                    showDashboardSection(window.currentSection);
-                }, 100);
+            // Update the UI immediately
+            const schoolNameElement = document.querySelector('h2.text-2xl.font-bold');
+            if (schoolNameElement) {
+                schoolNameElement.textContent = newSchoolName;
             }
             
             showToast(`School name updated to "${newSchoolName}"`, 'success');
