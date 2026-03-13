@@ -641,9 +641,26 @@ async function processNameChange() {
         return;
     }
     
+    // Debug logging
+    console.log('api object:', window.api);
+    console.log('school object:', window.api?.school);
+    console.log('createNameChangeRequest function:', window.api?.school?.createNameChangeRequest);
+    
+    if (!window.api || !window.api.school) {
+        showToast('API not properly initialized. Please refresh the page.', 'error');
+        console.error('api.school is undefined');
+        return;
+    }
+    
+    if (!window.api.school.createNameChangeRequest) {
+        showToast('Name change feature not available', 'error');
+        console.error('createNameChangeRequest function not found');
+        return;
+    }
+    
     showLoading();
     try {
-        const response = await api.school.createNameChangeRequest({
+        const response = await window.api.school.createNameChangeRequest({
             newName: newName,
             reason: reason
         });
