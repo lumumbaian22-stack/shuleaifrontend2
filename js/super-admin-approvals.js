@@ -704,18 +704,19 @@ async function approveNameChange(requestId) {
         const request = requests.find(r => r.id == requestId);
         
         if (request && request.School) {
-            // Update school data in localStorage for any logged-in admin
-            updateSchoolDataInStorage(request.School.schoolId, request.newName);
+            const schoolId = request.School.schoolId;
+            const newName = request.newName;
             
-            // If this is the current admin's school, refresh their view
+            // Update school data in localStorage for any logged-in admin
+            updateSchoolDataInStorage(schoolId, newName);
+            
+            // If the current user is an admin from this school, refresh their view
             const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
             const currentSchool = typeof getCurrentSchool === 'function' ? getCurrentSchool() : null;
             
-            if (currentUser?.role === 'admin' && currentSchool?.schoolId === request.School.schoolId) {
-                // Refresh school data for the admin
-                if (typeof refreshSchoolData === 'function') {
-                    await refreshSchoolData();
-                }
+            if (currentUser?.role === 'admin' && currentSchool?.schoolId === schoolId) {
+                // Force refresh school data
+                await refreshAdminSchoolData(newName);
             }
         }
         
@@ -726,6 +727,51 @@ async function approveNameChange(requestId) {
         showToast(error.message || 'Failed to approve name change', 'error');
     } finally {
         hideLoading();
+    }
+}
+
+// Helper function to update school data in storage
+function updateSchoolDataInStorage(schoolId, newName) {
+    // Update current school if this is the active school
+    const currentSchool = typeof getCurrentSchool === 'function' ? getCurrentSchool() : null;
+    if (currentSchool && currentSchool.schoolId === schoolId) {
+        currentSchool.name = newName;
+        localStorage.setItem('school', JSON.stringify(currentSchool));
+    }
+    
+    // Also update schoolSettings if they exist
+    const schoolSettings = JSON.parse(localStorage.getItem('schoolSettings') || '{}');
+    if (schoolSettings && schoolSettings.schoolId === schoolId) {
+        schoolSettings.schoolName = newName;
+        localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings));
+    }
+}
+
+// Helper function to refresh admin school data
+async function refreshAdminSchoolData(newName) {
+    try {
+        // Update the school name in the UI immediately
+        const schoolNameElement = document.getElementById('school-name');
+        if (schoolNameElement) {
+            schoolNameElement.textContent = newName;
+        }
+        
+        // Update the display school ID element if it exists
+        const displaySchoolId = document.getElementById('display-school-id');
+        if (displaySchoolId) {
+            // Just refresh the tooltip or any other display
+        }
+        
+        // If there's a refresh function for school settings, call it
+        if (typeof loadSchoolSettings === 'function') {
+            await loadSchoolSettings();
+        }
+        
+        // Show a message to the admin
+        showToast(`School name updated to "${newName}"`, 'success');
+        
+    } catch (error) {
+        console.error('Error refreshing admin school data:', error);
     }
 }
 
@@ -1092,3 +1138,4 @@ window.renderSchoolsTable = renderSchoolsTable;
 window.renderSuspendedSchoolsTable = renderSuspendedSchoolsTable;
 window.renderNameChangeRequestsTable = renderNameChangeRequestsTable;
 window.refreshNameChangeRequests = refreshNameChangeRequests;
+
