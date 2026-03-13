@@ -749,22 +749,20 @@
         </div>
     </div>
 
-<!-- Socket.io client -->
-<script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
-
-<!-- JavaScript Modules -->
+<!-- JavaScript Modules - Load in correct order -->
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/websocket.js"></script>
-<script src="js/duty.js"></script>
-<script src="js/super-admin-approvals.js"></script>
-<script src="js/admin-approvals.js"></script>
-<script src="js/teacher-features.js"></script>
+<script src="js/duty.js"></script>                 <!-- Defines loadTodayDuty, loadWeeklyDuty, etc. -->
+<script src="js/super-admin-approvals.js"></script> <!-- Defines loadPendingSchools, loadAllSchools, etc. -->
+<script src="js/admin-approvals.js"></script>      <!-- Defines loadPendingTeachers, loadAllTeachers, etc. -->
+<script src="js/teacher-features.js"></script>     <!-- Defines loadMyStudents, etc. -->
 <script src="js/upload.js"></script>
 <script src="js/analytics.js"></script>
-<script src="js/main.js"></script>
+<script src="js/main.js"></script>                  <!-- This should be LAST -->
 </body>
 
 </html>
+
 
 
