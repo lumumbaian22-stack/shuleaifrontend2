@@ -29,10 +29,16 @@ async function loadAllSchools() {
 // Load suspended schools
 async function loadSuspendedSchools() {
     try {
+        // Check if the endpoint exists, if not return empty array
+        if (!api.superAdmin.getSuspendedSchools) {
+            console.warn('getSuspendedSchools endpoint not available');
+            return [];
+        }
         const response = await api.superAdmin.getSuspendedSchools();
         return response.data || [];
     } catch (error) {
         console.error('Failed to load suspended schools:', error);
+        // Don't show toast for this as it might not be implemented yet
         return [];
     }
 }
@@ -80,6 +86,12 @@ async function rejectSchool(schoolId) {
 
 // Suspend school
 async function suspendSchool(schoolId) {
+    // Check if suspend endpoint exists
+    if (!api.superAdmin.suspendSchool) {
+        showToast('Suspend school feature coming soon', 'info');
+        return;
+    }
+    
     const reason = prompt('Please enter suspension reason:');
     if (reason === null) return;
     
@@ -103,6 +115,12 @@ async function suspendSchool(schoolId) {
 
 // Reactivate school
 async function reactivateSchool(schoolId) {
+    // Check if reactivate endpoint exists
+    if (!api.superAdmin.reactivateSchool) {
+        showToast('Reactivate school feature coming soon', 'info');
+        return;
+    }
+    
     const reason = prompt('Please enter reactivation reason:');
     if (reason === null) return;
     
@@ -178,10 +196,17 @@ function showSchoolDetailsModal(school) {
     
     // Update modal content with school data
     const modalContent = modal.querySelector('.modal-content');
-    modalContent.innerHTML = getSchoolDetailsHTML(school);
+    if (modalContent) {
+        modalContent.innerHTML = getSchoolDetailsHTML(school);
+    }
     
     // Show modal
     modal.classList.remove('hidden');
+    
+    // Reinitialize icons
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
 }
 
 // Create school details modal
@@ -265,7 +290,7 @@ function getSchoolDetailsHTML(school) {
                     </div>
                     <div class="col-span-2">
                         <p class="text-muted-foreground">Address</p>
-                        <p>${school.address ? `${school.address.street || ''}, ${school.address.city || ''}, ${school.address.country || ''}`.replace(/^, |, $/g, '') || 'N/A' : 'N/A'}</p>
+                        <p>${formatAddress(school.address) || 'N/A'}</p>
                     </div>
                 </div>
             </div>
@@ -320,6 +345,16 @@ function getSchoolDetailsHTML(school) {
     `;
 }
 
+// Helper function to format address
+function formatAddress(address) {
+    if (!address) return null;
+    const parts = [];
+    if (address.street) parts.push(address.street);
+    if (address.city) parts.push(address.city);
+    if (address.country) parts.push(address.country);
+    return parts.join(', ');
+}
+
 // Close school details modal
 function closeSchoolDetailsModal() {
     const modal = document.getElementById('school-details-modal');
@@ -364,15 +399,25 @@ function showEditSchoolModal(school) {
     }
     
     // Populate form with school data
-    document.getElementById('edit-school-id').value = school.id;
-    document.getElementById('edit-school-name').value = school.name || '';
-    document.getElementById('edit-school-level').value = school.settings?.schoolLevel || 'secondary';
-    document.getElementById('edit-curriculum').value = school.system || 'cbc';
-    document.getElementById('edit-contact-email').value = school.contact?.email || '';
-    document.getElementById('edit-contact-phone').value = school.contact?.phone || '';
-    document.getElementById('edit-address-street').value = school.address?.street || '';
-    document.getElementById('edit-address-city').value = school.address?.city || '';
-    document.getElementById('edit-address-country').value = school.address?.country || '';
+    const idField = document.getElementById('edit-school-id');
+    const nameField = document.getElementById('edit-school-name');
+    const levelField = document.getElementById('edit-school-level');
+    const curriculumField = document.getElementById('edit-curriculum');
+    const emailField = document.getElementById('edit-contact-email');
+    const phoneField = document.getElementById('edit-contact-phone');
+    const streetField = document.getElementById('edit-address-street');
+    const cityField = document.getElementById('edit-address-city');
+    const countryField = document.getElementById('edit-address-country');
+    
+    if (idField) idField.value = school.id;
+    if (nameField) nameField.value = school.name || '';
+    if (levelField) levelField.value = school.settings?.schoolLevel || 'secondary';
+    if (curriculumField) curriculumField.value = school.system || 'cbc';
+    if (emailField) emailField.value = school.contact?.email || '';
+    if (phoneField) phoneField.value = school.contact?.phone || '';
+    if (streetField) streetField.value = school.address?.street || '';
+    if (cityField) cityField.value = school.address?.city || '';
+    if (countryField) countryField.value = school.address?.country || '';
     
     // Show modal
     modal.classList.remove('hidden');
@@ -472,22 +517,27 @@ function closeEditSchoolModal() {
 
 // Handle update school
 async function handleUpdateSchool() {
-    const schoolId = document.getElementById('edit-school-id').value;
+    const schoolId = document.getElementById('edit-school-id')?.value;
+    
+    if (!schoolId) {
+        showToast('School ID not found', 'error');
+        return;
+    }
     
     const schoolData = {
-        name: document.getElementById('edit-school-name').value,
-        system: document.getElementById('edit-curriculum').value,
+        name: document.getElementById('edit-school-name')?.value,
+        system: document.getElementById('edit-curriculum')?.value,
         settings: {
-            schoolLevel: document.getElementById('edit-school-level').value
+            schoolLevel: document.getElementById('edit-school-level')?.value
         },
         contact: {
-            email: document.getElementById('edit-contact-email').value,
-            phone: document.getElementById('edit-contact-phone').value
+            email: document.getElementById('edit-contact-email')?.value,
+            phone: document.getElementById('edit-contact-phone')?.value
         },
         address: {
-            street: document.getElementById('edit-address-street').value,
-            city: document.getElementById('edit-address-city').value,
-            country: document.getElementById('edit-address-country').value
+            street: document.getElementById('edit-address-street')?.value,
+            city: document.getElementById('edit-address-city')?.value,
+            country: document.getElementById('edit-address-country')?.value
         }
     };
     
@@ -593,11 +643,17 @@ function closeCreateSchoolModal() {
     if (modal) {
         modal.classList.add('hidden');
         // Clear form
-        document.getElementById('modal-school-name') && (document.getElementById('modal-school-name').value = '');
-        document.getElementById('modal-school-level') && (document.getElementById('modal-school-level').value = 'secondary');
-        document.getElementById('modal-curriculum') && (document.getElementById('modal-curriculum').value = 'cbc');
-        document.getElementById('modal-admin-name') && (document.getElementById('modal-admin-name').value = '');
-        document.getElementById('modal-admin-email') && (document.getElementById('modal-admin-email').value = '');
+        const nameField = document.getElementById('modal-school-name');
+        const levelField = document.getElementById('modal-school-level');
+        const curriculumField = document.getElementById('modal-curriculum');
+        const adminNameField = document.getElementById('modal-admin-name');
+        const adminEmailField = document.getElementById('modal-admin-email');
+        
+        if (nameField) nameField.value = '';
+        if (levelField) levelField.value = 'secondary';
+        if (curriculumField) curriculumField.value = 'cbc';
+        if (adminNameField) adminNameField.value = '';
+        if (adminEmailField) adminEmailField.value = '';
     }
 }
 
@@ -958,6 +1014,16 @@ async function updateBankDetails(schoolId, bankData) {
     }
 }
 
+// Helper function for formatting dates
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
 // ============ EXPORT FUNCTIONS ============
 
 // Export all functions to global scope
@@ -990,13 +1056,3 @@ window.renderPendingSchoolsTable = renderPendingSchoolsTable;
 window.renderSchoolsTable = renderSchoolsTable;
 window.renderSuspendedSchoolsTable = renderSuspendedSchoolsTable;
 window.renderNameChangeRequestsTable = renderNameChangeRequestsTable;
-
-// Helper function for formatting dates
-function formatDate(dateString) {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-    });
-}
