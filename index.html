@@ -588,22 +588,40 @@
         </div>
     </div>
 
-    <!-- Name Change Modal -->
-    <div id="name-change-modal" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/50" onclick="closeNameChangeModal()"></div>
-        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
-            <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
-                <h3 class="text-lg font-semibold mb-4">Change School Name</h3>
-                <p class="text-sm text-muted-foreground mb-4">Fee: $50 (one-time payment)</p>
-                <input type="text" id="new-school-name" placeholder="New School Name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm mb-4">
-                <div class="flex justify-end gap-2">
-                    <button onclick="closeNameChangeModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
-                    <button onclick="processNameChange()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Proceed to Payment</button>
+<!-- Name Change Modal -->
+<div id="name-change-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50" onclick="closeNameChangeModal()"></div>
+    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+        <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+            <h3 class="text-lg font-semibold mb-4">Request School Name Change</h3>
+            <p class="text-sm text-muted-foreground mb-4">Fee: $50 (one-time payment)</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">New School Name</label>
+                    <input type="text" id="new-school-name" placeholder="Enter new school name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
                 </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-1">Reason for Change (Optional)</label>
+                    <textarea id="change-reason" rows="3" placeholder="Why do you want to change the school name?" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"></textarea>
+                </div>
+                
+                <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                    <p class="text-xs text-blue-600 dark:text-blue-400 flex items-start gap-2">
+                        <i data-lucide="info" class="h-4 w-4 flex-shrink-0 mt-0.5"></i>
+                        <span>Your request will be sent to Super Admin for approval. You'll be notified once it's processed.</span>
+                    </p>
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-2 mt-6">
+                <button onclick="closeNameChangeModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
+                <button onclick="processNameChange()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Submit Request</button>
             </div>
         </div>
     </div>
-
+</div>
     <!-- DASHBOARD CONTAINER -->
     <div id="dashboard-container" style="display: none;">
         <!-- Mobile overlay -->
@@ -742,3 +760,4 @@
 </body>
 
 </html>
+
