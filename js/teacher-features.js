@@ -1,15 +1,101 @@
-// Teacher Features
+// teacher-features.js - Complete file with all teacher functions
 
-// Load teacher's students
-async function loadMyStudents() {
-    try {
-        const response = await api.teacher.getMyStudents();
-        return response.data;
-    } catch (error) {
-        console.error('Failed to load students:', error);
-        showToast('Failed to load students', 'error');
-        return [];
+// ============ STUDENT MANAGEMENT ============
+
+// Show add student modal
+function showAddStudentModal() {
+    // Check if modal already exists
+    let modal = document.getElementById('add-student-modal');
+    
+    if (!modal) {
+        // Create modal if it doesn't exist
+        createAddStudentModal();
+        modal = document.getElementById('add-student-modal');
     }
+    
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+// Create add student modal
+function createAddStudentModal() {
+    const modalHTML = `
+        <div id="add-student-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeAddStudentModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                    <h3 class="text-lg font-semibold mb-4">Add New Student</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Full Name *</label>
+                            <input type="text" id="modal-student-name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Grade/Class *</label>
+                            <input type="text" id="modal-student-grade" placeholder="e.g., 10A, Form 2" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Parent Email</label>
+                            <input type="email" id="modal-parent-email" placeholder="parent@example.com" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                            <p class="text-xs text-muted-foreground mt-1">Parent will use this email to sign up</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Date of Birth</label>
+                            <input type="date" id="modal-student-dob" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Gender</label>
+                            <select id="modal-student-gender" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                                <option value="">Select</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button onclick="closeAddStudentModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
+                        <button onclick="handleAddStudentModal()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Add Student</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// Close add student modal
+function closeAddStudentModal() {
+    const modal = document.getElementById('add-student-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        // Clear form
+        document.getElementById('modal-student-name') && (document.getElementById('modal-student-name').value = '');
+        document.getElementById('modal-student-grade') && (document.getElementById('modal-student-grade').value = '');
+        document.getElementById('modal-parent-email') && (document.getElementById('modal-parent-email').value = '');
+        document.getElementById('modal-student-dob') && (document.getElementById('modal-student-dob').value = '');
+        document.getElementById('modal-student-gender') && (document.getElementById('modal-student-gender').value = '');
+    }
+}
+
+// Handle add student from modal
+async function handleAddStudentModal() {
+    const studentData = {
+        name: document.getElementById('modal-student-name')?.value,
+        grade: document.getElementById('modal-student-grade')?.value,
+        parentEmail: document.getElementById('modal-parent-email')?.value,
+        dateOfBirth: document.getElementById('modal-student-dob')?.value,
+        gender: document.getElementById('modal-student-gender')?.value
+    };
+    
+    if (!studentData.name || !studentData.grade) {
+        showToast('Name and grade are required', 'error');
+        return;
+    }
+    
+    await addStudent(studentData);
+    closeAddStudentModal();
 }
 
 // Add new student
@@ -31,6 +117,120 @@ async function addStudent(studentData) {
     }
 }
 
+// Load teacher's students
+async function loadMyStudents() {
+    try {
+        const response = await api.teacher.getMyStudents();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load students:', error);
+        showToast('Failed to load students', 'error');
+        return [];
+    }
+}
+
+// Refresh my students list
+async function refreshMyStudents() {
+    const container = document.getElementById('my-students-table');
+    if (!container) return;
+    
+    const students = await loadMyStudents();
+    if (students && students.length > 0) {
+        container.innerHTML = renderStudentsTable(students);
+    } else {
+        container.innerHTML = '<div class="text-center py-8 text-muted-foreground">No students yet. Click "Add Student" to get started.</div>';
+    }
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+// Render students table
+function renderStudentsTable(students) {
+    if (!students || students.length === 0) {
+        return '<div class="text-center py-8 text-muted-foreground">No students found</div>';
+    }
+    
+    return `
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-muted/50">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-medium">Student</th>
+                        <th class="px-4 py-3 text-left font-medium">Class</th>
+                        <th class="px-4 py-3 text-left font-medium">ELIMUID</th>
+                        <th class="px-4 py-3 text-left font-medium">Attendance</th>
+                        <th class="px-4 py-3 text-left font-medium">Average</th>
+                        <th class="px-4 py-3 text-right font-medium">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+                    ${students.map(student => `
+                        <tr class="hover:bg-accent/50 transition-colors">
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                        <span class="font-medium text-blue-700 text-sm">${getInitials(student.User?.name)}</span>
+                                    </div>
+                                    <span class="font-medium">${student.User?.name || 'Unknown'}</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">${student.grade || 'N/A'}</td>
+                            <td class="px-4 py-3">
+                                <span class="font-mono text-xs bg-muted px-2 py-1 rounded">${student.elimuid || 'N/A'}</span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="h-2 w-16 rounded-full bg-muted overflow-hidden">
+                                        <div class="h-full w-[${student.attendance || 95}%] bg-green-500 rounded-full"></div>
+                                    </div>
+                                    <span class="text-xs">${student.attendance || 95}%</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="font-semibold ${(student.average || 0) > 80 ? 'text-green-600' : (student.average || 0) > 60 ? 'text-yellow-600' : 'text-red-600'}">${student.average || 0}%</span>
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <button onclick="copyElimuid('${student.elimuid}')" class="p-2 hover:bg-accent rounded-lg">
+                                    <i data-lucide="copy" class="h-4 w-4"></i>
+                                </button>
+                                <button onclick="viewStudentDetails('${student.id}')" class="p-2 hover:bg-accent rounded-lg">
+                                    <i data-lucide="eye" class="h-4 w-4"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+// View student details
+function viewStudentDetails(studentId) {
+    showToast(`Viewing student ${studentId}`, 'info');
+    // Implement student details view
+}
+
+// Copy ELIMUID to clipboard
+function copyElimuid(elimuid) {
+    navigator.clipboard.writeText(elimuid).then(() => {
+        showToast('✅ ELIMUID copied to clipboard', 'success');
+    }).catch(() => {
+        showToast('Failed to copy', 'error');
+    });
+}
+
+// ============ TASK MANAGEMENT ============
+
+// Add teacher task
+function addTeacherTask() {
+    showToast('Add task feature coming soon', 'info');
+    // You can implement a task modal here
+}
+
+// ============ MARKS MANAGEMENT ============
+
 // Enter marks
 async function enterMarks(marksData) {
     showLoading();
@@ -46,182 +246,45 @@ async function enterMarks(marksData) {
     }
 }
 
-// Take attendance
-async function takeAttendance(attendanceData) {
-    showLoading();
-    try {
-        const response = await api.teacher.takeAttendance(attendanceData);
-        showToast('✅ Attendance recorded', 'success');
-        return response;
-    } catch (error) {
-        showToast(error.message || 'Failed to record attendance', 'error');
-        throw error;
-    } finally {
-        hideLoading();
-    }
-}
-
-// Add comment
-async function addComment(studentId, comment) {
-    showLoading();
-    try {
-        const response = await api.teacher.addComment({ studentId, comment });
-        showToast('✅ Comment sent to parents', 'success');
-        return response;
-    } catch (error) {
-        showToast(error.message || 'Failed to add comment', 'error');
-        throw error;
-    } finally {
-        hideLoading();
-    }
-}
-
-// Upload marks CSV
-async function uploadMarksCSV(file, onProgress) {
-    const formData = new FormData();
-    formData.append('file', file);
+// Save student grade (called from grade table)
+async function saveStudentGrade(button) {
+    const row = button.closest('tr');
+    const studentId = row.dataset.studentId;
+    const subject = document.getElementById('grade-subject')?.value;
+    const assessmentType = document.getElementById('grade-type')?.value;
+    const score = row.querySelector('.student-score')?.value;
+    const comment = row.querySelector('.student-comment')?.value;
     
-    try {
-        const response = await api.teacher.uploadMarksCSV(formData, onProgress);
-        showToast(`✅ Processed ${response.data.stats.processed} records`, 'success');
-        return response;
-    } catch (error) {
-        showToast(error.message || 'Failed to upload CSV', 'error');
-        throw error;
-    }
-}
-
-// Render add student form
-function renderAddStudentForm() {
-    return `
-        <div class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium mb-1">Full Name</label>
-                <input type="text" id="student-name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-            </div>
-            <div>
-                <label class="block text-sm font-medium mb-1">Grade/Class</label>
-                <input type="text" id="student-grade" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-            </div>
-            <div>
-                <label class="block text-sm font-medium mb-1">Parent Email</label>
-                <input type="email" id="parent-email" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                <p class="text-xs text-muted-foreground mt-1">Parent will use this email to sign up</p>
-            </div>
-            <div>
-                <label class="block text-sm font-medium mb-1">Date of Birth</label>
-                <input type="date" id="student-dob" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-            </div>
-            <div>
-                <label class="block text-sm font-medium mb-1">Gender</label>
-                <select id="student-gender" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                    <option value="">Select</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                </select>
-            </div>
-            <button onclick="handleAddStudent()" class="w-full bg-primary text-primary-foreground py-2 rounded-lg">
-                Generate ELIMUID & Add
-            </button>
-        </div>
-    `;
-}
-
-// Handle add student form submission
-async function handleAddStudent() {
-    const studentData = {
-        name: document.getElementById('student-name')?.value,
-        grade: document.getElementById('student-grade')?.value,
-        parentEmail: document.getElementById('parent-email')?.value,
-        dateOfBirth: document.getElementById('student-dob')?.value,
-        gender: document.getElementById('student-gender')?.value
-    };
-    
-    if (!studentData.name || !studentData.grade) {
-        showToast('Name and grade are required', 'error');
+    if (!subject || !score) {
+        showToast('Please select subject and enter score', 'error');
         return;
     }
     
-    await addStudent(studentData);
+    const marksData = {
+        studentId: parseInt(studentId),
+        subject,
+        assessmentType,
+        score: parseInt(score),
+        assessmentName: `${subject} ${assessmentType}`,
+        date: new Date().toISOString().split('T')[0]
+    };
     
-    // Clear form
-    document.getElementById('student-name').value = '';
-    document.getElementById('student-grade').value = '';
-    document.getElementById('parent-email').value = '';
-    document.getElementById('student-dob').value = '';
-    document.getElementById('student-gender').value = '';
-}
-
-// Render marks entry form
-function renderMarksEntryForm(students, subjects) {
-    return `
-        <div class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Subject</label>
-                    <select id="marks-subject" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                        ${subjects.map(subject => `<option value="${subject}">${subject}</option>`).join('')}
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Assessment Type</label>
-                    <select id="marks-type" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                        <option value="test">Test</option>
-                        <option value="exam">Exam</option>
-                        <option value="assignment">Assignment</option>
-                        <option value="project">Project</option>
-                        <option value="quiz">Quiz</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-muted/50">
-                        <tr>
-                            <th class="px-4 py-3 text-left font-medium">Student</th>
-                            <th class="px-4 py-3 text-left font-medium">ELIMUID</th>
-                            <th class="px-4 py-3 text-center font-medium">Score (0-100)</th>
-                            <th class="px-4 py-3 text-center font-medium">Grade</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y">
-                        ${students.map(student => `
-                            <tr class="hover:bg-accent/50 transition-colors" data-student-id="${student.id}">
-                                <td class="px-4 py-3 font-medium">${student.User.name}</td>
-                                <td class="px-4 py-3">
-                                    <span class="font-mono text-xs bg-muted px-2 py-1 rounded">${student.elimuid}</span>
-                                </td>
-                                <td class="px-4 py-3 text-center">
-                                    <input type="number" class="student-score w-20 rounded-lg border border-input bg-background px-2 py-1 text-sm text-center" 
-                                        min="0" max="100" onchange="updateGradeDisplay(this)">
-                                </td>
-                                <td class="px-4 py-3 text-center">
-                                    <span class="student-grade px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">-</span>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-            
-            <button onclick="saveAllMarks()" class="w-full bg-primary text-primary-foreground py-2 rounded-lg">
-                Save All Marks
-            </button>
-        </div>
-    `;
+    await enterMarks(marksData);
+    
+    if (comment) {
+        await addComment(studentId, comment);
+    }
 }
 
 // Update grade display based on score
-function updateGradeDisplay(input) {
+function updateGradeDisplay(input, curriculum, level) {
     const row = input.closest('tr');
     const score = parseInt(input.value);
     const gradeSpan = row.querySelector('.student-grade');
     
     if (!isNaN(score) && score >= 0 && score <= 100) {
         let grade = '';
-        let color = '';
+        let color = 'gray';
         
         if (score >= 80) { grade = 'A'; color = 'green'; }
         else if (score >= 75) { grade = 'A-'; color = 'green'; }
@@ -244,83 +307,112 @@ function updateGradeDisplay(input) {
     }
 }
 
-// Save all marks
-async function saveAllMarks() {
-    const subject = document.getElementById('marks-subject')?.value;
-    const assessmentType = document.getElementById('marks-type')?.value;
-    
-    if (!subject) {
-        showToast('Please select a subject', 'error');
-        return;
-    }
-    
-    const rows = document.querySelectorAll('[data-student-id]');
-    const marks = [];
-    
-    rows.forEach(row => {
-        const studentId = row.dataset.studentId;
-        const score = row.querySelector('.student-score')?.value;
-        
-        if (score && !isNaN(parseInt(score))) {
-            marks.push({
-                studentId: parseInt(studentId),
-                subject,
-                assessmentType,
-                score: parseInt(score),
-                date: new Date().toISOString().split('T')[0]
-            });
-        }
-    });
-    
-    if (marks.length === 0) {
-        showToast('No marks entered', 'error');
-        return;
-    }
-    
+// ============ ATTENDANCE MANAGEMENT ============
+
+// Take attendance
+async function takeAttendance(attendanceData) {
     showLoading();
     try {
-        for (const mark of marks) {
-            await enterMarks(mark);
-        }
-        showToast(`✅ Saved ${marks.length} marks`, 'success');
-        
-        // Clear inputs
-        rows.forEach(row => {
-            row.querySelector('.student-score').value = '';
-            row.querySelector('.student-grade').textContent = '-';
-            row.querySelector('.student-grade').className = 'student-grade px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full';
-        });
+        const response = await api.teacher.takeAttendance(attendanceData);
+        showToast('✅ Attendance recorded', 'success');
+        return response;
     } catch (error) {
-        // Error already shown in enterMarks
+        showToast(error.message || 'Failed to record attendance', 'error');
+        throw error;
     } finally {
         hideLoading();
     }
 }
 
-// Refresh my students
-async function refreshMyStudents() {
-    const container = document.getElementById('my-students-table');
-    if (!container) return;
+// Save attendance (called from attendance page)
+async function saveAttendance() {
+    const rows = document.querySelectorAll('[data-student-id]');
+    const attendanceData = [];
     
-    const students = await loadMyStudents();
-    if (students && students.length > 0) {
-        container.innerHTML = renderStudentsTable(students);
-    } else {
-        container.innerHTML = '<div class="text-center py-8 text-muted-foreground">No students yet</div>';
+    rows.forEach(row => {
+        const studentId = row.dataset.studentId;
+        const status = row.querySelector('.attendance-status')?.value;
+        const note = row.querySelector('.attendance-note')?.value;
+        
+        if (status) {
+            attendanceData.push({
+                studentId: parseInt(studentId),
+                date: new Date().toISOString().split('T')[0],
+                status,
+                reason: note
+            });
+        }
+    });
+    
+    if (attendanceData.length === 0) {
+        showToast('No attendance data to save', 'error');
+        return;
     }
-    lucide.createIcons();
+    
+    showLoading();
+    try {
+        for (const data of attendanceData) {
+            await takeAttendance(data);
+        }
+        showToast(`✅ Saved ${attendanceData.length} attendance records`, 'success');
+    } catch (error) {
+        // Error already shown in takeAttendance
+    } finally {
+        hideLoading();
+    }
 }
 
-// Export functions
-window.loadMyStudents = loadMyStudents;
+// ============ COMMENT MANAGEMENT ============
+
+// Add comment
+async function addComment(studentId, comment) {
+    showLoading();
+    try {
+        const response = await api.teacher.addComment({ studentId, comment });
+        showToast('✅ Comment sent to parents', 'success');
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to add comment', 'error');
+        throw error;
+    } finally {
+        hideLoading();
+    }
+}
+
+// ============ CSV UPLOAD ============
+
+// Upload marks CSV
+async function uploadMarksCSV(file, onProgress) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const response = await api.teacher.uploadMarksCSV(formData, onProgress);
+        showToast(`✅ Processed ${response.data.stats?.processed || 0} records`, 'success');
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to upload CSV', 'error');
+        throw error;
+    }
+}
+
+// ============ EXPORT FUNCTIONS ============
+
+// Export all functions to global scope
+window.showAddStudentModal = showAddStudentModal;
+window.closeAddStudentModal = closeAddStudentModal;
+window.handleAddStudentModal = handleAddStudentModal;
 window.addStudent = addStudent;
+window.loadMyStudents = loadMyStudents;
+window.refreshMyStudents = refreshMyStudents;
+window.renderStudentsTable = renderStudentsTable;
+window.viewStudentDetails = viewStudentDetails;
+window.copyElimuid = copyElimuid;
+window.addTeacherTask = addTeacherTask;
 window.enterMarks = enterMarks;
+window.saveStudentGrade = saveStudentGrade;
+window.updateGradeDisplay = updateGradeDisplay;
 window.takeAttendance = takeAttendance;
+window.saveAttendance = saveAttendance;
 window.addComment = addComment;
 window.uploadMarksCSV = uploadMarksCSV;
-window.renderAddStudentForm = renderAddStudentForm;
-window.renderMarksEntryForm = renderMarksEntryForm;
-window.handleAddStudent = handleAddStudent;
-window.updateGradeDisplay = updateGradeDisplay;
-window.saveAllMarks = saveAllMarks;
-window.refreshMyStudents = refreshMyStudents;
