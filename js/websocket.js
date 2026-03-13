@@ -4,69 +4,80 @@ let reconnectAttempts = 0;
 const maxReconnectAttempts = 5;
 
 function connectWebSocket() {
+    // Check if Socket.io is loaded
+    if (typeof io === 'undefined') {
+        console.warn('Socket.io not loaded, real-time features disabled');
+        return;
+    }
+    
     const token = localStorage.getItem('authToken');
     const user = JSON.parse(localStorage.getItem('user'));
     
     if (!token || !user) return;
     
-    socket = io('https://shuleaibackend-32h1.onrender.com', {
-        auth: { token },
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000
-    });
-    
-    socket.on('connect', () => {
-        console.log('✅ WebSocket connected');
-        reconnectAttempts = 0;
+    try {
+        socket = io('https://shuleaibackend-32h1.onrender.com', {
+            auth: { token },
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000
+        });
         
-        if (user) {
-            socket.emit('join', user.id);
-        }
-    });
-    
-    socket.on('connect_error', (error) => {
-        console.error('WebSocket connection error:', error);
-    });
-    
-    socket.on('alert', (data) => {
-        handleAlert(data);
-    });
-    
-    socket.on('private-message', (data) => {
-        handlePrivateMessage(data);
-    });
-    
-    socket.on('duty-roster-updated', (data) => {
-        showToast(`Duty roster updated: ${data.message}`, 'info');
-        if (currentSection === 'duty') {
-            showDashboardSection('duty');
-        }
-    });
-    
-    socket.on('attendance-update', (data) => {
-        handleAttendanceUpdate(data);
-    });
-    
-    socket.on('school-updated', (data) => {
-        handleSchoolUpdate(data);
-    });
-    
-    socket.on('disconnect', () => {
-        console.log('WebSocket disconnected');
-        if (reconnectAttempts < maxReconnectAttempts) {
-            reconnectAttempts++;
-            setTimeout(connectWebSocket, 1000 * reconnectAttempts);
-        }
-    });
-    
-    // Make socket globally available
-    window.globalSocket = socket;
+        socket.on('connect', () => {
+            console.log('✅ WebSocket connected');
+            reconnectAttempts = 0;
+            
+            if (user) {
+                socket.emit('join', user.id);
+            }
+        });
+        
+        socket.on('connect_error', (error) => {
+            console.error('WebSocket connection error:', error);
+        });
+        
+        socket.on('alert', (data) => {
+            handleAlert(data);
+        });
+        
+        socket.on('private-message', (data) => {
+            handlePrivateMessage(data);
+        });
+        
+        socket.on('duty-roster-updated', (data) => {
+            showToast(`Duty roster updated: ${data.message}`, 'info');
+            if (currentSection === 'duty') {
+                showDashboardSection('duty');
+            }
+        });
+        
+        socket.on('attendance-update', (data) => {
+            handleAttendanceUpdate(data);
+        });
+        
+        socket.on('school-updated', (data) => {
+            handleSchoolUpdate(data);
+        });
+        
+        socket.on('disconnect', () => {
+            console.log('WebSocket disconnected');
+            if (reconnectAttempts < maxReconnectAttempts) {
+                reconnectAttempts++;
+                setTimeout(connectWebSocket, 1000 * reconnectAttempts);
+            }
+        });
+        
+        window.globalSocket = socket;
+    } catch (error) {
+        console.error('Failed to connect WebSocket:', error);
+    }
 }
 
 function handleAlert(data) {
-    showToast(data.message, data.severity || 'info');
+    if (typeof showToast === 'function') {
+        showToast(data.message, data.severity || 'info');
+    }
     
     const badge = document.querySelector('.notification-badge');
     if (badge) {
@@ -77,7 +88,9 @@ function handleAlert(data) {
 }
 
 function handlePrivateMessage(data) {
-    showToast(`New message from ${data.from}`, 'info');
+    if (typeof showToast === 'function') {
+        showToast(`New message from ${data.from}`, 'info');
+    }
     
     const messageCount = document.getElementById('message-count');
     if (messageCount) {
@@ -121,7 +134,9 @@ function handleSchoolUpdate(data) {
                 }
             }
             
-            showToast(`School name updated to "${data.newName}"`, 'success');
+            if (typeof showToast === 'function') {
+                showToast(`School name updated to "${data.newName}"`, 'success');
+            }
         }
     }
 }
@@ -133,7 +148,9 @@ function sendMessage(recipientId, content) {
             message: content
         });
     } else {
-        showToast('Cannot send message: Not connected', 'error');
+        if (typeof showToast === 'function') {
+            showToast('Cannot send message: Not connected', 'error');
+        }
     }
 }
 
@@ -150,14 +167,16 @@ function appendMessage(container, message) {
         <div class="${message.sent ? 'chat-bubble-sent' : 'chat-bubble-received'} max-w-[70%]">
             ${!message.sent ? `<p class="text-sm font-medium">${message.from}</p>` : ''}
             <p class="text-sm">${message.content}</p>
-            <p class="text-xs text-muted-foreground mt-1">${timeAgo(message.timestamp)}</p>
+            <p class="text-xs text-muted-foreground mt-1">${typeof timeAgo === 'function' ? timeAgo(message.timestamp) : 'just now'}</p>
         </div>
     `;
     container.appendChild(messageEl);
     container.scrollTop = container.scrollHeight;
 }
 
+// Auto-connect when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+    // Delay connection to ensure everything is loaded
     setTimeout(() => {
         const token = localStorage.getItem('authToken');
         if (token) {
@@ -166,6 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1000);
 });
 
+// Export functions
 window.sendMessage = sendMessage;
 window.joinChatRoom = joinChatRoom;
 window.connectWebSocket = connectWebSocket;
