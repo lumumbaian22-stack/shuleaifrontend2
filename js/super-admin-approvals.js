@@ -1,4 +1,4 @@
-// super-admin-approvals.js - Complete fixed version
+// super-admin-approvals.js - Complete with suspension functions
 
 // Load pending schools
 async function loadPendingSchools() {
@@ -20,6 +20,17 @@ async function loadAllSchools() {
     } catch (error) {
         console.error('Failed to load schools:', error);
         showToast('Failed to load schools', 'error');
+        return [];
+    }
+}
+
+// Load suspended schools
+async function loadSuspendedSchools() {
+    try {
+        const response = await api.superAdmin.getSuspendedSchools();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load suspended schools:', error);
         return [];
     }
 }
@@ -69,6 +80,48 @@ async function rejectSchool(schoolId) {
         return response;
     } catch (error) {
         showToast(error.message || 'Failed to reject school', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Suspend school
+async function suspendSchool(schoolId) {
+    const reason = prompt('Please enter suspension reason:');
+    if (reason === null) return;
+    
+    if (!confirm('⚠️ Are you sure you want to suspend this school? All users will be locked out.')) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.superAdmin.suspendSchool(schoolId, reason);
+        showToast('✅ School suspended successfully', 'success');
+        await refreshSchoolsList();
+        await refreshSuspendedSchools();
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to suspend school', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Reactivate school
+async function reactivateSchool(schoolId) {
+    const reason = prompt('Please enter reactivation reason:');
+    if (reason === null) return;
+    
+    showLoading();
+    try {
+        const response = await api.superAdmin.reactivateSchool(schoolId, reason);
+        showToast('✅ School reactivated successfully', 'success');
+        await refreshSchoolsList();
+        await refreshSuspendedSchools();
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to reactivate school', 'error');
     } finally {
         hideLoading();
     }
@@ -196,7 +249,6 @@ function renderPendingSchoolsTable(schools) {
                 </thead>
                 <tbody class="divide-y">
                     ${schools.map(school => {
-                        // Find admin from the admins array (using the 'admins' alias from backend)
                         const admin = school.admins && school.admins.length > 0 ? school.admins[0] : null;
                         return `
                             <tr class="hover:bg-accent/50 transition-colors">
@@ -255,7 +307,8 @@ function renderSchoolsTable(schools) {
                                 <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium 
                                     ${school.status === 'active' ? 'bg-green-100 text-green-700' : 
                                       school.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 
-                                      'bg-red-100 text-red-700'}">
+                                      school.status === 'suspended' ? 'bg-red-100 text-red-700' : 
+                                      'bg-gray-100 text-gray-700'}">
                                     ${school.status}
                                 </span>
                             </td>
@@ -268,8 +321,60 @@ function renderSchoolsTable(schools) {
                                 <button onclick="editSchool('${school.id}')" class="p-2 hover:bg-accent rounded-lg">
                                     <i data-lucide="edit" class="h-4 w-4"></i>
                                 </button>
+                                ${school.status === 'active' ? `
+                                    <button onclick="suspendSchool('${school.id}')" class="p-2 hover:bg-yellow-100 rounded-lg text-yellow-600">
+                                        <i data-lucide="pause-circle" class="h-4 w-4"></i>
+                                    </button>
+                                ` : school.status === 'suspended' ? `
+                                    <button onclick="reactivateSchool('${school.id}')" class="p-2 hover:bg-green-100 rounded-lg text-green-600">
+                                        <i data-lucide="play-circle" class="h-4 w-4"></i>
+                                    </button>
+                                ` : ''}
                                 <button onclick="deleteSchool('${school.id}')" class="p-2 hover:bg-red-100 rounded-lg text-red-600">
                                     <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+// Render suspended schools table
+function renderSuspendedSchoolsTable(schools) {
+    if (!schools || schools.length === 0) {
+        return '<div class="text-center py-8 text-muted-foreground">No suspended schools</div>';
+    }
+    
+    return `
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-muted/50">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-medium">School</th>
+                        <th class="px-4 py-3 text-left font-medium">Short Code</th>
+                        <th class="px-4 py-3 text-left font-medium">Suspended On</th>
+                        <th class="px-4 py-3 text-left font-medium">Reason</th>
+                        <th class="px-4 py-3 text-right font-medium">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+                    ${schools.map(school => `
+                        <tr class="hover:bg-accent/50 transition-colors">
+                            <td class="px-4 py-3 font-medium">${school.name}</td>
+                            <td class="px-4 py-3">
+                                <span class="font-mono text-xs bg-muted px-2 py-1 rounded">${school.shortCode}</span>
+                            </td>
+                            <td class="px-4 py-3">${formatDate(school.suspendedAt)}</td>
+                            <td class="px-4 py-3">${school.suspensionReason || 'N/A'}</td>
+                            <td class="px-4 py-3 text-right">
+                                <button onclick="reactivateSchool('${school.id}')" class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full hover:bg-green-200">
+                                    Reactivate
+                                </button>
+                                <button onclick="deleteSchool('${school.id}')" class="px-3 py-1 bg-red-100 text-red-700 text-xs rounded-full hover:bg-red-200 ml-2">
+                                    Delete
                                 </button>
                             </td>
                         </tr>
@@ -347,6 +452,18 @@ async function refreshSchoolsList() {
     }
 }
 
+// Refresh suspended schools
+async function refreshSuspendedSchools() {
+    const container = document.getElementById('suspended-schools-container');
+    if (!container) return;
+    
+    const schools = await loadSuspendedSchools();
+    container.innerHTML = renderSuspendedSchoolsTable(schools);
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
 // Refresh name change requests
 async function refreshNameChangeRequests() {
     const container = document.getElementById('name-change-requests-container');
@@ -359,97 +476,44 @@ async function refreshNameChangeRequests() {
     }
 }
 
-// Show create school modal
-function showCreateSchoolModal() {
-    const modal = document.getElementById('create-school-modal');
-    if (modal) {
-        modal.classList.remove('hidden');
-    } else {
-        createCreateSchoolModal();
-    }
+// Helper function to format date
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
 }
 
-// Create create school modal
-function createCreateSchoolModal() {
-    const modalHTML = `
-        <div id="create-school-modal" class="fixed inset-0 z-50 hidden">
-            <div class="absolute inset-0 bg-black/50" onclick="closeCreateSchoolModal()"></div>
-            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
-                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
-                    <h3 class="text-lg font-semibold mb-4">Create New School</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">School Name</label>
-                            <input type="text" id="modal-school-name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">School Level</label>
-                            <select id="modal-school-level" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                                <option value="primary">Primary</option>
-                                <option value="secondary">Secondary</option>
-                                <option value="both">Both</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Curriculum</label>
-                            <select id="modal-curriculum" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                                <option value="cbc">CBC</option>
-                                <option value="844">8-4-4</option>
-                                <option value="british">British</option>
-                                <option value="american">American</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Admin Name</label>
-                            <input type="text" id="modal-admin-name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Admin Email</label>
-                            <input type="email" id="modal-admin-email" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Admin Password</label>
-                            <input type="password" id="modal-admin-password" value="Admin123!" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                        </div>
-                    </div>
-                    <div class="flex justify-end gap-2 mt-6">
-                        <button onclick="closeCreateSchoolModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
-                        <button onclick="handleCreateSchool()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Create School</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    document.getElementById('create-school-modal').classList.remove('hidden');
-}
-
-// Close create school modal
-function closeCreateSchoolModal() {
-    const modal = document.getElementById('create-school-modal');
-    if (modal) modal.classList.add('hidden');
-}
-
-// Handle create school
-async function handleCreateSchool() {
-    const schoolData = {
-        name: document.getElementById('modal-school-name')?.value,
-        system: document.getElementById('modal-curriculum')?.value,
-        adminName: document.getElementById('modal-admin-name')?.value,
-        adminEmail: document.getElementById('modal-admin-email')?.value,
-        adminPassword: document.getElementById('modal-admin-password')?.value,
-        settings: {
-            schoolLevel: document.getElementById('modal-school-level')?.value
-        }
+// Helper function for time ago
+function timeAgo(timestamp) {
+    if (!timestamp) return 'N/A';
+    const seconds = Math.floor((new Date() - new Date(timestamp)) / 1000);
+    
+    const intervals = {
+        year: 31536000,
+        month: 2592000,
+        week: 604800,
+        day: 86400,
+        hour: 3600,
+        minute: 60
     };
     
-    if (!schoolData.name || !schoolData.adminName || !schoolData.adminEmail) {
-        showToast('Please fill all required fields', 'error');
-        return;
+    for (const [unit, secondsInUnit] of Object.entries(intervals)) {
+        const interval = Math.floor(seconds / secondsInUnit);
+        if (interval >= 1) {
+            return `${interval} ${unit}${interval === 1 ? '' : 's'} ago`;
+        }
     }
     
-    await createSchool(schoolData);
-    closeCreateSchoolModal();
+    return 'just now';
+}
+
+// Helper function to get initials
+function getInitials(name) {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 }
 
 // View school details
@@ -465,9 +529,12 @@ function editSchool(schoolId) {
 // Export functions
 window.loadPendingSchools = loadPendingSchools;
 window.loadAllSchools = loadAllSchools;
+window.loadSuspendedSchools = loadSuspendedSchools;
 window.loadNameChangeRequests = loadNameChangeRequests;
 window.approveSchool = approveSchool;
 window.rejectSchool = rejectSchool;
+window.suspendSchool = suspendSchool;
+window.reactivateSchool = reactivateSchool;
 window.createSchool = createSchool;
 window.updateSchool = updateSchool;
 window.deleteSchool = deleteSchool;
@@ -476,12 +543,14 @@ window.rejectNameChange = rejectNameChange;
 window.updateBankDetails = updateBankDetails;
 window.renderPendingSchoolsTable = renderPendingSchoolsTable;
 window.renderSchoolsTable = renderSchoolsTable;
+window.renderSuspendedSchoolsTable = renderSuspendedSchoolsTable;
 window.renderNameChangeRequestsTable = renderNameChangeRequestsTable;
 window.refreshPendingSchools = refreshPendingSchools;
 window.refreshSchoolsList = refreshSchoolsList;
+window.refreshSuspendedSchools = refreshSuspendedSchools;
 window.refreshNameChangeRequests = refreshNameChangeRequests;
-window.showCreateSchoolModal = showCreateSchoolModal;
-window.closeCreateSchoolModal = closeCreateSchoolModal;
-window.handleCreateSchool = handleCreateSchool;
 window.viewSchoolDetails = viewSchoolDetails;
 window.editSchool = editSchool;
+window.formatDate = formatDate;
+window.timeAgo = timeAgo;
+window.getInitials = getInitials;
