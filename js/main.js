@@ -3629,6 +3629,34 @@ function setupSectionListeners(role, section) {
     }
 }
 
+// Add this function to main.js
+function updateSchoolNameInAllPlaces(newName) {
+    // Update the main school name element
+    const schoolNameElement = document.getElementById('school-name');
+    if (schoolNameElement) {
+        schoolNameElement.textContent = newName;
+    }
+    
+    // Update any elements with school-name-display class
+    document.querySelectorAll('.school-name-display').forEach(el => {
+        el.textContent = newName;
+    });
+    
+    // Update the school profile card if it exists
+    const profileSchoolName = document.querySelector('.school-profile h2');
+    if (profileSchoolName) {
+        profileSchoolName.textContent = newName;
+    }
+    
+    // Update schoolSettings in memory
+    if (window.schoolSettings) {
+        window.schoolSettings.schoolName = newName;
+    }
+}
+
+// Export it
+window.updateSchoolNameInAllPlaces = updateSchoolNameInAllPlaces;
+
 // ============ UI FUNCTIONS ============
 
 function toggleMobileSidebar() {
@@ -4200,4 +4228,5 @@ window.saveDutyPreferences = saveDutyPreferences;
 window.saveAttendance = saveAttendance;
 window.copyElimuid = copyElimuid;
 window.handleChangePassword = handleChangePassword;
+
 
