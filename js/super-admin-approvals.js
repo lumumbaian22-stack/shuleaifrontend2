@@ -702,176 +702,75 @@ async function approveNameChange(requestId) {
         // Refresh the name change requests list
         await refreshNameChangeRequests();
         
-        // Get the request details to know which school was updated
+        // Get the request details
         const requests = await loadNameChangeRequests();
         const approvedRequest = requests.find(r => r.id === requestId);
         
         if (approvedRequest) {
-            // Get the current user's school
-            const currentUser = getCurrentUser();
-            const currentSchool = getCurrentSchool();
+            // Get the new school name
+            const newSchoolName = approvedRequest.newName;
+            const schoolCode = approvedRequest.schoolCode;
             
-            // If this is the same school as the current admin, update their view
-            if (currentSchool && currentSchool.schoolId === approvedRequest.schoolCode) {
-                // Update the school name in memory
-                currentSchool.name = approvedRequest.newName;
-                
-                // Update localStorage
-                localStorage.setItem('school', JSON.stringify(currentSchool));
-                
-                // Update schoolSettings if it exists
-                const schoolSettings = JSON.parse(localStorage.getItem('schoolSettings') || '{}');
-                schoolSettings.schoolName = approvedRequest.newName;
-                localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings));
-                
-                // Update the UI immediately
-                const schoolNameElement = document.getElementById('school-name');
-                if (schoolNameElement) {
-                    schoolNameElement.textContent = approvedRequest.newName;
+            console.log('School name changed to:', newSchoolName);
+            
+            // METHOD 1: Update via getCurrentSchool (if available)
+            if (typeof getCurrentSchool === 'function') {
+                const currentSchool = getCurrentSchool();
+                if (currentSchool && currentSchool.schoolId === schoolCode) {
+                    currentSchool.name = newSchoolName;
                 }
-                
-                // Show a message that the name will update for all users on next login
-                showToast(`School name updated to "${approvedRequest.newName}". Other users will see the change after refreshing.`, 'info');
             }
+            
+            // METHOD 2: Update localStorage directly
+            const storedSchool = JSON.parse(localStorage.getItem('school') || '{}');
+            if (storedSchool && storedSchool.schoolId === schoolCode) {
+                storedSchool.name = newSchoolName;
+                localStorage.setItem('school', JSON.stringify(storedSchool));
+            }
+            
+            // METHOD 3: Update schoolSettings
+            const storedSettings = JSON.parse(localStorage.getItem('schoolSettings') || '{}');
+            storedSettings.schoolName = newSchoolName;
+            localStorage.setItem('schoolSettings', JSON.stringify(storedSettings));
+            
+            // METHOD 4: Update all possible HTML elements that might show school name
+            const possibleSelectors = [
+                '#school-name',
+                '.school-name',
+                '[id*="school-name"]',
+                '[class*="school-name"]',
+                '.text-2xl.font-bold', // The heading in admin dashboard
+                '.school-profile .text-2xl' // School profile heading
+            ];
+            
+            possibleSelectors.forEach(selector => {
+                document.querySelectorAll(selector).forEach(el => {
+                    if (el && el.textContent) {
+                        // Only update if it looks like a school name (not "ShuleAI")
+                        if (!el.textContent.includes('ShuleAI')) {
+                            el.textContent = newSchoolName;
+                        }
+                    }
+                });
+            });
+            
+            // METHOD 5: Force reload of the current section
+            if (typeof showDashboardSection === 'function' && window.currentSection) {
+                setTimeout(() => {
+                    showDashboardSection(window.currentSection);
+                }, 100);
+            }
+            
+            showToast(`School name updated to "${newSchoolName}"`, 'success');
         }
         
         return response;
     } catch (error) {
+        console.error('Approve name change error:', error);
         showToast(error.message || 'Failed to approve name change', 'error');
     } finally {
         hideLoading();
     }
-}
-
-// Helper function to refresh admin school data
-async function refreshAdminSchoolData(newName) {
-    try {
-        // Update the school name in the UI immediately
-        const schoolNameElement = document.getElementById('school-name');
-        if (schoolNameElement) {
-            schoolNameElement.textContent = newName;
-        }
-        
-        // Update the display school ID element if it exists
-        const displaySchoolId = document.getElementById('display-school-id');
-        if (displaySchoolId) {
-            // Just refresh the tooltip or any other display
-        }
-        
-        // If there's a refresh function for school settings, call it
-        if (typeof loadSchoolSettings === 'function') {
-            await loadSchoolSettings();
-        }
-        
-        // Show a message to the admin
-        showToast(`School name updated to "${newName}"`, 'success');
-        
-    } catch (error) {
-        console.error('Error refreshing admin school data:', error);
-    }
-}
-
-// Reject name change
-async function rejectNameChange(requestId) {
-    const reason = prompt('Please enter rejection reason:');
-    if (reason === null) return;
-    
-    showLoading();
-    try {
-        const response = await api.superAdmin.rejectRequest(requestId, reason);
-        showToast('Name change rejected', 'info');
-        await refreshNameChangeRequests();
-        return response;
-    } catch (error) {
-        showToast(error.message || 'Failed to reject name change', 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-// Helper function to update school data in storage
-function updateSchoolDataInStorage(schoolId, newName) {
-    // Update current school if this is the active school
-    const currentSchool = typeof getCurrentSchool === 'function' ? getCurrentSchool() : null;
-    if (currentSchool && currentSchool.schoolId === schoolId) {
-        currentSchool.name = newName;
-        localStorage.setItem('school', JSON.stringify(currentSchool));
-        
-        // Trigger a refresh of the sidebar
-        if (typeof updateSidebar === 'function') {
-            const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
-            if (user) {
-                updateSidebar(user.role);
-            }
-        }
-        
-        // Update any visible school name displays
-        if (typeof updateSchoolNameDisplay === 'function') {
-            updateSchoolNameDisplay();
-        }
-    }
-    
-    // Also update in any stored schools list if needed
-    const schools = JSON.parse(localStorage.getItem('schools') || '[]');
-    const updatedSchools = schools.map(s => 
-        s.schoolId === schoolId ? { ...s, name: newName } : s
-    );
-    localStorage.setItem('schools', JSON.stringify(updatedSchools));
-}
-
-// ============ RENDER FUNCTIONS ============
-
-// Render pending schools table
-function renderPendingSchoolsTable(schools) {
-    if (!schools || schools.length === 0) {
-        return '<div class="text-center py-8 text-muted-foreground">No pending schools</div>';
-    }
-    
-    return `
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-muted/50">
-                    <tr>
-                        <th class="px-4 py-3 text-left font-medium">School</th>
-                        <th class="px-4 py-3 text-left font-medium">Admin Email</th>
-                        <th class="px-4 py-3 text-left font-medium">Short Code</th>
-                        <th class="px-4 py-3 text-left font-medium">Level</th>
-                        <th class="px-4 py-3 text-left font-medium">Curriculum</th>
-                        <th class="px-4 py-3 text-left font-medium">Applied</th>
-                        <th class="px-4 py-3 text-right font-medium">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y">
-                    ${schools.map(school => {
-                        const admin = school.admins && school.admins.length > 0 ? school.admins[0] : null;
-                        return `
-                            <tr class="hover:bg-accent/50 transition-colors">
-                                <td class="px-4 py-3 font-medium">${school.name}</td>
-                                <td class="px-4 py-3">${admin ? admin.email : 'No admin yet'}</td>
-                                <td class="px-4 py-3">
-                                    <span class="font-mono text-xs bg-muted px-2 py-1 rounded">${school.shortCode}</span>
-                                </td>
-                                <td class="px-4 py-3">${school.settings?.schoolLevel || 'N/A'}</td>
-                                <td class="px-4 py-3">${school.system}</td>
-                                <td class="px-4 py-3">${timeAgo(school.createdAt)}</td>
-                                <td class="px-4 py-3 text-right">
-                                    <button onclick="approveSchool('${school.id}')" class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full hover:bg-green-200 mr-2">
-                                        Approve
-                                    </button>
-                                    <button onclick="rejectSchool('${school.id}')" class="px-3 py-1 bg-red-100 text-red-700 text-xs rounded-full hover:bg-red-200">
-                                        Reject
-                                    </button>
-                                    <button onclick="viewSchoolDetails('${school.id}')" class="p-2 hover:bg-accent rounded-lg">
-                                        <i data-lucide="eye" class="h-4 w-4"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        `;
-                    }).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
 }
 
 // Render schools management table
