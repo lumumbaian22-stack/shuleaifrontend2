@@ -7,6 +7,10 @@ let dashboardData = {};
 let schoolSettings = {};
 let customSubjects = [];
 let clickCount = 0;
+let currentSchool = null; // Add current school variable
+
+// Add this near your other global variables
+let schoolUpdateCallbacks = [];
 
 // ============ CURRICULUM DATA ============
 const CURRICULUMS = {
@@ -208,10 +212,85 @@ function formatDate(dateString) {
     });
 }
 
+function getCurrentSchool() {
+    if (currentSchool) return currentSchool;
+    
+    const schoolData = localStorage.getItem('school');
+    if (schoolData) {
+        try {
+            currentSchool = JSON.parse(schoolData);
+            return currentSchool;
+        } catch (e) {
+            console.error('Error parsing school data:', e);
+        }
+    }
+    return null;
+}
+
+// Register callback for school updates
+function onSchoolUpdate(callback) {
+    if (typeof callback === 'function') {
+        schoolUpdateCallbacks.push(callback);
+    }
+}
+
+// Refresh school data from server
+async function refreshSchoolData() {
+    try {
+        const response = await api.auth.getMe();
+        if (response.success && response.data.school) {
+            currentSchool = response.data.school;
+            localStorage.setItem('school', JSON.stringify(currentSchool));
+            
+            // Update sidebar with new school name
+            updateSidebar(currentRole);
+            
+            // Update any visible school name elements
+            updateSchoolNameDisplay();
+            
+            // Trigger all registered callbacks
+            schoolUpdateCallbacks.forEach(callback => {
+                try {
+                    callback(currentSchool);
+                } catch (e) {
+                    console.error('Error in school update callback:', e);
+                }
+            });
+            
+            console.log('School data refreshed:', currentSchool.name);
+            return true;
+        }
+    } catch (error) {
+        console.error('Failed to refresh school data:', error);
+    }
+    return false;
+}
+
+// Update school name display in UI
+function updateSchoolNameDisplay() {
+    const school = getCurrentSchool();
+    if (!school) return;
+    
+    // Update school name in header/profile card
+    const schoolNameElements = document.querySelectorAll('.school-name-display');
+    schoolNameElements.forEach(el => {
+        el.textContent = school.name;
+    });
+    
+    // Update school ID display
+    const schoolIdElements = document.querySelectorAll('.school-id-display');
+    schoolIdElements.forEach(el => {
+        el.textContent = school.schoolId || school.shortCode || '';
+    });
+}
+
 // ============ INITIALIZATION ============
 
 document.addEventListener('DOMContentLoaded', async () => {
     lucide.createIcons();
+    
+    // Load saved school data
+    currentSchool = getCurrentSchool();
     
     // Load saved settings
     const savedSettings = localStorage.getItem('schoolSettings');
@@ -674,6 +753,9 @@ async function processNameChange() {
             if (document.getElementById('change-reason')) {
                 document.getElementById('change-reason').value = '';
             }
+            
+            // Note: The name won't change immediately because it needs super admin approval
+            showToast('Your request has been submitted. You will be notified when approved.', 'info', 5000);
         }
     } catch (error) {
         console.error('Name change error:', error);
@@ -694,6 +776,9 @@ async function showDashboard(role) {
     if (dashboardContainer) dashboardContainer.style.display = 'block';
     
     await loadSchoolSettings();
+    
+    // Refresh school data if needed
+    await refreshSchoolData();
     
     showLoading();
     try {
@@ -1290,19 +1375,19 @@ function renderAdminDashboard() {
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <div class="flex items-center gap-3 mb-2">
-                            <h2 class="text-2xl font-bold">${school?.name || 'Your School'}</h2>
+                            <h2 class="text-2xl font-bold school-name-display">${school?.name || 'Your School'}</h2>
                             <span class="px-3 py-1 ${school?.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} text-xs rounded-full">
                                 ${school?.status || 'pending'}
                             </span>
                         </div>
                         <div class="flex items-center gap-4">
-                            <p class="text-sm"><span class="font-mono bg-muted px-2 py-1 rounded">Short Code: ${school?.shortCode || 'SHL-XXXXX'}</span></p>
+                            <p class="text-sm"><span class="font-mono bg-muted px-2 py-1 rounded school-id-display">Short Code: ${school?.shortCode || 'SHL-XXXXX'}</span></p>
                             <button onclick="showNameChangeModal()" class="text-sm text-primary hover:underline">Change School Name ($50)</button>
                         </div>
                     </div>
                     <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
                         <p class="text-xs text-muted-foreground">Share this code with teachers</p>
-                        <p class="text-lg font-mono font-bold">${school?.shortCode || 'SHL-XXXXX'}</p>
+                        <p class="text-lg font-mono font-bold school-id-display">${school?.shortCode || 'SHL-XXXXX'}</p>
                     </div>
                 </div>
             </div>
@@ -2062,9 +2147,22 @@ async function renderTeacherSection(section) {
 function renderTeacherDashboard() {
     const data = dashboardData || {};
     const user = getCurrentUser();
+    const school = getCurrentSchool();
     
     return `
         <div class="space-y-6 animate-fade-in">
+            <div class="rounded-xl border bg-card p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 mb-4">
+                <div class="flex items-center gap-4">
+                    <div class="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <i data-lucide="school" class="h-6 w-6 text-primary"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold school-name-display">${school?.name || 'School Name'}</h3>
+                        <p class="text-sm text-muted-foreground school-id-display">${school?.shortCode || ''}</p>
+                    </div>
+                </div>
+            </div>
+            
             <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div class="rounded-xl border bg-card p-6 card-hover">
                     <div class="flex items-center justify-between">
@@ -2663,9 +2761,22 @@ async function renderParentDashboard() {
     try {
         const children = await api.parent.getChildren();
         const data = dashboardData || {};
+        const school = getCurrentSchool();
         
         return `
             <div class="space-y-6 animate-fade-in">
+                <div class="rounded-xl border bg-card p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 mb-4">
+                    <div class="flex items-center gap-4">
+                        <div class="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                            <i data-lucide="school" class="h-6 w-6 text-primary"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold school-name-display">${school?.name || 'School Name'}</h3>
+                            <p class="text-sm text-muted-foreground school-id-display">${school?.shortCode || ''}</p>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="flex gap-2 border-b pb-4 overflow-x-auto" id="child-selector">
                     ${data.children?.map((child, index) => `
                         <button onclick="selectChild('${child.id}')" class="child-selector-btn px-4 py-2 ${index === 0 ? 'bg-primary text-primary-foreground' : 'bg-muted'} rounded-lg">
@@ -3018,9 +3129,22 @@ async function renderStudentDashboard() {
     try {
         const data = dashboardData || {};
         const user = getCurrentUser();
+        const school = getCurrentSchool();
         
         return `
             <div class="space-y-6 animate-fade-in">
+                <div class="rounded-xl border bg-card p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 mb-4">
+                    <div class="flex items-center gap-4">
+                        <div class="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                            <i data-lucide="school" class="h-6 w-6 text-primary"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold school-name-display">${school?.name || 'School Name'}</h3>
+                            <p class="text-sm text-muted-foreground school-id-display">${school?.shortCode || ''}</p>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <div class="rounded-xl border bg-card p-6 card-hover">
                         <div class="flex items-center justify-between">
@@ -3360,10 +3484,23 @@ function renderStudentSchedule() {
 
 function renderUserSettings(role) {
     const user = getCurrentUser();
+    const school = getCurrentSchool();
     
     return `
         <div class="space-y-6 animate-fade-in">
             <h2 class="text-2xl font-bold">My Settings</h2>
+            
+            <div class="rounded-xl border bg-card p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 mb-4">
+                <div class="flex items-center gap-4">
+                    <div class="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <i data-lucide="school" class="h-6 w-6 text-primary"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold school-name-display">${school?.name || 'School Name'}</h3>
+                        <p class="text-sm text-muted-foreground school-id-display">${school?.shortCode || ''}</p>
+                    </div>
+                </div>
+            </div>
             
             <div class="max-w-2xl space-y-6">
                 <div class="rounded-xl border bg-card p-6">
@@ -3452,6 +3589,13 @@ function updateSidebar(role) {
     const nav = document.getElementById('sidebar-nav');
     const settingsNav = document.getElementById('settings-nav');
     const mobileNav = document.getElementById('mobile-nav');
+    const school = getCurrentSchool();
+    
+    // Update school name in sidebar header if element exists
+    const schoolNameElement = document.getElementById('sidebar-school-name');
+    if (schoolNameElement && school) {
+        schoolNameElement.textContent = school.name;
+    }
     
     if (!nav) return;
     
@@ -4188,4 +4332,7 @@ window.saveDutyPreferences = saveDutyPreferences;
 window.saveAttendance = saveAttendance;
 window.copyElimuid = copyElimuid;
 window.handleChangePassword = handleChangePassword;
-
+window.onSchoolUpdate = onSchoolUpdate;
+window.refreshSchoolData = refreshSchoolData;
+window.getCurrentSchool = getCurrentSchool;
+window.updateSchoolNameDisplay = updateSchoolNameDisplay;
