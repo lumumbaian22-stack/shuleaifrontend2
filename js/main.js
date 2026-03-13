@@ -631,23 +631,38 @@ function showNameChangeModal() {
     if (modal) modal.classList.remove('hidden');
 }
 
+// Process name change request
 async function processNameChange() {
     const newName = document.getElementById('new-school-name')?.value;
+    const reason = document.getElementById('change-reason')?.value || 'School name change request';
     
     if (!newName) {
         showToast('Please enter a new school name', 'error');
         return;
     }
     
+    showLoading();
     try {
-        await apiRequest('/api/admin/name-change-request', {
-            method: 'POST',
-            body: JSON.stringify({ newName })
+        const response = await api.school.createNameChangeRequest({
+            newName: newName,
+            reason: reason
         });
-        closeNameChangeModal();
-        showToast('Name change request sent to Super Admin for approval', 'success');
+        
+        if (response.success) {
+            showToast('✅ Name change request sent to Super Admin for approval', 'success');
+            closeNameChangeModal();
+            
+            // Clear the form
+            document.getElementById('new-school-name').value = '';
+            if (document.getElementById('change-reason')) {
+                document.getElementById('change-reason').value = '';
+            }
+        }
     } catch (error) {
-        showToast(error.message, 'error');
+        console.error('Name change error:', error);
+        showToast(error.message || 'Failed to submit name change request', 'error');
+    } finally {
+        hideLoading();
     }
 }
 
@@ -4156,3 +4171,4 @@ window.saveDutyPreferences = saveDutyPreferences;
 window.saveAttendance = saveAttendance;
 window.copyElimuid = copyElimuid;
 window.handleChangePassword = handleChangePassword;
+
