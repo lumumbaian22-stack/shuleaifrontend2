@@ -106,6 +106,20 @@ const authAPI = {
             method: 'POST',
             body: JSON.stringify(data)
         }),
+
+    suspendSchool: (schoolId, reason) => 
+  apiRequest(`/api/super-admin/schools/${schoolId}/suspend`, {
+    method: 'POST',
+    body: JSON.stringify({ reason })
+  }),
+
+reactivateSchool: (schoolId, reason) => 
+  apiRequest(`/api/super-admin/schools/${schoolId}/reactivate`, {
+    method: 'POST',
+    body: JSON.stringify({ reason })
+  }),
+
+getSuspendedSchools: () => apiRequest('/api/super-admin/suspended-schools'),
     
     studentLogin: (elimuid, password) => 
         apiRequest('/api/auth/student/login', {
