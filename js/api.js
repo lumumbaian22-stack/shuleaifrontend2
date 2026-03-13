@@ -408,7 +408,7 @@ window.api = {
     analytics: analyticsAPI,
     upload: uploadAPI,
     public: publicAPI,
-    school: schoolAPI  // THIS WAS MISSING - NOW ADDED
+    school: schoolAPI
 };
 
 // Legacy support
