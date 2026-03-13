@@ -29,7 +29,6 @@ async function loadAllSchools() {
 // Load suspended schools
 async function loadSuspendedSchools() {
     try {
-        // Check if the endpoint exists, if not return empty array
         if (!api.superAdmin.getSuspendedSchools) {
             console.warn('getSuspendedSchools endpoint not available');
             return [];
@@ -38,7 +37,6 @@ async function loadSuspendedSchools() {
         return response.data || [];
     } catch (error) {
         console.error('Failed to load suspended schools:', error);
-        // Don't show toast for this as it might not be implemented yet
         return [];
     }
 }
@@ -86,7 +84,6 @@ async function rejectSchool(schoolId) {
 
 // Suspend school
 async function suspendSchool(schoolId) {
-    // Check if suspend endpoint exists
     if (!api.superAdmin.suspendSchool) {
         showToast('Suspend school feature coming soon', 'info');
         return;
@@ -115,7 +112,6 @@ async function suspendSchool(schoolId) {
 
 // Reactivate school
 async function reactivateSchool(schoolId) {
-    // Check if reactivate endpoint exists
     if (!api.superAdmin.reactivateSchool) {
         showToast('Reactivate school feature coming soon', 'info');
         return;
@@ -165,7 +161,6 @@ async function deleteSchool(schoolId) {
 async function viewSchoolDetails(schoolId) {
     showLoading();
     try {
-        // Get school details
         const schools = await loadAllSchools();
         const school = schools.find(s => s.id == schoolId);
         
@@ -174,7 +169,6 @@ async function viewSchoolDetails(schoolId) {
             return;
         }
         
-        // Create and show modal
         showSchoolDetailsModal(school);
     } catch (error) {
         console.error('Error viewing school details:', error);
@@ -186,7 +180,6 @@ async function viewSchoolDetails(schoolId) {
 
 // Show school details modal
 function showSchoolDetailsModal(school) {
-    // Check if modal already exists
     let modal = document.getElementById('school-details-modal');
     
     if (!modal) {
@@ -194,16 +187,13 @@ function showSchoolDetailsModal(school) {
         modal = document.getElementById('school-details-modal');
     }
     
-    // Update modal content with school data
     const modalContent = modal.querySelector('.modal-content');
     if (modalContent) {
         modalContent.innerHTML = getSchoolDetailsHTML(school);
     }
     
-    // Show modal
     modal.classList.remove('hidden');
     
-    // Reinitialize icons
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
         lucide.createIcons();
     }
@@ -254,7 +244,7 @@ function getSchoolDetailsHTML(school) {
                 <div class="grid grid-cols-2 gap-3 text-sm">
                     <div>
                         <p class="text-muted-foreground">School Name</p>
-                        <p class="font-medium">${school.name || 'N/A'}</p>
+                        <p class="font-medium school-name-display">${school.name || 'N/A'}</p>
                     </div>
                     <div>
                         <p class="text-muted-foreground">Curriculum</p>
@@ -369,7 +359,6 @@ function closeSchoolDetailsModal() {
 async function editSchool(schoolId) {
     showLoading();
     try {
-        // Get school details
         const schools = await loadAllSchools();
         const school = schools.find(s => s.id == schoolId);
         
@@ -378,7 +367,6 @@ async function editSchool(schoolId) {
             return;
         }
         
-        // Show edit modal
         showEditSchoolModal(school);
     } catch (error) {
         console.error('Error loading school for edit:', error);
@@ -390,7 +378,6 @@ async function editSchool(schoolId) {
 
 // Show edit school modal
 function showEditSchoolModal(school) {
-    // Check if modal already exists
     let modal = document.getElementById('edit-school-modal');
     
     if (!modal) {
@@ -398,7 +385,6 @@ function showEditSchoolModal(school) {
         modal = document.getElementById('edit-school-modal');
     }
     
-    // Populate form with school data
     const idField = document.getElementById('edit-school-id');
     const nameField = document.getElementById('edit-school-name');
     const levelField = document.getElementById('edit-school-level');
@@ -419,7 +405,6 @@ function showEditSchoolModal(school) {
     if (cityField) cityField.value = school.address?.city || '';
     if (countryField) countryField.value = school.address?.country || '';
     
-    // Show modal
     modal.classList.remove('hidden');
 }
 
@@ -642,7 +627,6 @@ function closeCreateSchoolModal() {
     const modal = document.getElementById('create-school-modal');
     if (modal) {
         modal.classList.add('hidden');
-        // Clear form
         const nameField = document.getElementById('modal-school-name');
         const levelField = document.getElementById('modal-school-level');
         const curriculumField = document.getElementById('modal-curriculum');
@@ -693,6 +677,104 @@ async function createSchool(schoolData) {
     } finally {
         hideLoading();
     }
+}
+
+// ============ NAME CHANGE FUNCTIONS ============
+
+// Load name change requests
+async function loadNameChangeRequests() {
+    try {
+        const response = await api.superAdmin.getPendingRequests();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load name change requests:', error);
+        return [];
+    }
+}
+
+// Approve name change
+async function approveNameChange(requestId) {
+    showLoading();
+    try {
+        const response = await api.superAdmin.approveRequest(requestId);
+        showToast('✅ Name change approved', 'success');
+        
+        // Get the request details to know which school was updated
+        const requests = await loadNameChangeRequests();
+        const request = requests.find(r => r.id == requestId);
+        
+        if (request && request.School) {
+            // Update school data in localStorage for any logged-in admin
+            updateSchoolDataInStorage(request.School.schoolId, request.newName);
+            
+            // If this is the current admin's school, refresh their view
+            const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+            const currentSchool = typeof getCurrentSchool === 'function' ? getCurrentSchool() : null;
+            
+            if (currentUser?.role === 'admin' && currentSchool?.schoolId === request.School.schoolId) {
+                // Refresh school data for the admin
+                if (typeof refreshSchoolData === 'function') {
+                    await refreshSchoolData();
+                }
+            }
+        }
+        
+        await refreshNameChangeRequests();
+        await refreshSchoolsList();
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to approve name change', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Reject name change
+async function rejectNameChange(requestId) {
+    const reason = prompt('Please enter rejection reason:');
+    if (reason === null) return;
+    
+    showLoading();
+    try {
+        const response = await api.superAdmin.rejectRequest(requestId, reason);
+        showToast('Name change rejected', 'info');
+        await refreshNameChangeRequests();
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to reject name change', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Helper function to update school data in storage
+function updateSchoolDataInStorage(schoolId, newName) {
+    // Update current school if this is the active school
+    const currentSchool = typeof getCurrentSchool === 'function' ? getCurrentSchool() : null;
+    if (currentSchool && currentSchool.schoolId === schoolId) {
+        currentSchool.name = newName;
+        localStorage.setItem('school', JSON.stringify(currentSchool));
+        
+        // Trigger a refresh of the sidebar
+        if (typeof updateSidebar === 'function') {
+            const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+            if (user) {
+                updateSidebar(user.role);
+            }
+        }
+        
+        // Update any visible school name displays
+        if (typeof updateSchoolNameDisplay === 'function') {
+            updateSchoolNameDisplay();
+        }
+    }
+    
+    // Also update in any stored schools list if needed
+    const schools = JSON.parse(localStorage.getItem('schools') || '[]');
+    const updatedSchools = schools.map(s => 
+        s.schoolId === schoolId ? { ...s, name: newName } : s
+    );
+    localStorage.setItem('schools', JSON.stringify(updatedSchools));
 }
 
 // ============ RENDER FUNCTIONS ============
@@ -772,7 +854,7 @@ function renderSchoolsTable(schools) {
                 <tbody class="divide-y">
                     ${schools.map(school => `
                         <tr class="hover:bg-accent/50 transition-colors">
-                            <td class="px-4 py-3 font-medium">${school.name}</td>
+                            <td class="px-4 py-3 font-medium school-name-display">${school.name}</td>
                             <td class="px-4 py-3">
                                 <span class="font-mono text-xs bg-muted px-2 py-1 rounded">${school.shortCode}</span>
                             </td>
@@ -858,67 +940,6 @@ function renderSuspendedSchoolsTable(schools) {
     `;
 }
 
-// ============ REFRESH FUNCTIONS ============
-
-// Refresh pending schools
-async function refreshPendingSchools() {
-    const container = document.getElementById('pending-schools-container');
-    if (!container) return;
-    
-    const schools = await loadPendingSchools();
-    container.innerHTML = renderPendingSchoolsTable(schools);
-    if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
-    }
-}
-
-// Refresh schools list
-async function refreshSchoolsList() {
-    const container = document.getElementById('schools-table-container');
-    if (!container) return;
-    
-    const schools = await loadAllSchools();
-    container.innerHTML = renderSchoolsTable(schools);
-    if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
-    }
-}
-
-// Refresh suspended schools
-async function refreshSuspendedSchools() {
-    const container = document.getElementById('suspended-schools-container');
-    if (!container) return;
-    
-    const schools = await loadSuspendedSchools();
-    container.innerHTML = renderSuspendedSchoolsTable(schools);
-    if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
-    }
-}
-
-// Load name change requests
-async function loadNameChangeRequests() {
-    try {
-        const response = await api.superAdmin.getPendingRequests();
-        return response.data || [];
-    } catch (error) {
-        console.error('Failed to load name change requests:', error);
-        return [];
-    }
-}
-
-// Refresh name change requests
-async function refreshNameChangeRequests() {
-    const container = document.getElementById('name-change-requests-container');
-    if (!container) return;
-    
-    const requests = await loadNameChangeRequests();
-    container.innerHTML = renderNameChangeRequestsTable(requests);
-    if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
-    }
-}
-
 // Render name change requests table
 function renderNameChangeRequestsTable(requests) {
     if (!requests || requests.length === 0) {
@@ -962,38 +983,53 @@ function renderNameChangeRequestsTable(requests) {
     `;
 }
 
-// ============ NAME CHANGE FUNCTIONS ============
+// ============ REFRESH FUNCTIONS ============
 
-// Approve name change
-async function approveNameChange(requestId) {
-    showLoading();
-    try {
-        const response = await api.superAdmin.approveRequest(requestId);
-        showToast('✅ Name change approved', 'success');
-        await refreshNameChangeRequests();
-        return response;
-    } catch (error) {
-        showToast(error.message || 'Failed to approve name change', 'error');
-    } finally {
-        hideLoading();
+// Refresh pending schools
+async function refreshPendingSchools() {
+    const container = document.getElementById('pending-schools-container');
+    if (!container) return;
+    
+    const schools = await loadPendingSchools();
+    container.innerHTML = renderPendingSchoolsTable(schools);
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
     }
 }
 
-// Reject name change
-async function rejectNameChange(requestId) {
-    const reason = prompt('Please enter rejection reason:');
-    if (reason === null) return;
+// Refresh schools list
+async function refreshSchoolsList() {
+    const container = document.getElementById('schools-table-container');
+    if (!container) return;
     
-    showLoading();
-    try {
-        const response = await api.superAdmin.rejectRequest(requestId, reason);
-        showToast('Name change rejected', 'info');
-        await refreshNameChangeRequests();
-        return response;
-    } catch (error) {
-        showToast(error.message || 'Failed to reject name change', 'error');
-    } finally {
-        hideLoading();
+    const schools = await loadAllSchools();
+    container.innerHTML = renderSchoolsTable(schools);
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+// Refresh suspended schools
+async function refreshSuspendedSchools() {
+    const container = document.getElementById('suspended-schools-container');
+    if (!container) return;
+    
+    const schools = await loadSuspendedSchools();
+    container.innerHTML = renderSuspendedSchoolsTable(schools);
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+// Refresh name change requests
+async function refreshNameChangeRequests() {
+    const container = document.getElementById('name-change-requests-container');
+    if (!container) return;
+    
+    const requests = await loadNameChangeRequests();
+    container.innerHTML = renderNameChangeRequestsTable(requests);
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
     }
 }
 
@@ -1026,7 +1062,6 @@ function formatDate(dateString) {
 
 // ============ EXPORT FUNCTIONS ============
 
-// Export all functions to global scope
 window.loadPendingSchools = loadPendingSchools;
 window.loadAllSchools = loadAllSchools;
 window.loadSuspendedSchools = loadSuspendedSchools;
@@ -1056,3 +1091,4 @@ window.renderPendingSchoolsTable = renderPendingSchoolsTable;
 window.renderSchoolsTable = renderSchoolsTable;
 window.renderSuspendedSchoolsTable = renderSuspendedSchoolsTable;
 window.renderNameChangeRequestsTable = renderNameChangeRequestsTable;
+window.refreshNameChangeRequests = refreshNameChangeRequests;
