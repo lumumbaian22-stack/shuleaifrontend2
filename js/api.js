@@ -321,6 +321,23 @@ const dutyAPI = {
         })
 };
 
+// ============ SCHOOL ENDPOINTS ============
+const schoolAPI = {
+    createNameChangeRequest: (data) => 
+        apiRequest('/api/school/name-change-request', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        }),
+    getNameChangeRequests: () => 
+        apiRequest('/api/school/name-change-requests')
+};
+
+// Add to the window.api export
+window.api = {
+    // ... existing APIs
+    school: schoolAPI
+};
+
 // ============ ANALYTICS ENDPOINTS ============
 const analyticsAPI = {
     getStudentAnalytics: (studentId, curriculum, period) => 
@@ -405,3 +422,4 @@ window.api = {
 // Legacy support
 window.apiRequest = apiRequest;
 window.uploadFile = uploadFile;
+
