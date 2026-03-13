@@ -106,20 +106,6 @@ const authAPI = {
             method: 'POST',
             body: JSON.stringify(data)
         }),
-
-    suspendSchool: (schoolId, reason) => 
-  apiRequest(`/api/super-admin/schools/${schoolId}/suspend`, {
-    method: 'POST',
-    body: JSON.stringify({ reason })
-  }),
-
-reactivateSchool: (schoolId, reason) => 
-  apiRequest(`/api/super-admin/schools/${schoolId}/reactivate`, {
-    method: 'POST',
-    body: JSON.stringify({ reason })
-  }),
-
-getSuspendedSchools: () => apiRequest('/api/super-admin/suspended-schools'),
     
     studentLogin: (elimuid, password) => 
         apiRequest('/api/auth/student/login', {
@@ -155,12 +141,23 @@ const superAdminAPI = {
     getOverview: () => apiRequest('/api/super-admin/overview'),
     getSchools: () => apiRequest('/api/super-admin/schools'),
     getPendingSchools: () => apiRequest('/api/super-admin/pending-schools'),
+    getSuspendedSchools: () => apiRequest('/api/super-admin/suspended-schools'),
     approveSchool: (schoolId) => 
         apiRequest(`/api/super-admin/schools/${schoolId}/approve`, {
             method: 'POST'
         }),
     rejectSchool: (schoolId, reason) => 
         apiRequest(`/api/super-admin/schools/${schoolId}/reject`, {
+            method: 'POST',
+            body: JSON.stringify({ reason })
+        }),
+    suspendSchool: (schoolId, reason) => 
+        apiRequest(`/api/super-admin/schools/${schoolId}/suspend`, {
+            method: 'POST',
+            body: JSON.stringify({ reason })
+        }),
+    reactivateSchool: (schoolId, reason) => 
+        apiRequest(`/api/super-admin/schools/${schoolId}/reactivate`, {
             method: 'POST',
             body: JSON.stringify({ reason })
         }),
@@ -321,7 +318,7 @@ const dutyAPI = {
         })
 };
 
-// ============ SCHOOL ENDPOINTS ============
+// ============ SCHOOL ENDPOINTS (for name change requests) ============
 const schoolAPI = {
     createNameChangeRequest: (data) => 
         apiRequest('/api/school/name-change-request', {
@@ -330,12 +327,6 @@ const schoolAPI = {
         }),
     getNameChangeRequests: () => 
         apiRequest('/api/school/name-change-requests')
-};
-
-// Add to the window.api export
-window.api = {
-    // ... existing APIs
-    school: schoolAPI
 };
 
 // ============ ANALYTICS ENDPOINTS ============
@@ -405,7 +396,7 @@ async function uploadFile(endpoint, file, onProgress) {
     });
 }
 
-// Export all APIs
+// Export all APIs - SINGLE EXPORT STATEMENT
 window.api = {
     auth: authAPI,
     superAdmin: superAdminAPI,
@@ -416,10 +407,10 @@ window.api = {
     duty: dutyAPI,
     analytics: analyticsAPI,
     upload: uploadAPI,
-    public: publicAPI
+    public: publicAPI,
+    school: schoolAPI  // ADDED: This was missing
 };
 
 // Legacy support
 window.apiRequest = apiRequest;
 window.uploadFile = uploadFile;
-
