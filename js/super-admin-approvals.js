@@ -1,4 +1,6 @@
-// super-admin-approvals.js - Complete with suspension functions
+// super-admin-approvals.js - Complete with working view and edit functions
+
+// ============ SCHOOL MANAGEMENT ============
 
 // Load pending schools
 async function loadPendingSchools() {
@@ -35,16 +37,7 @@ async function loadSuspendedSchools() {
     }
 }
 
-// Load name change requests
-async function loadNameChangeRequests() {
-    try {
-        const response = await api.superAdmin.getPendingRequests();
-        return response.data || [];
-    } catch (error) {
-        console.error('Failed to load name change requests:', error);
-        return [];
-    }
-}
+// ============ SCHOOL ACTIONS ============
 
 // Approve school
 async function approveSchool(schoolId) {
@@ -127,20 +120,384 @@ async function reactivateSchool(schoolId) {
     }
 }
 
-// Create new school
-async function createSchool(schoolData) {
+// Delete school
+async function deleteSchool(schoolId) {
+    if (!confirm('⚠️ Are you sure? This will delete ALL data for this school! This action cannot be undone.')) {
+        return;
+    }
+    
     showLoading();
     try {
-        const response = await api.superAdmin.createSchool(schoolData);
-        showToast('✅ School created successfully', 'success');
+        const response = await api.superAdmin.deleteSchool(schoolId);
+        showToast('School deleted', 'info');
         await refreshSchoolsList();
+        await refreshPendingSchools();
+        await refreshSuspendedSchools();
         return response;
     } catch (error) {
-        showToast(error.message || 'Failed to create school', 'error');
-        throw error;
+        showToast(error.message || 'Failed to delete school', 'error');
     } finally {
         hideLoading();
     }
+}
+
+// ============ VIEW SCHOOL DETAILS ============
+
+// View school details
+async function viewSchoolDetails(schoolId) {
+    showLoading();
+    try {
+        // Get school details
+        const schools = await loadAllSchools();
+        const school = schools.find(s => s.id == schoolId);
+        
+        if (!school) {
+            showToast('School not found', 'error');
+            return;
+        }
+        
+        // Create and show modal
+        showSchoolDetailsModal(school);
+    } catch (error) {
+        console.error('Error viewing school details:', error);
+        showToast('Failed to load school details', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Show school details modal
+function showSchoolDetailsModal(school) {
+    // Check if modal already exists
+    let modal = document.getElementById('school-details-modal');
+    
+    if (!modal) {
+        createSchoolDetailsModal();
+        modal = document.getElementById('school-details-modal');
+    }
+    
+    // Update modal content with school data
+    const modalContent = modal.querySelector('.modal-content');
+    modalContent.innerHTML = getSchoolDetailsHTML(school);
+    
+    // Show modal
+    modal.classList.remove('hidden');
+}
+
+// Create school details modal
+function createSchoolDetailsModal() {
+    const modalHTML = `
+        <div id="school-details-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeSchoolDetailsModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl p-4">
+                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">School Details</h3>
+                        <button onclick="closeSchoolDetailsModal()" class="p-2 hover:bg-accent rounded-lg">
+                            <i data-lucide="x" class="h-5 w-5"></i>
+                        </button>
+                    </div>
+                    <div class="modal-content space-y-4">
+                        <!-- Content will be filled dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// Get school details HTML
+function getSchoolDetailsHTML(school) {
+    const admin = school.admins && school.admins.length > 0 ? school.admins[0] : null;
+    
+    return `
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="p-3 bg-muted/30 rounded-lg">
+                    <p class="text-xs text-muted-foreground">School ID</p>
+                    <p class="font-mono text-sm">${school.schoolId || 'N/A'}</p>
+                </div>
+                <div class="p-3 bg-muted/30 rounded-lg">
+                    <p class="text-xs text-muted-foreground">Short Code</p>
+                    <p class="font-mono text-sm font-bold text-primary">${school.shortCode || 'N/A'}</p>
+                </div>
+            </div>
+            
+            <div class="border-t pt-4">
+                <h4 class="font-medium mb-2">Basic Information</h4>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                        <p class="text-muted-foreground">School Name</p>
+                        <p class="font-medium">${school.name || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <p class="text-muted-foreground">Curriculum</p>
+                        <p>${school.system || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <p class="text-muted-foreground">Status</p>
+                        <p><span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium 
+                            ${school.status === 'active' ? 'bg-green-100 text-green-700' : 
+                              school.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 
+                              school.status === 'suspended' ? 'bg-red-100 text-red-700' : 
+                              'bg-gray-100 text-gray-700'}">
+                            ${school.status}
+                        </span></p>
+                    </div>
+                    <div>
+                        <p class="text-muted-foreground">Created</p>
+                        <p>${formatDate(school.createdAt)}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-t pt-4">
+                <h4 class="font-medium mb-2">Contact Information</h4>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                        <p class="text-muted-foreground">Email</p>
+                        <p>${school.contact?.email || admin?.email || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <p class="text-muted-foreground">Phone</p>
+                        <p>${school.contact?.phone || 'N/A'}</p>
+                    </div>
+                    <div class="col-span-2">
+                        <p class="text-muted-foreground">Address</p>
+                        <p>${school.address ? `${school.address.street || ''}, ${school.address.city || ''}, ${school.address.country || ''}`.replace(/^, |, $/g, '') || 'N/A' : 'N/A'}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-t pt-4">
+                <h4 class="font-medium mb-2">Administrator</h4>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                        <p class="text-muted-foreground">Name</p>
+                        <p>${admin?.name || 'No admin assigned'}</p>
+                    </div>
+                    <div>
+                        <p class="text-muted-foreground">Email</p>
+                        <p>${admin?.email || 'N/A'}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-t pt-4">
+                <h4 class="font-medium mb-2">Statistics</h4>
+                <div class="grid grid-cols-3 gap-3 text-center">
+                    <div class="p-2 bg-muted/30 rounded">
+                        <p class="text-2xl font-bold text-blue-600">${school.stats?.teachers || 0}</p>
+                        <p class="text-xs text-muted-foreground">Teachers</p>
+                    </div>
+                    <div class="p-2 bg-muted/30 rounded">
+                        <p class="text-2xl font-bold text-green-600">${school.stats?.students || 0}</p>
+                        <p class="text-xs text-muted-foreground">Students</p>
+                    </div>
+                    <div class="p-2 bg-muted/30 rounded">
+                        <p class="text-2xl font-bold text-purple-600">${school.stats?.parents || 0}</p>
+                        <p class="text-xs text-muted-foreground">Parents</p>
+                    </div>
+                </div>
+            </div>
+            
+            ${school.suspensionReason ? `
+            <div class="border-t pt-4">
+                <h4 class="font-medium mb-2 text-red-600">Suspension Information</h4>
+                <div class="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                    <p class="text-sm"><span class="font-medium">Reason:</span> ${school.suspensionReason}</p>
+                    <p class="text-sm mt-1"><span class="font-medium">Date:</span> ${formatDate(school.suspendedAt)}</p>
+                </div>
+            </div>
+            ` : ''}
+            
+            <div class="flex justify-end gap-2 pt-4 border-t">
+                <button onclick="closeSchoolDetailsModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Close</button>
+                <button onclick="editSchool('${school.id}')" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Edit School</button>
+            </div>
+        </div>
+    `;
+}
+
+// Close school details modal
+function closeSchoolDetailsModal() {
+    const modal = document.getElementById('school-details-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+// ============ EDIT SCHOOL ============
+
+// Edit school
+async function editSchool(schoolId) {
+    showLoading();
+    try {
+        // Get school details
+        const schools = await loadAllSchools();
+        const school = schools.find(s => s.id == schoolId);
+        
+        if (!school) {
+            showToast('School not found', 'error');
+            return;
+        }
+        
+        // Show edit modal
+        showEditSchoolModal(school);
+    } catch (error) {
+        console.error('Error loading school for edit:', error);
+        showToast('Failed to load school data', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Show edit school modal
+function showEditSchoolModal(school) {
+    // Check if modal already exists
+    let modal = document.getElementById('edit-school-modal');
+    
+    if (!modal) {
+        createEditSchoolModal();
+        modal = document.getElementById('edit-school-modal');
+    }
+    
+    // Populate form with school data
+    document.getElementById('edit-school-id').value = school.id;
+    document.getElementById('edit-school-name').value = school.name || '';
+    document.getElementById('edit-school-level').value = school.settings?.schoolLevel || 'secondary';
+    document.getElementById('edit-curriculum').value = school.system || 'cbc';
+    document.getElementById('edit-contact-email').value = school.contact?.email || '';
+    document.getElementById('edit-contact-phone').value = school.contact?.phone || '';
+    document.getElementById('edit-address-street').value = school.address?.street || '';
+    document.getElementById('edit-address-city').value = school.address?.city || '';
+    document.getElementById('edit-address-country').value = school.address?.country || '';
+    
+    // Show modal
+    modal.classList.remove('hidden');
+}
+
+// Create edit school modal
+function createEditSchoolModal() {
+    const modalHTML = `
+        <div id="edit-school-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeEditSchoolModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl p-4">
+                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Edit School</h3>
+                        <button onclick="closeEditSchoolModal()" class="p-2 hover:bg-accent rounded-lg">
+                            <i data-lucide="x" class="h-5 w-5"></i>
+                        </button>
+                    </div>
+                    
+                    <input type="hidden" id="edit-school-id">
+                    
+                    <div class="space-y-4 max-h-[60vh] overflow-y-auto p-1">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="col-span-2">
+                                <label class="block text-sm font-medium mb-1">School Name *</label>
+                                <input type="text" id="edit-school-name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-1">School Level</label>
+                                <select id="edit-school-level" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                                    <option value="primary">Primary</option>
+                                    <option value="secondary">Secondary</option>
+                                    <option value="both">Both</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Curriculum</label>
+                                <select id="edit-curriculum" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                                    <option value="cbc">CBC</option>
+                                    <option value="844">8-4-4</option>
+                                    <option value="british">British</option>
+                                    <option value="american">American</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-span-2 border-t pt-2 mt-2">
+                                <h4 class="font-medium mb-2">Contact Information</h4>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Email</label>
+                                <input type="email" id="edit-contact-email" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Phone</label>
+                                <input type="tel" id="edit-contact-phone" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                            </div>
+                            
+                            <div class="col-span-2">
+                                <label class="block text-sm font-medium mb-1">Street Address</label>
+                                <input type="text" id="edit-address-street" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-1">City</label>
+                                <input type="text" id="edit-address-city" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Country</label>
+                                <input type="text" id="edit-address-country" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
+                        <button onclick="closeEditSchoolModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
+                        <button onclick="handleUpdateSchool()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Update School</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// Close edit school modal
+function closeEditSchoolModal() {
+    const modal = document.getElementById('edit-school-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+// Handle update school
+async function handleUpdateSchool() {
+    const schoolId = document.getElementById('edit-school-id').value;
+    
+    const schoolData = {
+        name: document.getElementById('edit-school-name').value,
+        system: document.getElementById('edit-curriculum').value,
+        settings: {
+            schoolLevel: document.getElementById('edit-school-level').value
+        },
+        contact: {
+            email: document.getElementById('edit-contact-email').value,
+            phone: document.getElementById('edit-contact-phone').value
+        },
+        address: {
+            street: document.getElementById('edit-address-street').value,
+            city: document.getElementById('edit-address-city').value,
+            country: document.getElementById('edit-address-country').value
+        }
+    };
+    
+    if (!schoolData.name) {
+        showToast('School name is required', 'error');
+        return;
+    }
+    
+    await updateSchool(schoolId, schoolData);
+    closeEditSchoolModal();
 }
 
 // Update school
@@ -159,73 +516,130 @@ async function updateSchool(schoolId, schoolData) {
     }
 }
 
-// Delete school
-async function deleteSchool(schoolId) {
-    if (!confirm('⚠️ Are you sure? This will delete ALL data for this school! This action cannot be undone.')) {
+// ============ CREATE SCHOOL ============
+
+// Show create school modal
+function showCreateSchoolModal() {
+    let modal = document.getElementById('create-school-modal');
+    
+    if (!modal) {
+        createCreateSchoolModal();
+        modal = document.getElementById('create-school-modal');
+    }
+    
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+// Create create school modal
+function createCreateSchoolModal() {
+    const modalHTML = `
+        <div id="create-school-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeCreateSchoolModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                    <h3 class="text-lg font-semibold mb-4">Create New School</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">School Name *</label>
+                            <input type="text" id="modal-school-name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">School Level</label>
+                            <select id="modal-school-level" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                                <option value="primary">Primary</option>
+                                <option value="secondary">Secondary</option>
+                                <option value="both">Both</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Curriculum</label>
+                            <select id="modal-curriculum" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                                <option value="cbc">CBC</option>
+                                <option value="844">8-4-4</option>
+                                <option value="british">British</option>
+                                <option value="american">American</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Admin Name *</label>
+                            <input type="text" id="modal-admin-name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Admin Email *</label>
+                            <input type="email" id="modal-admin-email" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Admin Password</label>
+                            <input type="password" id="modal-admin-password" value="Admin123!" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                            <p class="text-xs text-muted-foreground mt-1">Default: Admin123!</p>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button onclick="closeCreateSchoolModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
+                        <button onclick="handleCreateSchool()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Create School</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// Close create school modal
+function closeCreateSchoolModal() {
+    const modal = document.getElementById('create-school-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        // Clear form
+        document.getElementById('modal-school-name') && (document.getElementById('modal-school-name').value = '');
+        document.getElementById('modal-school-level') && (document.getElementById('modal-school-level').value = 'secondary');
+        document.getElementById('modal-curriculum') && (document.getElementById('modal-curriculum').value = 'cbc');
+        document.getElementById('modal-admin-name') && (document.getElementById('modal-admin-name').value = '');
+        document.getElementById('modal-admin-email') && (document.getElementById('modal-admin-email').value = '');
+    }
+}
+
+// Handle create school
+async function handleCreateSchool() {
+    const schoolData = {
+        name: document.getElementById('modal-school-name')?.value,
+        system: document.getElementById('modal-curriculum')?.value,
+        adminName: document.getElementById('modal-admin-name')?.value,
+        adminEmail: document.getElementById('modal-admin-email')?.value,
+        adminPassword: document.getElementById('modal-admin-password')?.value || 'Admin123!',
+        settings: {
+            schoolLevel: document.getElementById('modal-school-level')?.value
+        }
+    };
+    
+    if (!schoolData.name || !schoolData.adminName || !schoolData.adminEmail) {
+        showToast('Please fill all required fields', 'error');
         return;
     }
     
+    await createSchool(schoolData);
+    closeCreateSchoolModal();
+}
+
+// Create new school
+async function createSchool(schoolData) {
     showLoading();
     try {
-        const response = await api.superAdmin.deleteSchool(schoolId);
-        showToast('School deleted', 'info');
+        const response = await api.superAdmin.createSchool(schoolData);
+        showToast('✅ School created successfully', 'success');
         await refreshSchoolsList();
-        await refreshPendingSchools();
         return response;
     } catch (error) {
-        showToast(error.message || 'Failed to delete school', 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-// Approve name change
-async function approveNameChange(requestId) {
-    showLoading();
-    try {
-        const response = await api.superAdmin.approveRequest(requestId);
-        showToast('✅ Name change approved', 'success');
-        await refreshNameChangeRequests();
-        return response;
-    } catch (error) {
-        showToast(error.message || 'Failed to approve name change', 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-// Reject name change
-async function rejectNameChange(requestId) {
-    const reason = prompt('Please enter rejection reason:');
-    if (reason === null) return;
-    
-    showLoading();
-    try {
-        const response = await api.superAdmin.rejectRequest(requestId, reason);
-        showToast('Name change rejected', 'info');
-        await refreshNameChangeRequests();
-        return response;
-    } catch (error) {
-        showToast(error.message || 'Failed to reject name change', 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-// Update bank details
-async function updateBankDetails(schoolId, bankData) {
-    showLoading();
-    try {
-        const response = await api.superAdmin.updateBankDetails(schoolId, bankData);
-        showToast('✅ Bank details updated', 'success');
-        return response;
-    } catch (error) {
-        showToast(error.message || 'Failed to update bank details', 'error');
+        showToast(error.message || 'Failed to create school', 'error');
         throw error;
     } finally {
         hideLoading();
     }
 }
+
+// ============ RENDER FUNCTIONS ============
 
 // Render pending schools table
 function renderPendingSchoolsTable(schools) {
@@ -266,6 +680,9 @@ function renderPendingSchoolsTable(schools) {
                                     </button>
                                     <button onclick="rejectSchool('${school.id}')" class="px-3 py-1 bg-red-100 text-red-700 text-xs rounded-full hover:bg-red-200">
                                         Reject
+                                    </button>
+                                    <button onclick="viewSchoolDetails('${school.id}')" class="p-2 hover:bg-accent rounded-lg">
+                                        <i data-lucide="eye" class="h-4 w-4"></i>
                                     </button>
                                 </td>
                             </tr>
@@ -315,22 +732,22 @@ function renderSchoolsTable(schools) {
                             <td class="px-4 py-3">${school.stats?.teachers || 0}</td>
                             <td class="px-4 py-3">${school.stats?.students || 0}</td>
                             <td class="px-4 py-3 text-right">
-                                <button onclick="viewSchoolDetails('${school.id}')" class="p-2 hover:bg-accent rounded-lg">
+                                <button onclick="viewSchoolDetails('${school.id}')" class="p-2 hover:bg-accent rounded-lg" title="View Details">
                                     <i data-lucide="eye" class="h-4 w-4"></i>
                                 </button>
-                                <button onclick="editSchool('${school.id}')" class="p-2 hover:bg-accent rounded-lg">
+                                <button onclick="editSchool('${school.id}')" class="p-2 hover:bg-accent rounded-lg" title="Edit School">
                                     <i data-lucide="edit" class="h-4 w-4"></i>
                                 </button>
                                 ${school.status === 'active' ? `
-                                    <button onclick="suspendSchool('${school.id}')" class="p-2 hover:bg-yellow-100 rounded-lg text-yellow-600">
+                                    <button onclick="suspendSchool('${school.id}')" class="p-2 hover:bg-yellow-100 rounded-lg text-yellow-600" title="Suspend School">
                                         <i data-lucide="pause-circle" class="h-4 w-4"></i>
                                     </button>
                                 ` : school.status === 'suspended' ? `
-                                    <button onclick="reactivateSchool('${school.id}')" class="p-2 hover:bg-green-100 rounded-lg text-green-600">
+                                    <button onclick="reactivateSchool('${school.id}')" class="p-2 hover:bg-green-100 rounded-lg text-green-600" title="Reactivate School">
                                         <i data-lucide="play-circle" class="h-4 w-4"></i>
                                     </button>
                                 ` : ''}
-                                <button onclick="deleteSchool('${school.id}')" class="p-2 hover:bg-red-100 rounded-lg text-red-600">
+                                <button onclick="deleteSchool('${school.id}')" class="p-2 hover:bg-red-100 rounded-lg text-red-600" title="Delete School">
                                     <i data-lucide="trash-2" class="h-4 w-4"></i>
                                 </button>
                             </td>
@@ -370,11 +787,11 @@ function renderSuspendedSchoolsTable(schools) {
                             <td class="px-4 py-3">${formatDate(school.suspendedAt)}</td>
                             <td class="px-4 py-3">${school.suspensionReason || 'N/A'}</td>
                             <td class="px-4 py-3 text-right">
-                                <button onclick="reactivateSchool('${school.id}')" class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full hover:bg-green-200">
-                                    Reactivate
+                                <button onclick="viewSchoolDetails('${school.id}')" class="p-2 hover:bg-accent rounded-lg" title="View Details">
+                                    <i data-lucide="eye" class="h-4 w-4"></i>
                                 </button>
-                                <button onclick="deleteSchool('${school.id}')" class="px-3 py-1 bg-red-100 text-red-700 text-xs rounded-full hover:bg-red-200 ml-2">
-                                    Delete
+                                <button onclick="reactivateSchool('${school.id}')" class="p-2 hover:bg-green-100 rounded-lg text-green-600" title="Reactivate">
+                                    <i data-lucide="play-circle" class="h-4 w-4"></i>
                                 </button>
                             </td>
                         </tr>
@@ -383,6 +800,67 @@ function renderSuspendedSchoolsTable(schools) {
             </table>
         </div>
     `;
+}
+
+// ============ REFRESH FUNCTIONS ============
+
+// Refresh pending schools
+async function refreshPendingSchools() {
+    const container = document.getElementById('pending-schools-container');
+    if (!container) return;
+    
+    const schools = await loadPendingSchools();
+    container.innerHTML = renderPendingSchoolsTable(schools);
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+// Refresh schools list
+async function refreshSchoolsList() {
+    const container = document.getElementById('schools-table-container');
+    if (!container) return;
+    
+    const schools = await loadAllSchools();
+    container.innerHTML = renderSchoolsTable(schools);
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+// Refresh suspended schools
+async function refreshSuspendedSchools() {
+    const container = document.getElementById('suspended-schools-container');
+    if (!container) return;
+    
+    const schools = await loadSuspendedSchools();
+    container.innerHTML = renderSuspendedSchoolsTable(schools);
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+// Load name change requests
+async function loadNameChangeRequests() {
+    try {
+        const response = await api.superAdmin.getPendingRequests();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load name change requests:', error);
+        return [];
+    }
+}
+
+// Refresh name change requests
+async function refreshNameChangeRequests() {
+    const container = document.getElementById('name-change-requests-container');
+    if (!container) return;
+    
+    const requests = await loadNameChangeRequests();
+    container.innerHTML = renderNameChangeRequestsTable(requests);
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
 }
 
 // Render name change requests table
@@ -428,116 +906,83 @@ function renderNameChangeRequestsTable(requests) {
     `;
 }
 
-// Refresh pending schools
-async function refreshPendingSchools() {
-    const container = document.getElementById('pending-schools-container');
-    if (!container) return;
-    
-    const schools = await loadPendingSchools();
-    container.innerHTML = renderPendingSchoolsTable(schools);
-    if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
+// ============ NAME CHANGE FUNCTIONS ============
+
+// Approve name change
+async function approveNameChange(requestId) {
+    showLoading();
+    try {
+        const response = await api.superAdmin.approveRequest(requestId);
+        showToast('✅ Name change approved', 'success');
+        await refreshNameChangeRequests();
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to approve name change', 'error');
+    } finally {
+        hideLoading();
     }
 }
 
-// Refresh schools list
-async function refreshSchoolsList() {
-    const container = document.getElementById('schools-table-container');
-    if (!container) return;
+// Reject name change
+async function rejectNameChange(requestId) {
+    const reason = prompt('Please enter rejection reason:');
+    if (reason === null) return;
     
-    const schools = await loadAllSchools();
-    container.innerHTML = renderSchoolsTable(schools);
-    if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
+    showLoading();
+    try {
+        const response = await api.superAdmin.rejectRequest(requestId, reason);
+        showToast('Name change rejected', 'info');
+        await refreshNameChangeRequests();
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to reject name change', 'error');
+    } finally {
+        hideLoading();
     }
 }
 
-// Refresh suspended schools
-async function refreshSuspendedSchools() {
-    const container = document.getElementById('suspended-schools-container');
-    if (!container) return;
-    
-    const schools = await loadSuspendedSchools();
-    container.innerHTML = renderSuspendedSchoolsTable(schools);
-    if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
+// ============ BANK DETAILS ============
+
+// Update bank details
+async function updateBankDetails(schoolId, bankData) {
+    showLoading();
+    try {
+        const response = await api.superAdmin.updateBankDetails(schoolId, bankData);
+        showToast('✅ Bank details updated', 'success');
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to update bank details', 'error');
+        throw error;
+    } finally {
+        hideLoading();
     }
 }
 
-// Refresh name change requests
-async function refreshNameChangeRequests() {
-    const container = document.getElementById('name-change-requests-container');
-    if (!container) return;
-    
-    const requests = await loadNameChangeRequests();
-    container.innerHTML = renderNameChangeRequestsTable(requests);
-    if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
-    }
-}
+// ============ EXPORT FUNCTIONS ============
 
-// Helper function to format date
-function formatDate(dateString) {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-    });
-}
-
-// Helper function for time ago
-function timeAgo(timestamp) {
-    if (!timestamp) return 'N/A';
-    const seconds = Math.floor((new Date() - new Date(timestamp)) / 1000);
-    
-    const intervals = {
-        year: 31536000,
-        month: 2592000,
-        week: 604800,
-        day: 86400,
-        hour: 3600,
-        minute: 60
-    };
-    
-    for (const [unit, secondsInUnit] of Object.entries(intervals)) {
-        const interval = Math.floor(seconds / secondsInUnit);
-        if (interval >= 1) {
-            return `${interval} ${unit}${interval === 1 ? '' : 's'} ago`;
-        }
-    }
-    
-    return 'just now';
-}
-
-// Helper function to get initials
-function getInitials(name) {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-}
-
-// View school details
-function viewSchoolDetails(schoolId) {
-    showToast(`Viewing school ${schoolId}`, 'info');
-}
-
-// Edit school
-function editSchool(schoolId) {
-    showToast(`Editing school ${schoolId}`, 'info');
-}
-
-// Export functions
+// Export all functions to global scope
 window.loadPendingSchools = loadPendingSchools;
 window.loadAllSchools = loadAllSchools;
 window.loadSuspendedSchools = loadSuspendedSchools;
-window.loadNameChangeRequests = loadNameChangeRequests;
 window.approveSchool = approveSchool;
 window.rejectSchool = rejectSchool;
 window.suspendSchool = suspendSchool;
 window.reactivateSchool = reactivateSchool;
+window.deleteSchool = deleteSchool;
+window.viewSchoolDetails = viewSchoolDetails;
+window.closeSchoolDetailsModal = closeSchoolDetailsModal;
+window.editSchool = editSchool;
+window.closeEditSchoolModal = closeEditSchoolModal;
+window.handleUpdateSchool = handleUpdateSchool;
+window.showCreateSchoolModal = showCreateSchoolModal;
+window.closeCreateSchoolModal = closeCreateSchoolModal;
+window.handleCreateSchool = handleCreateSchool;
 window.createSchool = createSchool;
 window.updateSchool = updateSchool;
-window.deleteSchool = deleteSchool;
+window.refreshPendingSchools = refreshPendingSchools;
+window.refreshSchoolsList = refreshSchoolsList;
+window.refreshSuspendedSchools = refreshSuspendedSchools;
+window.loadNameChangeRequests = loadNameChangeRequests;
 window.approveNameChange = approveNameChange;
 window.rejectNameChange = rejectNameChange;
 window.updateBankDetails = updateBankDetails;
@@ -545,12 +990,13 @@ window.renderPendingSchoolsTable = renderPendingSchoolsTable;
 window.renderSchoolsTable = renderSchoolsTable;
 window.renderSuspendedSchoolsTable = renderSuspendedSchoolsTable;
 window.renderNameChangeRequestsTable = renderNameChangeRequestsTable;
-window.refreshPendingSchools = refreshPendingSchools;
-window.refreshSchoolsList = refreshSchoolsList;
-window.refreshSuspendedSchools = refreshSuspendedSchools;
-window.refreshNameChangeRequests = refreshNameChangeRequests;
-window.viewSchoolDetails = viewSchoolDetails;
-window.editSchool = editSchool;
-window.formatDate = formatDate;
-window.timeAgo = timeAgo;
-window.getInitials = getInitials;
+
+// Helper function for formatting dates
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
