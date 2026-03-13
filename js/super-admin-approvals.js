@@ -699,51 +699,47 @@ async function approveNameChange(requestId) {
         const response = await api.superAdmin.approveRequest(requestId);
         showToast('✅ Name change approved', 'success');
         
+        // Refresh the name change requests list
+        await refreshNameChangeRequests();
+        
         // Get the request details to know which school was updated
         const requests = await loadNameChangeRequests();
-        const request = requests.find(r => r.id == requestId);
+        const approvedRequest = requests.find(r => r.id === requestId);
         
-        if (request && request.School) {
-            const schoolId = request.School.schoolId;
-            const newName = request.newName;
+        if (approvedRequest) {
+            // Get the current user's school
+            const currentUser = getCurrentUser();
+            const currentSchool = getCurrentSchool();
             
-            // Update school data in localStorage for any logged-in admin
-            updateSchoolDataInStorage(schoolId, newName);
-            
-            // If the current user is an admin from this school, refresh their view
-            const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
-            const currentSchool = typeof getCurrentSchool === 'function' ? getCurrentSchool() : null;
-            
-            if (currentUser?.role === 'admin' && currentSchool?.schoolId === schoolId) {
-                // Force refresh school data
-                await refreshAdminSchoolData(newName);
+            // If this is the same school as the current admin, update their view
+            if (currentSchool && currentSchool.schoolId === approvedRequest.schoolCode) {
+                // Update the school name in memory
+                currentSchool.name = approvedRequest.newName;
+                
+                // Update localStorage
+                localStorage.setItem('school', JSON.stringify(currentSchool));
+                
+                // Update schoolSettings if it exists
+                const schoolSettings = JSON.parse(localStorage.getItem('schoolSettings') || '{}');
+                schoolSettings.schoolName = approvedRequest.newName;
+                localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings));
+                
+                // Update the UI immediately
+                const schoolNameElement = document.getElementById('school-name');
+                if (schoolNameElement) {
+                    schoolNameElement.textContent = approvedRequest.newName;
+                }
+                
+                // Show a message that the name will update for all users on next login
+                showToast(`School name updated to "${approvedRequest.newName}". Other users will see the change after refreshing.`, 'info');
             }
         }
         
-        await refreshNameChangeRequests();
-        await refreshSchoolsList();
         return response;
     } catch (error) {
         showToast(error.message || 'Failed to approve name change', 'error');
     } finally {
         hideLoading();
-    }
-}
-
-// Helper function to update school data in storage
-function updateSchoolDataInStorage(schoolId, newName) {
-    // Update current school if this is the active school
-    const currentSchool = typeof getCurrentSchool === 'function' ? getCurrentSchool() : null;
-    if (currentSchool && currentSchool.schoolId === schoolId) {
-        currentSchool.name = newName;
-        localStorage.setItem('school', JSON.stringify(currentSchool));
-    }
-    
-    // Also update schoolSettings if they exist
-    const schoolSettings = JSON.parse(localStorage.getItem('schoolSettings') || '{}');
-    if (schoolSettings && schoolSettings.schoolId === schoolId) {
-        schoolSettings.schoolName = newName;
-        localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings));
     }
 }
 
