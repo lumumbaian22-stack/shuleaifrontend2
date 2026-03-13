@@ -567,7 +567,9 @@ async function handleAuthSubmit() {
                 
                 closeAuthModal();
                 
-            } else if (role === 'teacher') {
+            } 
+            
+            else if (role === 'teacher') {
                 const schoolCode = document.getElementById('auth-school-code')?.value;
                 if (!schoolCode) {
                     showToast('School code is required', 'error');
@@ -585,6 +587,9 @@ async function handleAuthSubmit() {
                     subjects: subjects ? subjects.split(',').map(s => s.trim()) : [],
                     qualification: document.getElementById('auth-qualification')?.value
                 };
+
+                // ADD THIS DEBUG LINE
+                console.log('📤 Teacher signup payload:', teacherData);
                 
                 if (!teacherData.name || !teacherData.email || !teacherData.password) {
                     showToast('Please fill all required fields', 'error');
