@@ -700,6 +700,10 @@ async function showDashboard(role) {
     
     if (landingPage) landingPage.style.display = 'none';
     if (dashboardContainer) dashboardContainer.style.display = 'block';
+
+        // ADD THESE TWO LINES - Clear cached school data
+    localStorage.removeItem('school');
+    localStorage.removeItem('schoolSettings');
     
     await loadSchoolSettings();
     
@@ -4196,5 +4200,4 @@ window.saveDutyPreferences = saveDutyPreferences;
 window.saveAttendance = saveAttendance;
 window.copyElimuid = copyElimuid;
 window.handleChangePassword = handleChangePassword;
-
 
