@@ -729,6 +729,9 @@ async function approveNameChange(requestId) {
             settings.schoolName = newSchoolName;
             localStorage.setItem('schoolSettings', JSON.stringify(settings));
             
+            // 👇 ADD THE FUNCTION CALL HERE
+            updateSchoolNameInAllPlaces(newSchoolName);
+            
             // Update the UI immediately
             const schoolNameElement = document.querySelector('h2.text-2xl.font-bold');
             if (schoolNameElement) {
