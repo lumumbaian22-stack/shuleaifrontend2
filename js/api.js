@@ -396,7 +396,7 @@ async function uploadFile(endpoint, file, onProgress) {
     });
 }
 
-// Export all APIs - SINGLE EXPORT STATEMENT
+// ============ SINGLE EXPORT STATEMENT ============
 window.api = {
     auth: authAPI,
     superAdmin: superAdminAPI,
@@ -408,9 +408,12 @@ window.api = {
     analytics: analyticsAPI,
     upload: uploadAPI,
     public: publicAPI,
-    school: schoolAPI  // ADDED: This was missing
+    school: schoolAPI  // THIS WAS MISSING - NOW ADDED
 };
 
 // Legacy support
 window.apiRequest = apiRequest;
 window.uploadFile = uploadFile;
+
+// Log to verify schoolAPI is loaded
+console.log('✅ API loaded. schoolAPI available:', !!window.api.school);
