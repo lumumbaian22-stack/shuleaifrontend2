@@ -967,16 +967,41 @@ function renderNameChangeRequestsTable(requests) {
 }
 
 // ============ REFRESH FUNCTIONS ============
-
-// Refresh pending schools
-async function refreshPendingSchools() {
+// Refresh pending schools - WITH RETRY MECHANISM
+async function refreshPendingSchools(retryCount = 0) {
+    console.log('refreshPendingSchools called, retry:', retryCount);
     const container = document.getElementById('pending-schools-container');
-    if (!container) return;
     
-    const schools = await loadPendingSchools();
-    container.innerHTML = renderPendingSchoolsTable(schools);
-    if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
+    if (!container) {
+        console.error('Container not found');
+        if (retryCount < 10) {
+            console.log('Retrying in 200ms...');
+            setTimeout(() => refreshPendingSchools(retryCount + 1), 200);
+        }
+        return;
+    }
+    
+    // Check if render function is available
+    if (typeof renderPendingSchoolsTable !== 'function') {
+        console.log('renderPendingSchoolsTable not ready yet');
+        if (retryCount < 20) {
+            setTimeout(() => refreshPendingSchools(retryCount + 1), 100);
+        }
+        return;
+    }
+    
+    try {
+        const schools = await loadPendingSchools();
+        console.log('Schools loaded:', schools.length);
+        container.innerHTML = renderPendingSchoolsTable(schools);
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    } catch (error) {
+        console.error('Error refreshing pending schools:', error);
+        if (retryCount < 5) {
+            setTimeout(() => refreshPendingSchools(retryCount + 1), 500);
+        }
     }
 }
 
