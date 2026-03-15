@@ -41,6 +41,71 @@ async function loadSuspendedSchools() {
     }
 }
 
+// ============ RENDER PENDING SCHOOLS TABLE ============
+
+// Render pending schools table
+function renderPendingSchoolsTable(schools) {
+    console.log('Rendering pending schools table with:', schools);
+    
+    if (!schools || schools.length === 0) {
+        return '<div class="text-center py-8 text-muted-foreground">No pending schools</div>';
+    }
+    
+    let tableHtml = `
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-muted/50">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-medium">School</th>
+                        <th class="px-4 py-3 text-left font-medium">Admin Email</th>
+                        <th class="px-4 py-3 text-left font-medium">Short Code</th>
+                        <th class="px-4 py-3 text-left font-medium">Level</th>
+                        <th class="px-4 py-3 text-left font-medium">Curriculum</th>
+                        <th class="px-4 py-3 text-left font-medium">Applied</th>
+                        <th class="px-4 py-3 text-right font-medium">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+    `;
+    
+    schools.forEach(school => {
+        // Get the admin from the admins array (directly on the school object)
+        const admin = school.admins && school.admins.length > 0 ? school.admins[0] : null;
+        
+        tableHtml += `
+            <tr class="hover:bg-accent/50 transition-colors">
+                <td class="px-4 py-3 font-medium">${school.name || 'N/A'}</td>
+                <td class="px-4 py-3">${admin ? admin.email : 'No admin yet'}</td>
+                <td class="px-4 py-3">
+                    <span class="font-mono text-xs bg-muted px-2 py-1 rounded">${school.shortCode || 'N/A'}</span>
+                </td>
+                <td class="px-4 py-3">${school.settings?.schoolLevel || 'N/A'}</td>
+                <td class="px-4 py-3">${school.system || 'N/A'}</td>
+                <td class="px-4 py-3">${timeAgo(school.createdAt)}</td>
+                <td class="px-4 py-3 text-right">
+                    <button onclick="approveSchool('${school.id}')" class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full hover:bg-green-200 mr-2">
+                        Approve
+                    </button>
+                    <button onclick="rejectSchool('${school.id}')" class="px-3 py-1 bg-red-100 text-red-700 text-xs rounded-full hover:bg-red-200">
+                        Reject
+                    </button>
+                    <button onclick="viewSchoolDetails('${school.id}')" class="p-2 hover:bg-accent rounded-lg">
+                        <i data-lucide="eye" class="h-4 w-4"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tableHtml += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    return tableHtml;
+}
+
 // ============ SCHOOL ACTIONS ============
 
 // Approve school
@@ -1010,4 +1075,5 @@ window.renderSchoolsTable = renderSchoolsTable;
 window.renderSuspendedSchoolsTable = renderSuspendedSchoolsTable;
 window.renderNameChangeRequestsTable = renderNameChangeRequestsTable;
 window.refreshNameChangeRequests = refreshNameChangeRequests;
+
 
