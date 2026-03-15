@@ -11,8 +11,12 @@ async function checkAuth() {
         const response = await api.auth.getMe();
         currentUser = response.data.user;
         currentSchool = response.data.school;
+        
+        // Save everything including role
         localStorage.setItem('user', JSON.stringify(currentUser));
         localStorage.setItem('school', JSON.stringify(currentSchool));
+        localStorage.setItem('userRole', currentUser.role); // ADD THIS
+        
         return true;
     } catch (error) {
         console.error('Auth check failed:', error);
@@ -20,6 +24,7 @@ async function checkAuth() {
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
         localStorage.removeItem('school');
+        localStorage.removeItem('userRole'); // ADD THIS
         return false;
     }
 }
@@ -34,6 +39,7 @@ async function superAdminLogin(email, password, secretKey) {
         
         localStorage.setItem('authToken', authToken);
         localStorage.setItem('user', JSON.stringify(currentUser));
+        localStorage.setItem('userRole', currentUser.role); // ADD THIS
         
         return response;
     } catch (error) {
@@ -81,6 +87,7 @@ async function studentLogin(elimuid, password) {
         
         localStorage.setItem('authToken', authToken);
         localStorage.setItem('user', JSON.stringify(currentUser));
+        localStorage.setItem('userRole', currentUser.role); // ADD THIS
         
         return response;
     } catch (error) {
@@ -100,6 +107,7 @@ async function login(email, password, role) {
         localStorage.setItem('authToken', authToken);
         localStorage.setItem('user', JSON.stringify(currentUser));
         localStorage.setItem('school', JSON.stringify(currentSchool));
+        localStorage.setItem('userRole', currentUser.role); // ADD THIS
         
         return response;
     } catch (error) {
@@ -133,6 +141,7 @@ function logout() {
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     localStorage.removeItem('school');
+    localStorage.removeItem('userRole'); // ADD THIS
     authToken = null;
     refreshToken = null;
     currentUser = null;
@@ -157,6 +166,12 @@ function getCurrentSchool() {
     return currentSchool || JSON.parse(localStorage.getItem('school') || '{}');
 }
 
+// Get current user role (ADD THIS HELPER)
+function getCurrentRole() {
+    if (currentUser) return currentUser.role;
+    return localStorage.getItem('userRole') || null;
+}
+
 // Export auth functions
 window.superAdminLogin = superAdminLogin;
 window.adminSignup = adminSignup;
@@ -170,3 +185,4 @@ window.checkAuth = checkAuth;
 window.logout = logout;
 window.getCurrentUser = getCurrentUser;
 window.getCurrentSchool = getCurrentSchool;
+window.getCurrentRole = getCurrentRole; // ADD THIS
