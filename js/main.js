@@ -219,26 +219,112 @@ function formatDate(dateString) {
 // ============ INITIALIZATION ============
 
 document.addEventListener('DOMContentLoaded', async () => {
-    lucide.createIcons();
+    console.log('🔵 DOM Content Loaded - Starting initialization');
+    
+    // Initialize icons first
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
     
     // Load saved settings
     const savedSettings = localStorage.getItem('schoolSettings');
     if (savedSettings) {
-        schoolSettings = JSON.parse(savedSettings);
-        customSubjects = schoolSettings.customSubjects || [];
+        try {
+            schoolSettings = JSON.parse(savedSettings);
+            customSubjects = schoolSettings.customSubjects || [];
+            console.log('✅ School settings loaded from localStorage');
+        } catch (e) {
+            console.error('Failed to parse school settings:', e);
+        }
     }
     
+    // Small delay to ensure everything is loaded
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     // Check if user is already authenticated
+    console.log('Checking authentication...');
     const isAuthenticated = await checkAuth();
+    console.log('Is authenticated:', isAuthenticated);
     
     if (isAuthenticated) {
-        const user = getCurrentUser();
-        await showDashboard(user.role);
+        // Try multiple ways to get the role
+        let role = null;
         
-        // Connect WebSocket for real-time features
-        if (typeof connectWebSocket === 'function') {
-            connectWebSocket();
+        // Method 1: Check if we have a currentUser from checkAuth
+        if (currentUser && currentUser.role) {
+            role = currentUser.role;
+            console.log('✅ Role from currentUser:', role);
         }
+        
+        // Method 2: Use getCurrentRole helper
+        if (!role && typeof getCurrentRole === 'function') {
+            role = getCurrentRole();
+            console.log('✅ Role from getCurrentRole():', role);
+        }
+        
+        // Method 3: Check localStorage directly
+        if (!role) {
+            role = localStorage.getItem('userRole');
+            console.log('✅ Role from localStorage:', role);
+        }
+        
+        // Method 4: Parse from user object
+        if (!role) {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            role = user.role;
+            console.log('✅ Role from user object:', role);
+        }
+        
+        // Method 5: Use the user object from getCurrentUser
+        if (!role) {
+            const user = getCurrentUser();
+            role = user.role;
+            console.log('✅ Role from getCurrentUser():', role);
+        }
+        
+        // Method 6: Last resort - try to fetch from API
+        if (!role) {
+            console.log('⚠️ No role found in storage, attempting API call...');
+            try {
+                const response = await api.auth.getMe();
+                if (response && response.data && response.data.user) {
+                    role = response.data.user.role;
+                    // Save it for next time
+                    localStorage.setItem('userRole', role);
+                    localStorage.setItem('user', JSON.stringify(response.data.user));
+                    console.log('✅ Role from API:', role);
+                }
+            } catch (error) {
+                console.error('❌ Failed to fetch user from API:', error);
+            }
+        }
+        
+        if (role) {
+            console.log('🎯 Final role determined:', role);
+            
+            // Ensure role is in the correct format (superadmin vs super_admin)
+            // Your backend might use 'super_admin' but frontend might expect 'superadmin'
+            if (role === 'super_admin') {
+                role = 'superadmin';
+                console.log('🔄 Converted super_admin to superadmin');
+            }
+            
+            // Show the dashboard
+            await showDashboard(role);
+            
+            // Connect WebSocket for real-time features
+            if (typeof connectWebSocket === 'function') {
+                setTimeout(connectWebSocket, 500);
+            }
+        } else {
+            console.error('❌ Authenticated but no role could be determined');
+            showToast('Session error. Please log in again.', 'error');
+            setTimeout(() => {
+                window.location.href = '/'; // Redirect to landing page
+            }, 2000);
+        }
+    } else {
+        console.log('User not authenticated, showing landing page');
     }
     
     // Setup event listeners
@@ -251,6 +337,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             month: 'short', day: 'numeric', year: 'numeric' 
         });
     }
+    
+    console.log('✅ Initialization complete');
 });
 
 function setupEventListeners() {
