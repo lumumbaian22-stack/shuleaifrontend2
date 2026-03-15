@@ -697,8 +697,33 @@ async function processNameChange() {
 }
 
 // ============ DASHBOARD FUNCTIONS ============
-
 async function showDashboard(role) {
+    // If role is not provided, try to get from localStorage or currentUser
+    if (!role) {
+        // Try to get from the helper function we added
+        if (typeof getCurrentRole === 'function') {
+            role = getCurrentRole();
+        }
+        
+        // Fallback: try to get from localStorage directly
+        if (!role) {
+            role = localStorage.getItem('userRole');
+        }
+        
+        // Last resort: try to parse from user object
+        if (!role) {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            role = user.role;
+        }
+        
+        // If still no role, redirect to login
+        if (!role) {
+            console.error('No role found, redirecting to login');
+            window.location.href = '/'; // Or your landing page
+            return;
+        }
+    }
+    
     currentRole = role;
     const landingPage = document.getElementById('landing-page');
     const dashboardContainer = document.getElementById('dashboard-container');
@@ -706,9 +731,9 @@ async function showDashboard(role) {
     if (landingPage) landingPage.style.display = 'none';
     if (dashboardContainer) dashboardContainer.style.display = 'block';
 
-        // ADD THESE TWO LINES - Clear cached school data
-    localStorage.removeItem('school');
-    localStorage.removeItem('schoolSettings');
+    // Clear cached school data (optional - be careful with this)
+    // localStorage.removeItem('school');
+    // localStorage.removeItem('schoolSettings');
     
     await loadSchoolSettings();
     
@@ -4233,5 +4258,4 @@ window.saveDutyPreferences = saveDutyPreferences;
 window.saveAttendance = saveAttendance;
 window.copyElimuid = copyElimuid;
 window.handleChangePassword = handleChangePassword;
-
 
