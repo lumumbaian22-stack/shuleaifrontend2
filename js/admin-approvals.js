@@ -1,4 +1,4 @@
-// admin-approvals.js - Complete fixed version with working view and edit functions
+// admin-approvals.js - Complete fixed version with working view and edit functions for both teachers and students
 
 // ============ LOAD FUNCTIONS ============
 
@@ -224,6 +224,168 @@ function closeTeacherDetailsModal() {
     }
 }
 
+// ============ EDIT TEACHER FUNCTIONS ============
+
+// Edit teacher
+async function editTeacher(teacherId) {
+    showLoading();
+    try {
+        const teachers = await loadAllTeachers();
+        const teacher = teachers.find(t => t.id == teacherId);
+        
+        if (!teacher) {
+            showToast('Teacher not found', 'error');
+            return;
+        }
+        
+        showEditTeacherModal(teacher);
+    } catch (error) {
+        console.error('Error loading teacher for edit:', error);
+        showToast('Failed to load teacher data', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Show edit teacher modal
+function showEditTeacherModal(teacher) {
+    let modal = document.getElementById('edit-teacher-modal');
+    
+    if (!modal) {
+        createEditTeacherModal();
+        modal = document.getElementById('edit-teacher-modal');
+    }
+    
+    const user = teacher.User || {};
+    
+    // Populate form with teacher data
+    document.getElementById('edit-teacher-id').value = teacher.id;
+    document.getElementById('edit-teacher-name').value = user.name || '';
+    document.getElementById('edit-teacher-email').value = user.email || '';
+    document.getElementById('edit-teacher-phone').value = user.phone || '';
+    document.getElementById('edit-teacher-department').value = teacher.department || 'general';
+    document.getElementById('edit-teacher-subjects').value = (teacher.subjects || []).join(', ');
+    document.getElementById('edit-teacher-qualification').value = teacher.qualification || '';
+    
+    modal.classList.remove('hidden');
+}
+
+// Create edit teacher modal
+function createEditTeacherModal() {
+    const modalHTML = `
+        <div id="edit-teacher-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeEditTeacherModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Edit Teacher</h3>
+                        <button onclick="closeEditTeacherModal()" class="p-2 hover:bg-accent rounded-lg">
+                            <i data-lucide="x" class="h-5 w-5"></i>
+                        </button>
+                    </div>
+                    
+                    <input type="hidden" id="edit-teacher-id">
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Full Name</label>
+                            <input type="text" id="edit-teacher-name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Email</label>
+                            <input type="email" id="edit-teacher-email" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Phone</label>
+                            <input type="tel" id="edit-teacher-phone" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Department</label>
+                            <select id="edit-teacher-department" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                                <option value="general">General</option>
+                                <option value="mathematics">Mathematics</option>
+                                <option value="science">Science</option>
+                                <option value="languages">Languages</option>
+                                <option value="humanities">Humanities</option>
+                                <option value="technical">Technical</option>
+                                <option value="sports">Sports</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Subjects (comma separated)</label>
+                            <input type="text" id="edit-teacher-subjects" placeholder="Mathematics, Physics, Chemistry" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Qualification</label>
+                            <input type="text" id="edit-teacher-qualification" placeholder="e.g., B.Ed, M.Sc" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button onclick="closeEditTeacherModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
+                        <button onclick="handleUpdateTeacher()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Update Teacher</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// Close edit teacher modal
+function closeEditTeacherModal() {
+    const modal = document.getElementById('edit-teacher-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+// Handle update teacher
+async function handleUpdateTeacher() {
+    const teacherId = document.getElementById('edit-teacher-id')?.value;
+    
+    if (!teacherId) {
+        showToast('Teacher ID not found', 'error');
+        return;
+    }
+    
+    const subjects = document.getElementById('edit-teacher-subjects')?.value;
+    const teacherData = {
+        name: document.getElementById('edit-teacher-name')?.value,
+        email: document.getElementById('edit-teacher-email')?.value,
+        phone: document.getElementById('edit-teacher-phone')?.value,
+        department: document.getElementById('edit-teacher-department')?.value,
+        subjects: subjects ? subjects.split(',').map(s => s.trim()) : [],
+        qualification: document.getElementById('edit-teacher-qualification')?.value
+    };
+    
+    if (!teacherData.name) {
+        showToast('Teacher name is required', 'error');
+        return;
+    }
+    
+    await updateTeacher(teacherId, teacherData);
+    closeEditTeacherModal();
+}
+
+// Update teacher
+async function updateTeacher(teacherId, teacherData) {
+    showLoading();
+    try {
+        // Assuming you have an API endpoint for updating teachers
+        const response = await api.admin.updateTeacher(teacherId, teacherData);
+        showToast('✅ Teacher updated successfully', 'success');
+        await refreshTeachersList();
+        return response;
+    } catch (error) {
+        console.error('Update teacher error:', error);
+        showToast(error.message || 'Failed to update teacher', 'error');
+        throw error;
+    } finally {
+        hideLoading();
+    }
+}
+
 // ============ STUDENT DETAILS MODAL ============
 
 // View student details
@@ -363,165 +525,7 @@ function closeStudentDetailsModal() {
     }
 }
 
-// ============ EDIT FUNCTIONS ============
-
-// Edit teacher
-async function editTeacher(teacherId) {
-    showLoading();
-    try {
-        const teachers = await loadAllTeachers();
-        const teacher = teachers.find(t => t.id == teacherId);
-        
-        if (!teacher) {
-            showToast('Teacher not found', 'error');
-            return;
-        }
-        
-        showEditTeacherModal(teacher);
-    } catch (error) {
-        console.error('Error loading teacher for edit:', error);
-        showToast('Failed to load teacher data', 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-// Show edit teacher modal
-function showEditTeacherModal(teacher) {
-    let modal = document.getElementById('edit-teacher-modal');
-    
-    if (!modal) {
-        createEditTeacherModal();
-        modal = document.getElementById('edit-teacher-modal');
-    }
-    
-    // Populate form with teacher data
-    document.getElementById('edit-teacher-id').value = teacher.id;
-    document.getElementById('edit-teacher-name').value = teacher.User?.name || '';
-    document.getElementById('edit-teacher-email').value = teacher.User?.email || '';
-    document.getElementById('edit-teacher-phone').value = teacher.User?.phone || '';
-    document.getElementById('edit-teacher-department').value = teacher.department || 'general';
-    document.getElementById('edit-teacher-subjects').value = (teacher.subjects || []).join(', ');
-    document.getElementById('edit-teacher-qualification').value = teacher.qualification || '';
-    
-    modal.classList.remove('hidden');
-}
-
-// Create edit teacher modal
-function createEditTeacherModal() {
-    const modalHTML = `
-        <div id="edit-teacher-modal" class="fixed inset-0 z-50 hidden">
-            <div class="absolute inset-0 bg-black/50" onclick="closeEditTeacherModal()"></div>
-            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
-                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold">Edit Teacher</h3>
-                        <button onclick="closeEditTeacherModal()" class="p-2 hover:bg-accent rounded-lg">
-                            <i data-lucide="x" class="h-5 w-5"></i>
-                        </button>
-                    </div>
-                    
-                    <input type="hidden" id="edit-teacher-id">
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Full Name</label>
-                            <input type="text" id="edit-teacher-name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Email</label>
-                            <input type="email" id="edit-teacher-email" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Phone</label>
-                            <input type="tel" id="edit-teacher-phone" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Department</label>
-                            <select id="edit-teacher-department" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                                <option value="general">General</option>
-                                <option value="mathematics">Mathematics</option>
-                                <option value="science">Science</option>
-                                <option value="languages">Languages</option>
-                                <option value="humanities">Humanities</option>
-                                <option value="technical">Technical</option>
-                                <option value="sports">Sports</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Subjects (comma separated)</label>
-                            <input type="text" id="edit-teacher-subjects" placeholder="Mathematics, Physics, Chemistry" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Qualification</label>
-                            <input type="text" id="edit-teacher-qualification" placeholder="e.g., B.Ed, M.Sc" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                        </div>
-                    </div>
-                    
-                    <div class="flex justify-end gap-2 mt-6">
-                        <button onclick="closeEditTeacherModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
-                        <button onclick="handleUpdateTeacher()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Update Teacher</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-}
-
-// Close edit teacher modal
-function closeEditTeacherModal() {
-    const modal = document.getElementById('edit-teacher-modal');
-    if (modal) {
-        modal.classList.add('hidden');
-    }
-}
-
-// Handle update teacher
-async function handleUpdateTeacher() {
-    const teacherId = document.getElementById('edit-teacher-id')?.value;
-    
-    if (!teacherId) {
-        showToast('Teacher ID not found', 'error');
-        return;
-    }
-    
-    const subjects = document.getElementById('edit-teacher-subjects')?.value;
-    const teacherData = {
-        name: document.getElementById('edit-teacher-name')?.value,
-        email: document.getElementById('edit-teacher-email')?.value,
-        phone: document.getElementById('edit-teacher-phone')?.value,
-        department: document.getElementById('edit-teacher-department')?.value,
-        subjects: subjects ? subjects.split(',').map(s => s.trim()) : [],
-        qualification: document.getElementById('edit-teacher-qualification')?.value
-    };
-    
-    if (!teacherData.name) {
-        showToast('Teacher name is required', 'error');
-        return;
-    }
-    
-    await updateTeacher(teacherId, teacherData);
-    closeEditTeacherModal();
-}
-
-// Update teacher
-async function updateTeacher(teacherId, teacherData) {
-    showLoading();
-    try {
-        // Assuming you have an API endpoint for updating teachers
-        const response = await api.admin.updateTeacher(teacherId, teacherData);
-        showToast('✅ Teacher updated successfully', 'success');
-        await refreshTeachersList();
-        return response;
-    } catch (error) {
-        console.error('Update teacher error:', error);
-        showToast(error.message || 'Failed to update teacher', 'error');
-        throw error;
-    } finally {
-        hideLoading();
-    }
-}
+// ============ EDIT STUDENT FUNCTIONS ============
 
 // Edit student
 async function editStudent(studentId) {
@@ -553,10 +557,12 @@ function showEditStudentModal(student) {
         modal = document.getElementById('edit-student-modal');
     }
     
+    const user = student.User || {};
+    
     // Populate form with student data
     document.getElementById('edit-student-id').value = student.id;
-    document.getElementById('edit-student-name').value = student.User?.name || '';
-    document.getElementById('edit-student-email').value = student.User?.email || '';
+    document.getElementById('edit-student-name').value = user.name || '';
+    document.getElementById('edit-student-email').value = user.email || '';
     document.getElementById('edit-student-grade').value = student.grade || '';
     document.getElementById('edit-student-gender').value = student.gender || '';
     document.getElementById('edit-student-dob').value = student.dateOfBirth ? student.dateOfBirth.split('T')[0] : '';
