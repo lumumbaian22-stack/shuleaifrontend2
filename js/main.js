@@ -698,38 +698,72 @@ async function processNameChange() {
 
 // ============ DASHBOARD FUNCTIONS ============
 async function showDashboard(role) {
+    console.log('🔵 showDashboard called with role:', role);
+    
     // If role is not provided, try to get from localStorage or currentUser
     if (!role) {
+        console.log('No role provided, attempting to recover...');
+        
         // Try to get from the helper function we added
         if (typeof getCurrentRole === 'function') {
             role = getCurrentRole();
+            console.log('Role from getCurrentRole():', role);
         }
         
         // Fallback: try to get from localStorage directly
         if (!role) {
             role = localStorage.getItem('userRole');
+            console.log('Role from localStorage:', role);
         }
         
         // Last resort: try to parse from user object
         if (!role) {
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             role = user.role;
+            console.log('Role from user object:', role);
+        }
+        
+        // If still no role, try to get from API as last resort
+        if (!role) {
+            console.log('Attempting to fetch user from API...');
+            try {
+                const response = await api.auth.getMe();
+                if (response && response.data && response.data.user) {
+                    role = response.data.user.role;
+                    // Save it for next time
+                    localStorage.setItem('userRole', role);
+                    localStorage.setItem('user', JSON.stringify(response.data.user));
+                    console.log('Role from API:', role);
+                }
+            } catch (error) {
+                console.error('Failed to fetch user from API:', error);
+            }
         }
         
         // If still no role, redirect to login
         if (!role) {
-            console.error('No role found, redirecting to login');
-            window.location.href = '/'; // Or your landing page
+            console.error('❌ No role found after all attempts, redirecting to login');
+            showToast('Session expired. Please log in again.', 'error');
+            setTimeout(() => {
+                window.location.href = '/'; // Or your landing page
+            }, 2000);
             return;
         }
     }
     
+    // Save the role to ensure it's in localStorage
+    localStorage.setItem('userRole', role);
     currentRole = role;
+    console.log('✅ Final role set to:', role);
+    
     const landingPage = document.getElementById('landing-page');
     const dashboardContainer = document.getElementById('dashboard-container');
     
     if (landingPage) landingPage.style.display = 'none';
-    if (dashboardContainer) dashboardContainer.style.display = 'block';
+    if (dashboardContainer) {
+        dashboardContainer.style.display = 'block';
+        dashboardContainer.setAttribute('data-current-role', role);
+    }
 
     // Clear cached school data (optional - be careful with this)
     // localStorage.removeItem('school');
@@ -740,11 +774,21 @@ async function showDashboard(role) {
     showLoading();
     try {
         if (role === 'superadmin') {
+            console.log('Loading superadmin dashboard...');
             // Use existing super admin endpoints
             const [overview, schools, pending] = await Promise.all([
-                api.superAdmin.getOverview().catch(() => ({ data: {} })),
-                api.superAdmin.getSchools().catch(() => ({ data: [] })),
-                api.superAdmin.getPendingSchools().catch(() => ({ data: [] }))
+                api.superAdmin.getOverview().catch(err => {
+                    console.error('Overview error:', err);
+                    return { data: {} };
+                }),
+                api.superAdmin.getSchools().catch(err => {
+                    console.error('Schools error:', err);
+                    return { data: [] };
+                }),
+                api.superAdmin.getPendingSchools().catch(err => {
+                    console.error('Pending schools error:', err);
+                    return { data: [] };
+                })
             ]);
             
             dashboardData = {
@@ -754,11 +798,21 @@ async function showDashboard(role) {
             };
             
         } else if (role === 'admin') {
+            console.log('Loading admin dashboard...');
             // Use existing admin endpoints
             const [teachers, students, pendingTeachers] = await Promise.all([
-                api.admin.getTeachers().catch(() => ({ data: [] })),
-                api.admin.getStudents().catch(() => ({ data: [] })),
-                api.admin.getPendingApprovals().catch(() => ({ data: { teachers: [] } }))
+                api.admin.getTeachers().catch(err => {
+                    console.error('Teachers error:', err);
+                    return { data: [] };
+                }),
+                api.admin.getStudents().catch(err => {
+                    console.error('Students error:', err);
+                    return { data: [] };
+                }),
+                api.admin.getPendingApprovals().catch(err => {
+                    console.error('Pending approvals error:', err);
+                    return { data: { teachers: [] } };
+                })
             ]);
             
             dashboardData = {
@@ -768,10 +822,17 @@ async function showDashboard(role) {
             };
             
         } else if (role === 'teacher') {
+            console.log('Loading teacher dashboard...');
             // Use existing teacher endpoints
             const [students, todayDuty] = await Promise.all([
-                api.teacher.getMyStudents().catch(() => ({ data: [] })),
-                api.duty.getTodayDuty().catch(() => ({ data: {} }))
+                api.teacher.getMyStudents().catch(err => {
+                    console.error('Students error:', err);
+                    return { data: [] };
+                }),
+                api.duty.getTodayDuty().catch(err => {
+                    console.error('Today duty error:', err);
+                    return { data: {} };
+                })
             ]);
             
             dashboardData = {
@@ -780,12 +841,19 @@ async function showDashboard(role) {
             };
             
         } else if (role === 'parent') {
+            console.log('Loading parent dashboard...');
             // Get children first, then get first child's summary
-            const children = await api.parent.getChildren().catch(() => ({ data: [] }));
+            const children = await api.parent.getChildren().catch(err => {
+                console.error('Children error:', err);
+                return { data: [] };
+            });
             let childSummary = null;
             
             if (children.data && children.data.length > 0) {
-                childSummary = await api.parent.getChildSummary(children.data[0].id).catch(() => ({ data: {} }));
+                childSummary = await api.parent.getChildSummary(children.data[0].id).catch(err => {
+                    console.error('Child summary error:', err);
+                    return { data: {} };
+                });
             }
             
             dashboardData = {
@@ -794,16 +862,30 @@ async function showDashboard(role) {
             };
             
         } else if (role === 'student') {
+            console.log('Loading student dashboard...');
             // Use existing student endpoints
             const [grades, attendance] = await Promise.all([
-                api.student.getGrades().catch(() => ({ data: [] })),
-                api.student.getAttendance().catch(() => ({ data: [] }))
+                api.student.getGrades().catch(err => {
+                    console.error('Grades error:', err);
+                    return { data: [] };
+                }),
+                api.student.getAttendance().catch(err => {
+                    console.error('Attendance error:', err);
+                    return { data: [] };
+                })
             ]);
             
             dashboardData = {
                 grades: grades.data,
                 attendance: attendance.data
             };
+        } else {
+            console.error('Unknown role:', role);
+            showToast('Invalid user role', 'error');
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+            return;
         }
         
         updateSidebar(role);
@@ -811,10 +893,10 @@ async function showDashboard(role) {
         await showDashboardSection('dashboard');
         
         if (typeof connectWebSocket === 'function') {
-            connectWebSocket();
+            setTimeout(connectWebSocket, 500);
         }
     } catch (error) {
-        console.error('Error loading dashboard:', error);
+        console.error('❌ Error loading dashboard:', error);
         showToast('Failed to load dashboard data. Please check your connection.', 'error');
     } finally {
         hideLoading();
@@ -4258,4 +4340,3 @@ window.saveDutyPreferences = saveDutyPreferences;
 window.saveAttendance = saveAttendance;
 window.copyElimuid = copyElimuid;
 window.handleChangePassword = handleChangePassword;
-
