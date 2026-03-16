@@ -974,16 +974,22 @@ window.renderStudentsTable = renderStudentsTable;
 window.refreshPendingTeachers = refreshPendingTeachers;
 window.refreshTeachersList = refreshTeachersList;
 window.refreshStudentsList = refreshStudentsList;
-// Force our viewStudent to be the one that's used
-window.viewStudent = (function(original) {
-    return function(studentId) {
-        console.log('Using admin viewStudent for ID:', studentId);
-        return original(studentId);
-    };
-})(window.viewStudent);
-
-// Prevent teacher version from overwriting ours
-Object.defineProperty(window, 'viewStudent', {
-    writable: false,
-    configurable: false
-});
+// Forcefully override any other viewStudent functions
+window.viewStudent = function(studentId) {
+    console.log('✅ Admin viewStudent called for ID:', studentId);
+    showLoading();
+    api.admin.getStudentDetails(studentId)
+        .then(response => {
+            hideLoading();
+            if (response && response.data) {
+                showStudentDetailsModal(response.data);
+            } else {
+                showToast('Student not found', 'error');
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Error:', error);
+            showToast('Failed to load student details', 'error');
+        });
+};
