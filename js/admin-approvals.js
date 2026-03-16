@@ -1133,13 +1133,16 @@ function renderStudentsTable(students) {
                                     </span>
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    <button onclick="viewStudent('${student.id}')" class="p-2 hover:bg-accent rounded-lg">
+                                    <button onclick="viewStudent('${student.id}')" class="p-2 hover:bg-accent rounded-lg" title="View Details">
                                         <i data-lucide="eye" class="h-4 w-4"></i>
                                     </button>
-                                    <button onclick="editStudent('${student.id}')" class="p-2 hover:bg-accent rounded-lg">
+                                    <button onclick="viewStudentAttendance('${student.id}')" class="p-2 hover:bg-blue-100 rounded-lg text-blue-600" title="View Attendance">
+                                        <i data-lucide="calendar-check" class="h-4 w-4"></i>
+                                    </button>
+                                    <button onclick="editStudent('${student.id}')" class="p-2 hover:bg-accent rounded-lg" title="Edit">
                                         <i data-lucide="edit" class="h-4 w-4"></i>
                                     </button>
-                                    <button onclick="copyElimuid('${student.elimuid}')" class="p-2 hover:bg-accent rounded-lg">
+                                    <button onclick="copyElimuid('${student.elimuid}')" class="p-2 hover:bg-accent rounded-lg" title="Copy ELIMUID">
                                         <i data-lucide="copy" class="h-4 w-4"></i>
                                     </button>
                                 </td>
@@ -1227,6 +1230,8 @@ window.renderStudentsTable = renderStudentsTable;
 window.refreshPendingTeachers = refreshPendingTeachers;
 window.refreshTeachersList = refreshTeachersList;
 window.refreshStudentsList = refreshStudentsList;
+window.viewStudentAttendance = viewStudentAttendance;
+window.closeAttendanceModal = closeAttendanceModal;
 // Simple fix - redirect any calls to viewStudentDetails
 window.viewStudentDetails = function(studentId) {
     console.log('Redirecting to viewStudent');
