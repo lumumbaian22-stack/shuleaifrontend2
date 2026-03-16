@@ -288,20 +288,28 @@ const teacherAPI = {
 
 // ============ PARENT ENDPOINTS ============
 const parentAPI = {
-    getChildren: () => apiRequest('/api/parent/children'),
-    getChildSummary: (studentId) => 
-        apiRequest(`/api/parent/child/${studentId}/summary`),
-    reportAbsence: (data) => 
-        apiRequest('/api/parent/report-absence', {
+    // ... existing functions ...
+    
+    sendMessage: (data) => 
+        apiRequest('/api/parent/message', {
             method: 'POST',
             body: JSON.stringify(data)
         }),
-    makePayment: (data) => 
-        apiRequest('/api/parent/pay', {
+    
+    getSubscriptionPlans: () => 
+        apiRequest('/api/parent/plans'),
+    
+    upgradePlan: (data) => 
+        apiRequest('/api/parent/upgrade-plan', {
             method: 'POST',
             body: JSON.stringify(data)
         }),
-    getPayments: () => apiRequest('/api/parent/payments')
+    
+    getMessages: (otherUserId) => 
+        apiRequest(`/api/parent/messages/${otherUserId}`),
+    
+    getConversations: () => 
+        apiRequest('/api/parent/conversations')
 };
 
 // ============ STUDENT ENDPOINTS ============
