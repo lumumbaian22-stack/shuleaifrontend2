@@ -1092,10 +1092,10 @@ function renderTeachersTable(teachers) {
     `;
 }
 
-// Render students table
+// Render students table - REDESIGNED with better spacing
 function renderStudentsTable(students) {
     if (!students || students.length === 0) {
-        return '<div class="text-center py-8 text-muted-foreground">No students found</div>';
+        return '<div class="text-center py-12 text-muted-foreground">No students found</div>';
     }
     
     return `
@@ -1103,11 +1103,11 @@ function renderStudentsTable(students) {
             <table class="w-full text-sm">
                 <thead class="bg-muted/50">
                     <tr>
-                        <th class="px-4 py-3 text-left font-medium">Student</th>
-                        <th class="px-4 py-3 text-left font-medium">ELIMUID</th>
-                        <th class="px-4 py-3 text-left font-medium">Grade</th>
-                        <th class="px-4 py-3 text-left font-medium">Status</th>
-                        <th class="px-4 py-3 text-right font-medium">Actions</th>
+                        <th class="px-6 py-4 text-left font-medium">Student</th>
+                        <th class="px-6 py-4 text-left font-medium">ELIMUID</th>
+                        <th class="px-6 py-4 text-left font-medium">Grade</th>
+                        <th class="px-6 py-4 text-left font-medium">Status</th>
+                        <th class="px-6 py-4 text-right font-medium">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y">
@@ -1115,36 +1115,42 @@ function renderStudentsTable(students) {
                         const user = student.User || {};
                         return `
                             <tr class="hover:bg-accent/50 transition-colors">
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center gap-3">
-                                        <div class="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                                            <span class="font-medium text-green-700 text-sm">${getInitials(user.name)}</span>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-4">
+                                        <div class="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-semibold shadow-sm">
+                                            ${getInitials(user.name)}
                                         </div>
-                                        <span class="font-medium">${user.name || 'Unknown'}</span>
+                                        <div>
+                                            <div class="font-medium">${user.name || 'Unknown'}</div>
+                                            <div class="text-xs text-muted-foreground mt-0.5">${user.email || 'No email'}</div>
+                                        </div>
                                     </div>
                                 </td>
-                                <td class="px-4 py-3">
-                                    <span class="font-mono text-xs bg-muted px-2 py-1 rounded">${student.elimuid || 'N/A'}</span>
+                                <td class="px-6 py-4">
+                                    <span class="font-mono text-xs bg-muted/70 px-3 py-1.5 rounded-full border border-muted">${student.elimuid || 'N/A'}</span>
                                 </td>
-                                <td class="px-4 py-3">${student.grade || 'N/A'}</td>
-                                <td class="px-4 py-3">
-                                    <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-100 text-green-700">
+                                <td class="px-6 py-4 font-medium">${student.grade || 'N/A'}</td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-green-600 mr-1.5"></span>
                                         ${student.status || 'active'}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3 text-right">
-                                    <button onclick="viewStudent('${student.id}')" class="p-2 hover:bg-accent rounded-lg" title="View Details">
-                                        <i data-lucide="eye" class="h-4 w-4"></i>
-                                    </button>
-                                    <button onclick="viewStudentAttendance('${student.id}')" class="p-2 hover:bg-blue-100 rounded-lg text-blue-600" title="View Attendance">
-                                        <i data-lucide="calendar-check" class="h-4 w-4"></i>
-                                    </button>
-                                    <button onclick="editStudent('${student.id}')" class="p-2 hover:bg-accent rounded-lg" title="Edit">
-                                        <i data-lucide="edit" class="h-4 w-4"></i>
-                                    </button>
-                                    <button onclick="copyElimuid('${student.elimuid}')" class="p-2 hover:bg-accent rounded-lg" title="Copy ELIMUID">
-                                        <i data-lucide="copy" class="h-4 w-4"></i>
-                                    </button>
+                                <td class="px-6 py-4 text-right">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <button onclick="viewStudent('${student.id}')" class="p-2.5 hover:bg-blue-50 rounded-lg transition-colors group" title="View Details">
+                                            <i data-lucide="eye" class="h-4 w-4 text-blue-600 group-hover:scale-110 transition-transform"></i>
+                                        </button>
+                                        <button onclick="viewStudentAttendance('${student.id}')" class="p-2.5 hover:bg-indigo-50 rounded-lg transition-colors group" title="View Attendance">
+                                            <i data-lucide="calendar-check" class="h-4 w-4 text-indigo-600 group-hover:scale-110 transition-transform"></i>
+                                        </button>
+                                        <button onclick="editStudent('${student.id}')" class="p-2.5 hover:bg-amber-50 rounded-lg transition-colors group" title="Edit">
+                                            <i data-lucide="edit" class="h-4 w-4 text-amber-600 group-hover:scale-110 transition-transform"></i>
+                                        </button>
+                                        <button onclick="copyElimuid('${student.elimuid}')" class="p-2.5 hover:bg-purple-50 rounded-lg transition-colors group" title="Copy ELIMUID">
+                                            <i data-lucide="copy" class="h-4 w-4 text-purple-600 group-hover:scale-110 transition-transform"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         `;
