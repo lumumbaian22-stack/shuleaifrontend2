@@ -1955,6 +1955,13 @@ function renderAdminCustomSubjects() {
     const schoolLevel = schoolSettings.schoolLevel || 'secondary';
     const curriculumInfo = CURRICULUMS[curriculum];
     const subjectInfo = curriculumInfo?.subjects[schoolLevel] || [];
+    const isDark = document.documentElement.classList.contains('dark');
+    
+    const cardBg = isDark ? 'rgba(39, 39, 42, 0.3)' : 'rgba(0, 0, 0, 0.03)';
+    const textColor = isDark ? '#e4e4e7' : '#18181b';
+    const borderColor = isDark ? '#3f3f46' : '#e4e4e7';
+    const primaryColor = isDark ? '#60a5fa' : '#3b82f6';
+    const destructiveColor = isDark ? '#ef4444' : '#dc2626';
     
     return `
         <div class="space-y-6 animate-fade-in">
@@ -1976,9 +1983,9 @@ function renderAdminCustomSubjects() {
                         <h4 class="text-sm font-medium mb-3">Curriculum Subjects</h4>
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
                             ${subjectInfo.map(subject => `
-                                <div class="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border">
-                                    <span class="text-sm font-medium text-foreground">${subject}</span>
-                                    <span class="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">core</span>
+                                <div style="background-color: ${cardBg}; border-color: ${borderColor};" class="flex items-center justify-between p-3 rounded-lg border">
+                                    <span style="color: ${textColor};" class="text-sm font-medium">${subject}</span>
+                                    <span style="background-color: ${primaryColor}20; color: ${primaryColor};" class="text-xs px-2 py-0.5 rounded-full">core</span>
                                 </div>
                             `).join('')}
                         </div>
@@ -1987,9 +1994,9 @@ function renderAdminCustomSubjects() {
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
                             ${customSubjects && customSubjects.length > 0 ? 
                                 customSubjects.map(subject => `
-                                    <div class="flex items-center justify-between p-3 bg-secondary/30 rounded-lg border-border group hover:bg-secondary/50 transition-colors">
-                                        <span class="text-sm font-medium text-foreground">${subject}</span>
-                                        <button onclick="removeCustomSubject('${subject}')" class="text-destructive hover:text-destructive/80 opacity-70 hover:opacity-100 transition-opacity">
+                                    <div style="background-color: ${cardBg}; border-color: ${borderColor};" class="flex items-center justify-between p-3 rounded-lg border group hover:bg-opacity-50 transition-colors">
+                                        <span style="color: ${textColor};" class="text-sm font-medium">${subject}</span>
+                                        <button onclick="removeCustomSubject('${subject}')" style="color: ${destructiveColor};" class="opacity-70 hover:opacity-100 transition-opacity">
                                             <i data-lucide="x" class="h-4 w-4"></i>
                                         </button>
                                     </div>
