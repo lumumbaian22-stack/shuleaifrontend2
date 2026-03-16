@@ -796,6 +796,172 @@ async function updateStudent(studentId, studentData) {
     }
 }
 
+// ============ ATTENDANCE MANAGEMENT ============
+
+// View student attendance history
+async function viewStudentAttendance(studentId) {
+    showLoading();
+    try {
+        // Get student details first
+        const student = await api.admin.getStudentDetails(studentId);
+        
+        if (!student || !student.data) {
+            showToast('Student not found', 'error');
+            return;
+        }
+        
+        // Get attendance records for this student
+        const response = await api.analytics.getStudentAnalytics(studentId);
+        
+        if (!response || !response.data) {
+            showToast('No attendance data found', 'info');
+            return;
+        }
+        
+        showAttendanceModal(student.data, response.data);
+    } catch (error) {
+        console.error('Error loading attendance:', error);
+        showToast('Failed to load attendance data', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Show attendance modal
+function showAttendanceModal(student, analytics) {
+    let modal = document.getElementById('attendance-modal');
+    
+    if (!modal) {
+        createAttendanceModal();
+        modal = document.getElementById('attendance-modal');
+    }
+    
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) {
+        modalContent.innerHTML = getAttendanceHTML(student, analytics);
+    }
+    
+    modal.classList.remove('hidden');
+    
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+// Create attendance modal
+function createAttendanceModal() {
+    const modalHTML = `
+        <div id="attendance-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeAttendanceModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl p-4">
+                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Attendance History</h3>
+                        <button onclick="closeAttendanceModal()" class="p-2 hover:bg-accent rounded-lg">
+                            <i data-lucide="x" class="h-5 w-5"></i>
+                        </button>
+                    </div>
+                    <div class="modal-content space-y-4">
+                        <!-- Content will be filled dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// Close attendance modal
+function closeAttendanceModal() {
+    const modal = document.getElementById('attendance-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+// Get attendance HTML
+function getAttendanceHTML(student, analytics) {
+    const user = student.User || {};
+    const attendance = analytics.attendance || {};
+    const present = attendance.present || 0;
+    const absent = attendance.absent || 0;
+    const late = attendance.late || 0;
+    const total = attendance.total || 0;
+    const attendanceRate = total > 0 ? ((present / total) * 100).toFixed(1) : 0;
+    
+    return `
+        <div class="space-y-6">
+            <div class="flex items-center gap-4 pb-4 border-b">
+                <div class="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
+                    <span class="font-medium text-green-700 text-xl">${getInitials(user.name)}</span>
+                </div>
+                <div>
+                    <h4 class="font-medium text-lg">${user.name || 'N/A'}</h4>
+                    <p class="text-sm text-muted-foreground">${student.elimuid || 'No ELIMUID'}</p>
+                    <p class="text-sm text-muted-foreground">Grade: ${student.grade || 'N/A'}</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="p-4 bg-green-50 rounded-lg text-center">
+                    <p class="text-3xl font-bold text-green-600">${present}</p>
+                    <p class="text-xs text-muted-foreground">Present</p>
+                </div>
+                <div class="p-4 bg-red-50 rounded-lg text-center">
+                    <p class="text-3xl font-bold text-red-600">${absent}</p>
+                    <p class="text-xs text-muted-foreground">Absent</p>
+                </div>
+                <div class="p-4 bg-yellow-50 rounded-lg text-center">
+                    <p class="text-3xl font-bold text-yellow-600">${late}</p>
+                    <p class="text-xs text-muted-foreground">Late</p>
+                </div>
+                <div class="p-4 bg-blue-50 rounded-lg text-center">
+                    <p class="text-3xl font-bold text-blue-600">${attendanceRate}%</p>
+                    <p class="text-xs text-muted-foreground">Rate</p>
+                </div>
+            </div>
+            
+            <div class="pt-4 border-t">
+                <h4 class="font-medium mb-3">Attendance Summary</h4>
+                <div class="space-y-3">
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span>Present</span>
+                            <span class="font-medium">${present}/${total}</span>
+                        </div>
+                        <div class="w-full h-2 bg-muted rounded-full overflow-hidden">
+                            <div class="h-full bg-green-500 rounded-full" style="width: ${total > 0 ? (present/total*100) : 0}%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span>Absent</span>
+                            <span class="font-medium">${absent}/${total}</span>
+                        </div>
+                        <div class="w-full h-2 bg-muted rounded-full overflow-hidden">
+                            <div class="h-full bg-red-500 rounded-full" style="width: ${total > 0 ? (absent/total*100) : 0}%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span>Late</span>
+                            <span class="font-medium">${late}/${total}</span>
+                        </div>
+                        <div class="w-full h-2 bg-muted rounded-full overflow-hidden">
+                            <div class="h-full bg-yellow-500 rounded-full" style="width: ${total > 0 ? (late/total*100) : 0}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-2 pt-4 border-t">
+                <button onclick="closeAttendanceModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Close</button>
+                <button onclick="viewStudent('${student.id}')" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">View Student</button>
+            </div>
+        </div>
+    `;
+}
+
 // ============ RENDER FUNCTIONS ============
 
 // Render pending teachers table
