@@ -760,6 +760,38 @@
 <script src="js/upload.js"></script>
 <script src="js/analytics.js"></script>
 <script src="js/main.js"></script>                  <!-- This should be LAST -->
+
+<script>
+// FINAL FIX - This runs after all scripts and ensures correct functions
+document.addEventListener('DOMContentLoaded', function() {
+    // Store the correct admin function
+    const adminViewStudent = window.viewStudent;
+    
+    // Override any attempts to use the wrong function
+    window.viewStudentDetails = function(id) {
+        console.log('Redirecting to admin viewStudent');
+        if (adminViewStudent) {
+            return adminViewStudent(id);
+        }
+        alert('Error: View function not available');
+    };
+    
+    // Fix all buttons on the page
+    function fixAllButtons() {
+        document.querySelectorAll('button[onclick*="viewStudentDetails"]').forEach(btn => {
+            const match = btn.getAttribute('onclick').match(/\d+/);
+            if (match) {
+                btn.setAttribute('onclick', `viewStudent('${match[0]}')`);
+            }
+        });
+    }
+    
+    // Run immediately and observe changes
+    fixAllButtons();
+    const observer = new MutationObserver(fixAllButtons);
+    observer.observe(document.body, { childList: true, subtree: true });
+});
+</script>
 </body>
 
 </html>
