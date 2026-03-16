@@ -5049,18 +5049,16 @@ window.saveDutyPreferences = saveDutyPreferences;
 window.saveAttendance = saveAttendance;
 window.copyElimuid = copyElimuid;
 window.handleChangePassword = handleChangePassword;
-window.showDayDetails = showDayDetails;
 window.closeDayEventsModal = closeDayEventsModal;
 window.showAddEventModal = showAddEventModal;
 window.closeAddEventModal = closeAddEventModal;
 window.saveCalendarEvent = saveCalendarEvent;
 window.deleteEvent = deleteEvent;
-window.changeMonth = changeMonth;
 window.changeMonth = changeMonth;
 window.goToToday = goToToday;
 window.showDayDetails = showDayDetails;
-window.closeDayEventsModal = closeDayEventsModal;
-window.showAddEventModal = showAddEventModal;
-window.closeAddEventModal = closeAddEventModal;
-window.saveCalendarEvent = saveCalendarEvent;
-window.deleteEvent = deleteEvent;
+
+
+
+
+
