@@ -3493,146 +3493,121 @@ async function renderParentSection(section) {
     }
 }
 
+// Update the renderParentDashboard function
 async function renderParentDashboard() {
     try {
-        const children = await api.parent.getChildren();
-        const data = dashboardData || {};
+        // Fetch children data
+        const childrenResponse = await api.parent.getChildren();
+        const children = childrenResponse.data || [];
         
-        return `
-            <div class="space-y-6 animate-fade-in">
-                <div class="flex gap-2 border-b pb-4 overflow-x-auto" id="child-selector">
-                    ${data.children?.map((child, index) => `
-                        <button onclick="selectChild('${child.id}')" class="child-selector-btn px-4 py-2 ${index === 0 ? 'bg-primary text-primary-foreground' : 'bg-muted'} rounded-lg">
-                            ${child.User?.name} (Grade ${child.grade})
-                        </button>
-                    `).join('')}
-                    ${!data.children?.length ? '<p class="text-muted-foreground">No children linked to your account</p>' : ''}
+        let selectedChild = null;
+        if (children.length > 0) {
+            // Get summary for first child
+            const summaryResponse = await api.parent.getChildSummary(children[0].id);
+            selectedChild = summaryResponse.data;
+        }
+        
+        return renderParentDashboardHTML(children, selectedChild);
+    } catch (error) {
+        console.error('Error loading parent dashboard:', error);
+        return '<div class="text-center py-12 text-red-500">Error loading dashboard</div>';
+    }
+}
+
+// Create a separate function for the HTML
+function renderParentDashboardHTML(children, selectedChild) {
+    return `
+        <div class="space-y-6 animate-fade-in">
+            <!-- Child Selector -->
+            <div class="flex gap-2 border-b pb-4 overflow-x-auto" id="child-selector">
+                ${children.map((child, index) => `
+                    <button onclick="selectChild('${child.id}')" 
+                            class="child-selector-btn px-4 py-2 ${index === 0 ? 'bg-primary text-primary-foreground' : 'bg-muted'} rounded-lg">
+                        ${child.User?.name || 'Unknown'} (Grade ${child.grade})
+                    </button>
+                `).join('')}
+                ${children.length === 0 ? '<p class="text-muted-foreground">No children linked to your account</p>' : ''}
+            </div>
+            
+            ${selectedChild ? `
+                <!-- Stats Grid -->
+                <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <div class="rounded-xl border bg-card p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-muted-foreground">Attendance</p>
+                                <h3 class="text-2xl font-bold mt-1">${selectedChild.attendance?.length || 0}%</h3>
+                                <p class="text-xs text-green-600 mt-1">This term</p>
+                            </div>
+                            <div class="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                                <i data-lucide="calendar-check" class="h-6 w-6 text-blue-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="rounded-xl border bg-card p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-muted-foreground">Class Average</p>
+                                <h3 class="text-2xl font-bold mt-1">${selectedChild.averageScore || 0}%</h3>
+                                <p class="text-xs text-green-600 mt-1">Above average</p>
+                            </div>
+                            <div class="h-12 w-12 rounded-lg bg-violet-100 flex items-center justify-center">
+                                <i data-lucide="trending-up" class="h-6 w-6 text-violet-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="rounded-xl border bg-card p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-muted-foreground">Homework</p>
+                                <h3 class="text-2xl font-bold mt-1">${selectedChild.recentRecords?.length || 0}</h3>
+                                <p class="text-xs text-yellow-600 mt-1">Pending</p>
+                            </div>
+                            <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
+                                <i data-lucide="book-open" class="h-6 w-6 text-amber-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="rounded-xl border bg-card p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-muted-foreground">Fee Balance</p>
+                                <h3 class="text-2xl font-bold mt-1">$${selectedChild.outstandingFees?.balance || 0}</h3>
+                                <p class="text-xs text-red-600 mt-1">Due soon</p>
+                            </div>
+                            <div class="h-12 w-12 rounded-lg bg-red-100 flex items-center justify-center">
+                                <i data-lucide="credit-card" class="h-6 w-6 text-red-600"></i>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
-                ${data.selectedChild ? `
-                    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        <div class="rounded-xl border bg-card p-6 card-hover">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-muted-foreground">Attendance</p>
-                                    <h3 class="text-2xl font-bold mt-1">95%</h3>
-                                    <p class="text-xs text-green-600 mt-1">This term</p>
-                                </div>
-                                <div class="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                                    <i data-lucide="calendar-check" class="h-6 w-6 text-blue-600"></i>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="rounded-xl border bg-card p-6 card-hover">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-muted-foreground">Class Average</p>
-                                    <h3 class="text-2xl font-bold mt-1">82%</h3>
-                                    <p class="text-xs text-green-600 mt-1">Above average</p>
-                                </div>
-                                <div class="h-12 w-12 rounded-lg bg-violet-100 flex items-center justify-center">
-                                    <i data-lucide="trending-up" class="h-6 w-6 text-violet-600"></i>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="rounded-xl border bg-card p-6 card-hover">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-muted-foreground">Homework</p>
-                                    <h3 class="text-2xl font-bold mt-1">3</h3>
-                                    <p class="text-xs text-yellow-600 mt-1">Pending</p>
-                                </div>
-                                <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
-                                    <i data-lucide="book-open" class="h-6 w-6 text-amber-600"></i>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="rounded-xl border bg-card p-6 card-hover">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-muted-foreground">Fee Balance</p>
-                                    <h3 class="text-2xl font-bold mt-1">$250</h3>
-                                    <p class="text-xs text-red-600 mt-1">Due in 5 days</p>
-                                </div>
-                                <div class="h-12 w-12 rounded-lg bg-red-100 flex items-center justify-center">
-                                    <i data-lucide="credit-card" class="h-6 w-6 text-red-600"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <!-- Quick Actions -->
+                <div class="grid gap-4 md:grid-cols-3">
+                    <button onclick="showDashboardSection('progress')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
+                        <i data-lucide="trending-up" class="h-8 w-8 text-blue-600 mb-3"></i>
+                        <h4 class="font-semibold">View Progress</h4>
+                        <p class="text-sm text-muted-foreground">Check academic performance</p>
+                    </button>
                     
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <div class="rounded-xl border bg-card p-6">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="font-semibold">Live Attendance</h3>
-                                <span class="px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full" id="today-status">Present Today</span>
-                            </div>
-                            <div id="live-attendance">
-                                <p class="text-3xl font-bold">Checked in at 7:45 AM</p>
-                                <p class="text-sm text-muted-foreground mt-1" id="checkin-gate">Gate: Main Entrance</p>
-                            </div>
-                            
-                            <div class="mt-6">
-                                <h4 class="text-sm font-medium mb-2">This Week</h4>
-                                <div class="flex gap-1" id="weekly-attendance">
-                                    <div class="flex-1 h-2 bg-green-500 rounded"></div>
-                                    <div class="flex-1 h-2 bg-green-500 rounded"></div>
-                                    <div class="flex-1 h-2 bg-green-500 rounded"></div>
-                                    <div class="flex-1 h-2 bg-green-500 rounded"></div>
-                                    <div class="flex-1 h-2 bg-gray-300 rounded"></div>
-                                </div>
-                                <div class="flex justify-between text-xs text-muted-foreground mt-1">
-                                    <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="rounded-xl border bg-card p-6">
-                            <h3 class="font-semibold mb-4">Recent Grades</h3>
-                            <div class="space-y-3">
-                                <div class="flex justify-between items-center">
-                                    <span>Mathematics</span>
-                                    <span class="font-semibold text-green-600">85% (A-)</span>
-                                </div>
-                                <div class="flex justify-between items-center">
-                                    <span>English</span>
-                                    <span class="font-semibold text-blue-600">78% (B+)</span>
-                                </div>
-                                <div class="flex justify-between items-center">
-                                    <span>Science</span>
-                                    <span class="font-semibold text-green-600">92% (A)</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <button onclick="showDashboardSection('payments')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
+                        <i data-lucide="credit-card" class="h-8 w-8 text-green-600 mb-3"></i>
+                        <h4 class="font-semibold">Make Payment</h4>
+                        <p class="text-sm text-muted-foreground">Pay fees and upgrade plans</p>
+                    </button>
                     
-                    <div class="rounded-xl border bg-card p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-semibold">Report Absence</h3>
-                        </div>
-                        <div class="space-y-3">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Date</label>
-                                <input type="date" id="absence-date" value="${new Date().toISOString().split('T')[0]}" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Reason</label>
-                                <textarea id="absence-reason" rows="2" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="Why will your child be absent?"></textarea>
-                            </div>
-                            <button onclick="reportAbsence()" class="w-full bg-primary text-primary-foreground py-2 rounded-lg hover:bg-primary/90">
-                                Report Absence
-                            </button>
-                        </div>
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    } catch (error) {
-        return `<div class="text-center py-12 text-red-500">Error loading dashboard: ${error.message}</div>`;
-    }
+                    <button onclick="showReportAbsenceModal()" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
+                        <i data-lucide="calendar-x" class="h-8 w-8 text-orange-600 mb-3"></i>
+                        <h4 class="font-semibold">Report Absence</h4>
+                        <p class="text-sm text-muted-foreground">Notify school about absence</p>
+                    </button>
+                </div>
+            ` : ''}
+        </div>
+    `;
 }
 
 async function renderParentProgress() {
