@@ -1949,19 +1949,12 @@ async function renderAdminTeacherWorkload() {
 }
 
 // ============ MISSING ADMIN FUNCTIONS ============
-// Simpler version with built-in dark mode classes
+// Render admin custom subjects - WITH PROPER SELECTORS
 function renderAdminCustomSubjects() {
     const curriculum = schoolSettings.curriculum || 'cbc';
     const schoolLevel = schoolSettings.schoolLevel || 'secondary';
     const curriculumInfo = CURRICULUMS[curriculum];
     const subjectInfo = curriculumInfo?.subjects[schoolLevel] || [];
-    const isDark = document.documentElement.classList.contains('dark');
-    
-    const cardBg = isDark ? 'rgba(39, 39, 42, 0.3)' : 'rgba(0, 0, 0, 0.03)';
-    const textColor = isDark ? '#e4e4e7' : '#18181b';
-    const borderColor = isDark ? '#3f3f46' : '#e4e4e7';
-    const primaryColor = isDark ? '#60a5fa' : '#3b82f6';
-    const destructiveColor = isDark ? '#ef4444' : '#dc2626';
     
     return `
         <div class="space-y-6 animate-fade-in">
@@ -1981,27 +1974,27 @@ function renderAdminCustomSubjects() {
                     
                     <div>
                         <h4 class="text-sm font-medium mb-3">Curriculum Subjects</h4>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6" id="curriculum-subjects-container">
                             ${subjectInfo.map(subject => `
-                                <div style="background-color: ${cardBg}; border-color: ${borderColor};" class="flex items-center justify-between p-3 rounded-lg border">
-                                    <span style="color: ${textColor};" class="text-sm font-medium">${subject}</span>
-                                    <span style="background-color: ${primaryColor}20; color: ${primaryColor};" class="text-xs px-2 py-0.5 rounded-full">core</span>
+                                <div class="flex items-center justify-between p-3 bg-muted/30 dark:bg-muted/20 rounded-lg border border-border">
+                                    <span class="text-sm font-medium text-foreground">${subject}</span>
+                                    <span class="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">core</span>
                                 </div>
                             `).join('')}
                         </div>
                         
                         <h4 class="text-sm font-medium mb-3">Custom Subjects</h4>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="custom-subjects-container">
                             ${customSubjects && customSubjects.length > 0 ? 
                                 customSubjects.map(subject => `
-                                    <div style="background-color: ${cardBg}; border-color: ${borderColor};" class="flex items-center justify-between p-3 rounded-lg border group hover:bg-opacity-50 transition-colors">
-                                        <span style="color: ${textColor};" class="text-sm font-medium">${subject}</span>
-                                        <button onclick="removeCustomSubject('${subject}')" style="color: ${destructiveColor};" class="opacity-70 hover:opacity-100 transition-opacity">
+                                    <div class="custom-subject-item flex items-center justify-between p-3 bg-secondary/30 dark:bg-secondary/20 rounded-lg border border-border group hover:bg-secondary/50 dark:hover:bg-secondary/30 transition-colors" data-subject="${subject}">
+                                        <span class="text-sm font-medium text-foreground">${subject}</span>
+                                        <button onclick="removeCustomSubject('${subject}')" class="text-destructive hover:text-destructive/80 dark:text-red-400 dark:hover:text-red-300 opacity-70 hover:opacity-100 transition-opacity">
                                             <i data-lucide="x" class="h-4 w-4"></i>
                                         </button>
                                     </div>
                                 `).join('') 
-                                : '<p class="text-sm text-muted-foreground col-span-3 py-4 text-center bg-muted/30 rounded-lg">No custom subjects added yet</p>'
+                                : '<p class="text-sm text-muted-foreground col-span-3 py-4 text-center bg-muted/30 rounded-lg" id="no-custom-subjects-message">No custom subjects added yet</p>'
                             }
                         </div>
                     </div>
@@ -4616,20 +4609,26 @@ window.addCustomSubject = function() {
     customSubjects.push(newSubject);
     schoolSettings.customSubjects = customSubjects;
     
-    // Update localStorage temporarily
+    // Update localStorage
     localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings));
     
     // Update the UI immediately
-    const subjectsContainer = document.querySelector('.grid.grid-cols-2.md\\:grid-cols-3.gap-2');
-    if (subjectsContainer) {
-        subjectsContainer.innerHTML += `
-            <div class="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
-                <span class="text-sm">${newSubject}</span>
-                <button onclick="removeCustomSubject('${newSubject}')" class="text-red-600 hover:text-red-800">
+    const container = document.getElementById('custom-subjects-container');
+    if (container) {
+        // Remove "no subjects" message if it exists
+        const noSubjectsMsg = document.getElementById('no-custom-subjects-message');
+        if (noSubjectsMsg) noSubjectsMsg.remove();
+        
+        // Add the new subject
+        const newSubjectHTML = `
+            <div class="custom-subject-item flex items-center justify-between p-3 bg-secondary/30 dark:bg-secondary/20 rounded-lg border border-border group hover:bg-secondary/50 dark:hover:bg-secondary/30 transition-colors" data-subject="${newSubject}">
+                <span class="text-sm font-medium text-foreground">${newSubject}</span>
+                <button onclick="removeCustomSubject('${newSubject}')" class="text-destructive hover:text-destructive/80 dark:text-red-400 dark:hover:text-red-300 opacity-70 hover:opacity-100 transition-opacity">
                     <i data-lucide="x" class="h-4 w-4"></i>
                 </button>
             </div>
         `;
+        container.insertAdjacentHTML('beforeend', newSubjectHTML);
     }
     
     document.getElementById('new-subject-name').value = '';
@@ -4651,9 +4650,18 @@ window.removeCustomSubject = function(subject) {
     // Update localStorage
     localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings));
     
-    // Refresh the custom subjects section
-    const section = currentSection;
-    showDashboardSection(section);
+    // Remove from UI
+    const subjectItem = document.querySelector(`.custom-subject-item[data-subject="${subject}"]`);
+    if (subjectItem) {
+        subjectItem.remove();
+    }
+    
+    // Show "no subjects" message if container is empty
+    const container = document.getElementById('custom-subjects-container');
+    if (container && container.children.length === 0) {
+        container.innerHTML = '<p class="text-sm text-muted-foreground col-span-3 py-4 text-center bg-muted/30 rounded-lg" id="no-custom-subjects-message">No custom subjects added yet</p>';
+    }
+    
     showToast(`Subject "${subject}" removed`, 'info');
 };
 
