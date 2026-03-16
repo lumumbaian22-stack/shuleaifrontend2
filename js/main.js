@@ -3494,53 +3494,70 @@ async function renderParentSection(section) {
 }
 
 // Update the renderParentDashboard function
+// COMPLETE FIX - Replace your existing renderParentDashboard function
 async function renderParentDashboard() {
     try {
+        console.log('Fetching parent data...');
+        
         // Fetch children data
         const childrenResponse = await api.parent.getChildren();
-        const children = childrenResponse.data || [];
+        console.log('Children response:', childrenResponse);
         
-        let selectedChild = null;
+        const children = childrenResponse.data || [];
+        let selectedChildSummary = null;
+        
         if (children.length > 0) {
-            // Get summary for first child
+            // Get summary for the first child
             const summaryResponse = await api.parent.getChildSummary(children[0].id);
-            selectedChild = summaryResponse.data;
+            console.log('Child summary:', summaryResponse);
+            selectedChildSummary = summaryResponse.data;
         }
         
-        return renderParentDashboardHTML(children, selectedChild);
-    } catch (error) {
-        console.error('Error loading parent dashboard:', error);
-        return '<div class="text-center py-12 text-red-500">Error loading dashboard</div>';
-    }
-}
-
-// Create a separate function for the HTML
-function renderParentDashboardHTML(children, selectedChild) {
-    return `
-        <div class="space-y-6 animate-fade-in">
-            <!-- Child Selector -->
-            <div class="flex gap-2 border-b pb-4 overflow-x-auto" id="child-selector">
-                ${children.map((child, index) => `
-                    <button onclick="selectChild('${child.id}')" 
-                            class="child-selector-btn px-4 py-2 ${index === 0 ? 'bg-primary text-primary-foreground' : 'bg-muted'} rounded-lg">
-                        ${child.User?.name || 'Unknown'} (Grade ${child.grade})
+        // Generate HTML
+        let html = `
+            <div class="space-y-6 animate-fade-in">
+                <!-- Child Selector -->
+                <div class="flex gap-2 border-b pb-4 overflow-x-auto" id="child-selector">
+        `;
+        
+        if (children.length === 0) {
+            html += `<p class="text-muted-foreground">No children linked to your account</p>`;
+        } else {
+            children.forEach((child, index) => {
+                const childName = child.User?.name || 'Unknown';
+                const childGrade = child.grade || 'N/A';
+                const isActive = index === 0 ? 'bg-primary text-primary-foreground' : 'bg-muted';
+                
+                html += `
+                    <button onclick="selectChild(${child.id})" 
+                            class="child-selector-btn px-4 py-2 ${isActive} rounded-lg">
+                        ${childName} (Grade ${childGrade})
                     </button>
-                `).join('')}
-                ${children.length === 0 ? '<p class="text-muted-foreground">No children linked to your account</p>' : ''}
-            </div>
+                `;
+            });
+        }
+        
+        html += `</div>`;
+        
+        // Add child summary if available
+        if (selectedChildSummary) {
+            const student = selectedChildSummary.student || {};
+            const avgScore = selectedChildSummary.averageScore || 0;
+            const attendance = selectedChildSummary.recentAttendance || [];
+            const attendanceRate = attendance.length ? 
+                Math.round((attendance.filter(a => a.status === 'present').length / attendance.length) * 100) : 95;
             
-            ${selectedChild ? `
+            html += `
                 <!-- Stats Grid -->
                 <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <div class="rounded-xl border bg-card p-6 card-hover">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm font-medium text-muted-foreground">Attendance</p>
-                                <h3 class="text-2xl font-bold mt-1">${selectedChild.attendance?.length || 0}%</h3>
-                                <p class="text-xs text-green-600 mt-1">This term</p>
+                                <p class="text-sm font-medium text-muted-foreground">Student ELIMUID</p>
+                                <h3 class="text-lg font-mono font-bold mt-1">${student.elimuid || 'N/A'}</h3>
                             </div>
-                            <div class="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                                <i data-lucide="calendar-check" class="h-6 w-6 text-blue-600"></i>
+                            <div class="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center">
+                                <i data-lucide="id-card" class="h-6 w-6 text-purple-600"></i>
                             </div>
                         </div>
                     </div>
@@ -3549,11 +3566,10 @@ function renderParentDashboardHTML(children, selectedChild) {
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-medium text-muted-foreground">Class Average</p>
-                                <h3 class="text-2xl font-bold mt-1">${selectedChild.averageScore || 0}%</h3>
-                                <p class="text-xs text-green-600 mt-1">Above average</p>
+                                <h3 class="text-2xl font-bold mt-1">${avgScore}%</h3>
                             </div>
-                            <div class="h-12 w-12 rounded-lg bg-violet-100 flex items-center justify-center">
-                                <i data-lucide="trending-up" class="h-6 w-6 text-violet-600"></i>
+                            <div class="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
+                                <i data-lucide="trending-up" class="h-6 w-6 text-green-600"></i>
                             </div>
                         </div>
                     </div>
@@ -3561,12 +3577,11 @@ function renderParentDashboardHTML(children, selectedChild) {
                     <div class="rounded-xl border bg-card p-6 card-hover">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm font-medium text-muted-foreground">Homework</p>
-                                <h3 class="text-2xl font-bold mt-1">${selectedChild.recentRecords?.length || 0}</h3>
-                                <p class="text-xs text-yellow-600 mt-1">Pending</p>
+                                <p class="text-sm font-medium text-muted-foreground">Attendance</p>
+                                <h3 class="text-2xl font-bold mt-1">${attendanceRate}%</h3>
                             </div>
                             <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
-                                <i data-lucide="book-open" class="h-6 w-6 text-amber-600"></i>
+                                <i data-lucide="calendar-check" class="h-6 w-6 text-amber-600"></i>
                             </div>
                         </div>
                     </div>
@@ -3575,8 +3590,7 @@ function renderParentDashboardHTML(children, selectedChild) {
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-medium text-muted-foreground">Fee Balance</p>
-                                <h3 class="text-2xl font-bold mt-1">$${selectedChild.outstandingFees?.balance || 0}</h3>
-                                <p class="text-xs text-red-600 mt-1">Due soon</p>
+                                <h3 class="text-2xl font-bold mt-1">$${selectedChildSummary.outstandingFees?.balance || 0}</h3>
                             </div>
                             <div class="h-12 w-12 rounded-lg bg-red-100 flex items-center justify-center">
                                 <i data-lucide="credit-card" class="h-6 w-6 text-red-600"></i>
@@ -3605,9 +3619,17 @@ function renderParentDashboardHTML(children, selectedChild) {
                         <p class="text-sm text-muted-foreground">Notify school about absence</p>
                     </button>
                 </div>
-            ` : ''}
-        </div>
-    `;
+            `;
+        }
+        
+        html += `</div>`;
+        
+        return html;
+        
+    } catch (error) {
+        console.error('Parent dashboard error:', error);
+        return `<div class="text-center py-12 text-red-500">Error loading dashboard: ${error.message}</div>`;
+    }
 }
 
 async function renderParentProgress() {
