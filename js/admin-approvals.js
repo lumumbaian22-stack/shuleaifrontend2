@@ -1,7 +1,6 @@
 // admin-approvals.js - Complete fixed version with working view and edit functions for both teachers and students
 
 // View student details (admin version)
-
 async function viewStudent(studentId) {
     console.log('🔵 viewStudent called with ID:', studentId);
     console.log('This function is from admin-approvals.js');
@@ -417,20 +416,39 @@ async function updateTeacher(teacherId, teacherData) {
 
 // View student details
 async function viewStudent(studentId) {
+    console.log('🔵 viewStudent called with ID:', studentId);
+    console.log('Stack trace:', new Error().stack);
     showLoading();
     try {
+        console.log('📥 Loading all students...');
         const students = await loadAllStudents();
-        const student = students.find(s => s.id == studentId);
+        console.log('📥 Loaded students:', students);
+        
+        if (!students || students.length === 0) {
+            console.log('❌ No students loaded');
+            showToast('No students available', 'error');
+            return;
+        }
+        
+        console.log('🔍 Looking for student with ID:', studentId, '(type:', typeof studentId, ')');
+        const student = students.find(s => {
+            console.log('Comparing:', s.id, '(', typeof s.id, ') with', studentId, '(', typeof studentId, ')');
+            return s.id == studentId;
+        });
+        
+        console.log('🎯 Found student:', student);
         
         if (!student) {
+            console.log('❌ Student not found');
             showToast('Student not found', 'error');
             return;
         }
         
+        console.log('✅ Student found, showing modal');
         showStudentDetailsModal(student);
     } catch (error) {
-        console.error('Error viewing student:', error);
-        showToast('Failed to load student details', 'error');
+        console.error('❌ Error viewing student:', error);
+        showToast('Failed to load student details: ' + error.message, 'error');
     } finally {
         hideLoading();
     }
