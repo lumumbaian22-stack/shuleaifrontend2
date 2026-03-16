@@ -216,6 +216,25 @@ function formatDate(dateString) {
     });
 }
 
+// Listen for school name changes
+window.addEventListener('school-name-changed', (event) => {
+    const { newName, schoolCode } = event.detail;
+    console.log('School name changed event received:', newName);
+    
+    // Update any school name elements that might have been missed
+    setTimeout(() => {
+        document.querySelectorAll('h2, h1, .font-bold, .school-name').forEach(el => {
+            if (el.textContent && 
+                !el.textContent.includes('ShuleAI') && 
+                !el.textContent.includes('Dashboard') &&
+                el.textContent.length > 3 &&
+                el.textContent.length < 50) {
+                el.textContent = newName;
+            }
+        });
+    }, 100);
+});
+
 // ============ INITIALIZATION ============
 
 document.addEventListener('DOMContentLoaded', async () => {
