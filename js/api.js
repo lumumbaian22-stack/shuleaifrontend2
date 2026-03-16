@@ -194,6 +194,7 @@ const superAdminAPI = {
 
 // ============ ADMIN ENDPOINTS ============
 const adminAPI = {
+    // Teacher management
     getTeachers: () => apiRequest('/api/admin/teachers'),
     getStudents: () => apiRequest('/api/admin/students'),
     getParents: () => apiRequest('/api/admin/parents'),
@@ -203,12 +204,33 @@ const adminAPI = {
             method: 'POST',
             body: JSON.stringify({ action, rejectionReason })
         }),
+    
+    // Teacher suspend/reactivate/delete
+    suspendTeacher: (teacherId, reason) => 
+        apiRequest(`/api/admin/teachers/${teacherId}/suspend`, {
+            method: 'POST',
+            body: JSON.stringify({ reason })
+        }),
+    
+    reactivateTeacher: (teacherId) => 
+        apiRequest(`/api/admin/teachers/${teacherId}/reactivate`, {
+            method: 'POST'
+        }),
+    
+    deleteTeacher: (teacherId) => 
+        apiRequest(`/api/admin/teachers/${teacherId}`, {
+            method: 'DELETE'
+        }),
+    
+    // School settings
     getSchoolSettings: () => apiRequest('/api/admin/settings'),
     updateSchoolSettings: (data) => 
         apiRequest('/api/admin/settings', {
             method: 'PUT',
             body: JSON.stringify(data)
         }),
+    
+    // Classes
     createClass: (data) => 
         apiRequest('/api/admin/classes', {
             method: 'POST',
@@ -216,9 +238,9 @@ const adminAPI = {
         }),
     getClasses: () => apiRequest('/api/admin/classes'),
 
-    // Add to adminAPI in api.js
+    // Student details
     getStudentDetails: (studentId) => 
-         apiRequest(`/api/admin/students/${studentId}`),
+        apiRequest(`/api/admin/students/${studentId}`),
     
     // Duty management
     generateDutyRoster: (startDate, endDate) => 
