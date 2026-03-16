@@ -1949,13 +1949,12 @@ async function renderAdminTeacherWorkload() {
 }
 
 // ============ MISSING ADMIN FUNCTIONS ============
-// Render admin custom subjects
+// Simpler version with built-in dark mode classes
 function renderAdminCustomSubjects() {
     const curriculum = schoolSettings.curriculum || 'cbc';
     const schoolLevel = schoolSettings.schoolLevel || 'secondary';
     const curriculumInfo = CURRICULUMS[curriculum];
     const subjectInfo = curriculumInfo?.subjects[schoolLevel] || [];
-    const allSubjects = [...subjectInfo, ...(customSubjects || [])];
     
     return `
         <div class="space-y-6 animate-fade-in">
@@ -1974,28 +1973,28 @@ function renderAdminCustomSubjects() {
                     </div>
                     
                     <div>
-                        <h4 class="text-sm font-medium mb-2">Curriculum Subjects</h4>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
+                        <h4 class="text-sm font-medium mb-3">Curriculum Subjects</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
                             ${subjectInfo.map(subject => `
-                                <div class="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
-                                    <span class="text-sm">${subject}</span>
-                                    <span class="text-xs text-blue-600">core</span>
+                                <div class="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border">
+                                    <span class="text-sm font-medium text-foreground">${subject}</span>
+                                    <span class="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">core</span>
                                 </div>
                             `).join('')}
                         </div>
                         
-                        <h4 class="text-sm font-medium mb-2">Custom Subjects</h4>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        <h4 class="text-sm font-medium mb-3">Custom Subjects</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
                             ${customSubjects && customSubjects.length > 0 ? 
                                 customSubjects.map(subject => `
-                                    <div class="flex items-center justify-between p-2 bg-purple-50 rounded-lg">
-                                        <span class="text-sm">${subject}</span>
-                                        <button onclick="removeCustomSubject('${subject}')" class="text-red-600 hover:text-red-800">
+                                    <div class="flex items-center justify-between p-3 bg-secondary/30 rounded-lg border-border group hover:bg-secondary/50 transition-colors">
+                                        <span class="text-sm font-medium text-foreground">${subject}</span>
+                                        <button onclick="removeCustomSubject('${subject}')" class="text-destructive hover:text-destructive/80 opacity-70 hover:opacity-100 transition-opacity">
                                             <i data-lucide="x" class="h-4 w-4"></i>
                                         </button>
                                     </div>
                                 `).join('') 
-                                : '<p class="text-sm text-muted-foreground col-span-3">No custom subjects added yet</p>'
+                                : '<p class="text-sm text-muted-foreground col-span-3 py-4 text-center bg-muted/30 rounded-lg">No custom subjects added yet</p>'
                             }
                         </div>
                     </div>
