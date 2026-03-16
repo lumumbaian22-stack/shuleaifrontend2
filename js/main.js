@@ -1954,17 +1954,86 @@ function renderAdminCalendar() {
     const currentYear = today.getFullYear();
     const terms = schoolSettings.terms || [];
     
+    // Get calendar events from localStorage (or you can fetch from API)
+    let calendarEvents = [];
+    try {
+        calendarEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+    } catch (e) {
+        calendarEvents = [];
+    }
+    
+    // Get the first day of the month and total days
+    const firstDay = new Date(currentYear, today.getMonth(), 1).getDay();
+    const daysInMonth = new Date(currentYear, today.getMonth() + 1, 0).getDate();
+    
+    // Create calendar grid
+    let calendarDays = [];
+    
+    // Add empty cells for days before the first day of month
+    for (let i = 0; i < firstDay; i++) {
+        calendarDays.push('<div class="aspect-square p-1 border rounded-lg opacity-30"></div>');
+    }
+    
+    // Add cells for each day of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${currentYear}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        
+        // Check if this day is within any term
+        const isInTerm = terms.some(t => {
+            const start = new Date(t.startDate);
+            const end = new Date(t.endDate);
+            const checkDate = new Date(dateStr);
+            return checkDate >= start && checkDate <= end;
+        });
+        
+        // Check if this day has events
+        const dayEvents = calendarEvents.filter(e => e.date === dateStr);
+        const hasEvents = dayEvents.length > 0;
+        
+        // Check if this is today
+        const isToday = day === today.getDate() && 
+                        today.getMonth() === new Date().getMonth() && 
+                        today.getFullYear() === new Date().getFullYear();
+        
+        calendarDays.push(`
+            <div class="aspect-square p-1 border rounded-lg hover:bg-accent cursor-pointer relative group
+                ${isInTerm ? 'bg-primary/5 border-primary/30' : ''} 
+                ${isToday ? 'ring-2 ring-primary' : ''}"
+                onclick="showDayDetails('${dateStr}')">
+                <span class="text-sm ${isToday ? 'font-bold' : ''}">${day}</span>
+                ${hasEvents ? '<div class="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full"></div>' : ''}
+                ${dayEvents.length > 1 ? '<div class="absolute bottom-1 right-1 text-[8px] font-bold text-primary">' + dayEvents.length + '</div>' : ''}
+            </div>
+        `);
+    }
+    
+    // Get upcoming events (next 5)
+    const upcomingEvents = [...calendarEvents]
+        .filter(e => new Date(e.date) >= new Date())
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .slice(0, 5);
+    
     return `
         <div class="space-y-6 animate-fade-in">
-            <h2 class="text-2xl font-bold">School Calendar - ${currentMonth} ${currentYear}</h2>
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold">School Calendar - ${currentMonth} ${currentYear}</h2>
+                <button onclick="showAddEventModal()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
+                    <i data-lucide="plus" class="h-4 w-4"></i>
+                    Add Event
+                </button>
+            </div>
             
             <div class="grid gap-4 md:grid-cols-3">
                 <div class="md:col-span-2 rounded-xl border bg-card p-6">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-semibold">${currentMonth} ${currentYear}</h3>
                         <div class="flex gap-2">
-                            <button class="p-2 hover:bg-accent rounded-lg"><i data-lucide="chevron-left" class="h-4 w-4"></i></button>
-                            <button class="p-2 hover:bg-accent rounded-lg"><i data-lucide="chevron-right" class="h-4 w-4"></i></button>
+                            <button onclick="changeMonth(-1)" class="p-2 hover:bg-accent rounded-lg">
+                                <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                            </button>
+                            <button onclick="changeMonth(1)" class="p-2 hover:bg-accent rounded-lg">
+                                <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                            </button>
                         </div>
                     </div>
                     
@@ -1979,44 +2048,252 @@ function renderAdminCalendar() {
                     </div>
                     
                     <div class="grid grid-cols-7 gap-1">
-                        ${Array.from({ length: 31 }, (_, i) => {
-                            const day = i + 1;
-                            const hasEvent = terms.some(t => {
-                                const start = new Date(t.startDate).getDate();
-                                const end = new Date(t.endDate).getDate();
-                                return day >= start && day <= end;
-                            });
-                            return `
-                                <div class="aspect-square p-1 border rounded-lg hover:bg-accent cursor-pointer ${hasEvent ? 'bg-primary/10 border-primary' : ''}">
-                                    <span class="text-sm">${day}</span>
-                                    ${hasEvent ? '<div class="w-1 h-1 bg-primary rounded-full mx-auto mt-1"></div>' : ''}
-                                </div>
-                            `;
-                        }).join('')}
+                        ${calendarDays.join('')}
                     </div>
                 </div>
                 
                 <div class="rounded-xl border bg-card p-6">
-                    <h3 class="font-semibold mb-4">Academic Terms</h3>
-                    <div class="space-y-3">
-                        ${terms.map(term => `
-                            <div class="p-3 bg-primary/10 rounded-lg">
-                                <p class="font-medium">${term.name}</p>
-                                <p class="text-sm text-muted-foreground">${formatDate(term.startDate)} - ${formatDate(term.endDate)}</p>
-                            </div>
-                        `).join('')}
-                        ${terms.length === 0 ? '<p class="text-sm text-muted-foreground">No terms configured</p>' : ''}
+                    <h3 class="font-semibold mb-4">Upcoming Events</h3>
+                    <div id="upcoming-events-list" class="space-y-3">
+                        ${upcomingEvents.length > 0 ? 
+                            upcomingEvents.map(event => `
+                                <div class="p-3 bg-primary/10 rounded-lg flex justify-between items-center group">
+                                    <div>
+                                        <p class="font-medium">${event.title}</p>
+                                        <p class="text-xs text-muted-foreground">${formatDate(event.date)}</p>
+                                    </div>
+                                    <button onclick="deleteEvent('${event.id}')" class="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded-lg text-red-600 transition-opacity">
+                                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                    </button>
+                                </div>
+                            `).join('') 
+                            : '<p class="text-sm text-muted-foreground text-center py-4">No upcoming events</p>'
+                        }
                     </div>
                     
-                    <button onclick="showDashboardSection('settings')" class="mt-4 w-full py-2 border rounded-lg hover:bg-accent flex items-center justify-center gap-2">
-                        <i data-lucide="settings" class="h-4 w-4"></i>
-                        Configure Terms
-                    </button>
+                    <div class="mt-6 border-t pt-4">
+                        <h4 class="font-medium mb-2">Academic Terms</h4>
+                        <div class="space-y-2">
+                            ${terms.map(term => `
+                                <div class="p-2 bg-primary/5 rounded-lg text-sm">
+                                    <span class="font-medium">${term.name}:</span>
+                                    <span class="text-muted-foreground"> ${formatDate(term.startDate)} - ${formatDate(term.endDate)}</span>
+                                </div>
+                            `).join('')}
+                            ${terms.length === 0 ? '<p class="text-sm text-muted-foreground">No terms configured</p>' : ''}
+                        </div>
+                        
+                        <button onclick="showDashboardSection('settings')" class="mt-4 w-full py-2 border rounded-lg hover:bg-accent flex items-center justify-center gap-2">
+                            <i data-lucide="settings" class="h-4 w-4"></i>
+                            Configure Terms
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     `;
 }
+
+// ============ CALENDAR HELPER FUNCTIONS ============
+
+// Show day details modal
+window.showDayDetails = function(date) {
+    const events = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+    const dayEvents = events.filter(e => e.date === date);
+    const formattedDate = formatDate(date);
+    
+    if (dayEvents.length === 0) {
+        // No events, ask if user wants to add one
+        if (confirm(`No events on ${formattedDate}. Would you like to add one?`)) {
+            showAddEventModal(date);
+        }
+        return;
+    }
+    
+    // Create a modal to show day events
+    let modal = document.getElementById('day-events-modal');
+    if (!modal) {
+        createDayEventsModal();
+        modal = document.getElementById('day-events-modal');
+    }
+    
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) {
+        modalContent.innerHTML = `
+            <div class="space-y-4">
+                <h4 class="font-medium">Events on ${formattedDate}</h4>
+                <div class="space-y-2 max-h-60 overflow-y-auto">
+                    ${dayEvents.map(event => `
+                        <div class="p-3 border rounded-lg flex justify-between items-center">
+                            <div>
+                                <p class="font-medium">${event.title}</p>
+                                ${event.description ? `<p class="text-xs text-muted-foreground">${event.description}</p>` : ''}
+                            </div>
+                            <button onclick="deleteEvent('${event.id}')" class="p-1 hover:bg-red-100 rounded-lg text-red-600">
+                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button onclick="closeDayEventsModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Close</button>
+                    <button onclick="showAddEventModal('${date}')" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Add Event</button>
+                </div>
+            </div>
+        `;
+    }
+    
+    modal.classList.remove('hidden');
+    if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+};
+
+// Create day events modal
+function createDayEventsModal() {
+    const modalHTML = `
+        <div id="day-events-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeDayEventsModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Day Events</h3>
+                        <button onclick="closeDayEventsModal()" class="p-2 hover:bg-accent rounded-lg">
+                            <i data-lucide="x" class="h-5 w-5"></i>
+                        </button>
+                    </div>
+                    <div class="modal-content space-y-4">
+                        <!-- Content will be filled dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// Close day events modal
+window.closeDayEventsModal = function() {
+    const modal = document.getElementById('day-events-modal');
+    if (modal) modal.classList.add('hidden');
+};
+
+// Show add event modal
+window.showAddEventModal = function(prefillDate) {
+    let modal = document.getElementById('add-event-modal');
+    
+    if (!modal) {
+        createAddEventModal();
+        modal = document.getElementById('add-event-modal');
+    }
+    
+    // Prefill date if provided
+    if (prefillDate) {
+        document.getElementById('event-date').value = prefillDate;
+    } else {
+        document.getElementById('event-date').value = new Date().toISOString().split('T')[0];
+    }
+    
+    modal.classList.remove('hidden');
+};
+
+// Create add event modal
+function createAddEventModal() {
+    const modalHTML = `
+        <div id="add-event-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeAddEventModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                    <h3 class="text-lg font-semibold mb-4">Add Calendar Event</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Event Title *</label>
+                            <input type="text" id="event-title" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Date *</label>
+                            <input type="date" id="event-date" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Description (optional)</label>
+                            <textarea id="event-description" rows="3" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"></textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button onclick="closeAddEventModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
+                        <button onclick="saveCalendarEvent()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Save Event</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// Close add event modal
+window.closeAddEventModal = function() {
+    const modal = document.getElementById('add-event-modal');
+    if (modal) modal.classList.add('hidden');
+};
+
+// Save calendar event
+window.saveCalendarEvent = function() {
+    const title = document.getElementById('event-title')?.value;
+    const date = document.getElementById('event-date')?.value;
+    const description = document.getElementById('event-description')?.value;
+    
+    if (!title || !date) {
+        showToast('Title and date are required', 'error');
+        return;
+    }
+    
+    // Get existing events
+    let events = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+    
+    // Create new event
+    const newEvent = {
+        id: Date.now().toString(),
+        title,
+        date,
+        description,
+        createdAt: new Date().toISOString()
+    };
+    
+    events.push(newEvent);
+    localStorage.setItem('calendarEvents', JSON.stringify(events));
+    
+    showToast('Event added successfully', 'success');
+    closeAddEventModal();
+    
+    // Refresh the calendar view
+    if (currentSection === 'calendar') {
+        showDashboardSection('calendar');
+    }
+};
+
+// Delete event
+window.deleteEvent = function(eventId) {
+    if (!confirm('Delete this event?')) return;
+    
+    let events = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+    events = events.filter(e => e.id !== eventId);
+    localStorage.setItem('calendarEvents', JSON.stringify(events));
+    
+    showToast('Event deleted', 'success');
+    
+    // Close any open modals
+    closeDayEventsModal();
+    
+    // Refresh the calendar view
+    if (currentSection === 'calendar') {
+        showDashboardSection('calendar');
+    }
+};
+
+// Change month (simplified version - just refreshes with a different month)
+window.changeMonth = function(direction) {
+    // This would require state management for the current month
+    // For now, we'll just show a message
+    showToast('Month navigation coming soon', 'info');
+};
 
 function renderAdminTasks() {
     return `
@@ -4428,3 +4705,10 @@ window.saveDutyPreferences = saveDutyPreferences;
 window.saveAttendance = saveAttendance;
 window.copyElimuid = copyElimuid;
 window.handleChangePassword = handleChangePassword;
+window.showDayDetails = showDayDetails;
+window.closeDayEventsModal = closeDayEventsModal;
+window.showAddEventModal = showAddEventModal;
+window.closeAddEventModal = closeAddEventModal;
+window.saveCalendarEvent = saveCalendarEvent;
+window.deleteEvent = deleteEvent;
+window.changeMonth = changeMonth;
