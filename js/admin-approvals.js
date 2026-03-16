@@ -90,6 +90,74 @@ async function approveTeacher(teacherId) {
     }
 }
 
+// ============ TEACHER SUSPEND/REMOVE FUNCTIONS ============
+
+// Suspend teacher
+async function suspendTeacher(teacherId) {
+    if (!confirm('⚠️ Suspend this teacher? They will not be able to log in until reactivated.')) {
+        return;
+    }
+    
+    const reason = prompt('Please enter suspension reason:');
+    if (reason === null) return;
+    
+    showLoading();
+    try {
+        const response = await api.admin.suspendTeacher(teacherId, reason);
+        showToast('✅ Teacher suspended successfully', 'success');
+        await refreshTeachersList();
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to suspend teacher', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Reactivate teacher
+async function reactivateTeacher(teacherId) {
+    if (!confirm('Reactivate this teacher? They will be able to log in again.')) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.admin.reactivateTeacher(teacherId);
+        showToast('✅ Teacher reactivated successfully', 'success');
+        await refreshTeachersList();
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to reactivate teacher', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Remove/Delete teacher permanently
+async function removeTeacher(teacherId) {
+    if (!confirm('⚠️⚠️⚠️ PERMANENT ACTION: Delete this teacher forever? This cannot be undone!')) {
+        return;
+    }
+    
+    const confirmText = prompt('Type "DELETE" to confirm permanent removal:');
+    if (confirmText !== 'DELETE') {
+        showToast('Action cancelled', 'info');
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.admin.deleteTeacher(teacherId);
+        showToast('✅ Teacher permanently removed', 'success');
+        await refreshTeachersList();
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to remove teacher', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
 // Reject teacher
 async function rejectTeacher(teacherId) {
     const reason = prompt('Please enter rejection reason:');
