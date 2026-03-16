@@ -1948,6 +1948,145 @@ async function renderAdminTeacherWorkload() {
     }
 }
 
+// ============ MISSING ADMIN FUNCTIONS ============
+
+// Render admin custom subjects
+function renderAdminCustomSubjects() {
+    const curriculum = schoolSettings.curriculum || 'cbc';
+    const schoolLevel = schoolSettings.schoolLevel || 'secondary';
+    const curriculumInfo = CURRICULUMS[curriculum];
+    const subjectInfo = curriculumInfo?.subjects[schoolLevel] || [];
+    const allSubjects = [...subjectInfo, ...(customSubjects || [])];
+    
+    return `
+        <div class="space-y-6 animate-fade-in">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold">Custom Subjects</h2>
+            </div>
+            <p class="text-sm text-muted-foreground">Add subjects that are not in the standard curriculum</p>
+            
+            <div class="rounded-xl border bg-card p-6">
+                <div class="space-y-4">
+                    <div class="flex gap-2">
+                        <input type="text" id="new-subject-name" placeholder="e.g., French, Computer Science, Art" class="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        <button onclick="addCustomSubject()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">
+                            Add Subject
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        ${allSubjects.map(subject => `
+                            <div class="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                                <span class="text-sm">${subject}</span>
+                                ${customSubjects?.includes(subject) ? `
+                                    <button onclick="removeCustomSubject('${subject}')" class="text-red-600 hover:text-red-800">
+                                        <i data-lucide="x" class="h-4 w-4"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end">
+                <button onclick="saveAllSettings()" class="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
+                    <i data-lucide="save" class="h-4 w-4"></i>
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// Render admin settings
+function renderAdminSettings() {
+    const curriculum = schoolSettings.curriculum || 'cbc';
+    const schoolLevel = schoolSettings.schoolLevel || 'secondary';
+    const curriculumInfo = CURRICULUMS[curriculum];
+    const levelInfo = curriculumInfo?.levels[schoolLevel] || [];
+    const subjectInfo = curriculumInfo?.subjects[schoolLevel] || [];
+    const terms = schoolSettings.terms || [
+        { name: 'Term 1', startDate: new Date(new Date().getFullYear(), 0, 15).toISOString().split('T')[0], endDate: new Date(new Date().getFullYear(), 3, 12).toISOString().split('T')[0] },
+        { name: 'Term 2', startDate: new Date(new Date().getFullYear(), 4, 6).toISOString().split('T')[0], endDate: new Date(new Date().getFullYear(), 7, 9).toISOString().split('T')[0] },
+        { name: 'Term 3', startDate: new Date(new Date().getFullYear(), 8, 2).toISOString().split('T')[0], endDate: new Date(new Date().getFullYear(), 10, 29).toISOString().split('T')[0] }
+    ];
+    
+    return `
+        <div class="space-y-6 animate-fade-in">
+            <h2 class="text-2xl font-bold">School Settings</h2>
+            <p class="text-sm text-muted-foreground">Changes made here will reflect across all dashboards for this school.</p>
+            
+            <div class="grid gap-6">
+                <div class="rounded-xl border bg-card p-6">
+                    <h3 class="font-semibold mb-4">School Information</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">School Name</label>
+                            <input type="text" id="settings-school-name" value="${schoolSettings.schoolName || ''}" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">School Level</label>
+                            <select id="settings-school-level" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" onchange="updateSchoolLevel(this.value)">
+                                <option value="primary" ${schoolLevel === 'primary' ? 'selected' : ''}>Primary</option>
+                                <option value="secondary" ${schoolLevel === 'secondary' ? 'selected' : ''}>Secondary</option>
+                                <option value="both" ${schoolLevel === 'both' ? 'selected' : ''}>Both Primary & Secondary</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="rounded-xl border bg-card p-6">
+                    <h3 class="font-semibold mb-4">Curriculum Settings</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Select Curriculum</label>
+                            <select id="settings-curriculum" onchange="updateCurriculumInfo(this.value)" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                                <option value="cbc" ${curriculum === 'cbc' ? 'selected' : ''}>CBC (Competency Based Curriculum)</option>
+                                <option value="844" ${curriculum === '844' ? 'selected' : ''}>8-4-4 System</option>
+                                <option value="british" ${curriculum === 'british' ? 'selected' : ''}>British Curriculum</option>
+                                <option value="american" ${curriculum === 'american' ? 'selected' : ''}>American Curriculum</option>
+                            </select>
+                        </div>
+                        
+                        <div class="p-4 bg-muted/30 rounded-lg">
+                            <h4 class="font-sm font-medium mb-2">Curriculum Information</h4>
+                            <p class="text-sm text-muted-foreground"><span class="font-medium">Name:</span> ${curriculumInfo?.name || 'N/A'}</p>
+                            <p class="text-sm text-muted-foreground mt-1"><span class="font-medium">Grade Levels:</span> ${levelInfo.join(', ')}</p>
+                            <p class="text-sm text-muted-foreground mt-1"><span class="font-medium">Core Subjects:</span> ${subjectInfo.join(', ')}</p>
+                            ${customSubjects?.length ? `<p class="text-sm text-muted-foreground mt-1"><span class="font-medium">Custom Subjects:</span> ${customSubjects.join(', ')}</p>` : ''}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="rounded-xl border bg-card p-6">
+                    <h3 class="font-semibold mb-4">Academic Terms</h3>
+                    <div class="space-y-4">
+                        ${terms.map((term, index) => `
+                            <div class="grid grid-cols-3 gap-2">
+                                <input type="text" value="${term.name}" placeholder="Term Name" class="term-name rounded-lg border border-input bg-background px-3 py-2 text-sm" data-index="${index}">
+                                <input type="date" value="${term.startDate}" class="term-start rounded-lg border border-input bg-background px-3 py-2 text-sm" data-index="${index}">
+                                <input type="date" value="${term.endDate}" class="term-end rounded-lg border border-input bg-background px-3 py-2 text-sm" data-index="${index}">
+                            </div>
+                        `).join('')}
+                        <button onclick="addTerm()" class="text-sm text-primary hover:underline flex items-center gap-1">
+                            <i data-lucide="plus" class="h-4 w-4"></i>
+                            Add Term
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end">
+                    <button onclick="saveAllSettings()" class="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
+                        <i data-lucide="save" class="h-4 w-4"></i>
+                        Save All Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 // ============ CALENDAR STATE ============
 let calendarState = {
     currentDate: new Date(),
