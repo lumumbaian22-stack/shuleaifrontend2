@@ -1,3 +1,22 @@
+// ============ TEACHER FEATURES ============
+// WARNING: Do not overwrite admin functions
+
+// Save the admin version if it exists
+const adminViewStudent = window.viewStudent;
+
+// Then define your teacher version with a different name
+async function teacherViewStudentDetails(studentId) {
+    // ... your existing teacher code ...
+}
+
+// Export with a different name
+window.teacherViewStudentDetails = teacherViewStudentDetails;
+
+// Restore the admin version if it was overwritten
+if (adminViewStudent && typeof window.viewStudent !== 'function') {
+    window.viewStudent = adminViewStudent;
+}
+
 // teacher-features.js - Complete file with all teacher functions
 
 // ============ STUDENT MANAGEMENT ============
@@ -368,6 +387,14 @@ async function addComment(studentId, comment) {
         await api.teacher.addComment({ studentId, comment });
         showToast('✅ Comment sent', 'success');
     } catch (e) { showToast(e.message || 'Failed', 'error'); } finally { hideLoading(); }
+}
+// Simple redirect - don't overwrite admin functions
+if (typeof window.viewStudent === 'function') {
+    // Admin version exists, don't overwrite
+    console.log('Admin viewStudent exists, keeping it');
+} else {
+    // No admin version, use teacher version
+    window.viewStudent = viewStudentDetails;
 }
 
 // ============ EXPORT ============
