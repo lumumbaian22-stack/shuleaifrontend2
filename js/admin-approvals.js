@@ -1,25 +1,4 @@
-// admin-approvals.js - Complete fixed version with working view and edit functions for both teachers and students
-
-// View student details (using the new admin endpoint)
-async function viewStudent(studentId) {
-    showLoading();
-    try {
-        // Use the new admin endpoint instead of loading all students
-        const response = await api.admin.getStudentDetails(studentId);
-        
-        if (!response || !response.data) {
-            showToast('Student not found', 'error');
-            return;
-        }
-        
-        showStudentDetailsModal(response.data);
-    } catch (error) {
-        console.error('Error viewing student:', error);
-        showToast('Failed to load student details: ' + error.message, 'error');
-    } finally {
-        hideLoading();
-    }
-}
+// admin-approvals.js - Complete fixed version
 
 // ============ LOAD FUNCTIONS ============
 
@@ -393,7 +372,6 @@ async function handleUpdateTeacher() {
 async function updateTeacher(teacherId, teacherData) {
     showLoading();
     try {
-        // Assuming you have an API endpoint for updating teachers
         const response = await api.admin.updateTeacher(teacherId, teacherData);
         showToast('✅ Teacher updated successfully', 'success');
         await refreshTeachersList();
@@ -409,38 +387,19 @@ async function updateTeacher(teacherId, teacherData) {
 
 // ============ STUDENT DETAILS MODAL ============
 
-// View student details
+// View student details - UPDATED to use API directly
 async function viewStudent(studentId) {
     console.log('🔵 viewStudent called with ID:', studentId);
-    console.log('Stack trace:', new Error().stack);
     showLoading();
     try {
-        console.log('📥 Loading all students...');
-        const students = await loadAllStudents();
-        console.log('📥 Loaded students:', students);
+        const response = await api.admin.getStudentDetails(studentId);
         
-        if (!students || students.length === 0) {
-            console.log('❌ No students loaded');
-            showToast('No students available', 'error');
-            return;
-        }
-        
-        console.log('🔍 Looking for student with ID:', studentId, '(type:', typeof studentId, ')');
-        const student = students.find(s => {
-            console.log('Comparing:', s.id, '(', typeof s.id, ') with', studentId, '(', typeof studentId, ')');
-            return s.id == studentId;
-        });
-        
-        console.log('🎯 Found student:', student);
-        
-        if (!student) {
-            console.log('❌ Student not found');
+        if (!response || !response.data) {
             showToast('Student not found', 'error');
             return;
         }
         
-        console.log('✅ Student found, showing modal');
-        showStudentDetailsModal(student);
+        showStudentDetailsModal(response.data);
     } catch (error) {
         console.error('❌ Error viewing student:', error);
         showToast('Failed to load student details: ' + error.message, 'error');
@@ -714,7 +673,6 @@ async function handleUpdateStudent() {
 async function updateStudent(studentId, studentData) {
     showLoading();
     try {
-        // Assuming you have an API endpoint for updating students
         const response = await api.admin.updateStudent(studentId, studentData);
         showToast('✅ Student updated successfully', 'success');
         await refreshStudentsList();
@@ -949,7 +907,10 @@ function formatDate(dateString) {
         day: 'numeric'
     });
 }
-\// Force all student view buttons to use the admin function
+
+// ============ BUTTON FIXER ============
+
+// Force all student view buttons to use the admin function
 function fixStudentButtons() {
     document.querySelectorAll('button').forEach(button => {
         const onclick = button.getAttribute('onclick');
@@ -961,7 +922,11 @@ function fixStudentButtons() {
                 button.onclick = function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    window.viewStudent(studentId);
+                    if (typeof window.viewStudent === 'function') {
+                        window.viewStudent(studentId);
+                    } else {
+                        console.error('viewStudent function not found');
+                    }
                     return false;
                 };
             }
@@ -971,10 +936,13 @@ function fixStudentButtons() {
 
 // Run it whenever the dashboard content changes
 const observer = new MutationObserver(fixStudentButtons);
-observer.observe(document.getElementById('dashboard-content'), { 
-    childList: true, 
-    subtree: true 
-});
+const dashboardContent = document.getElementById('dashboard-content');
+if (dashboardContent) {
+    observer.observe(dashboardContent, { 
+        childList: true, 
+        subtree: true 
+    });
+}
 
 // Run it immediately
 setTimeout(fixStudentButtons, 500);
@@ -1003,3 +971,4 @@ window.renderStudentsTable = renderStudentsTable;
 window.refreshPendingTeachers = refreshPendingTeachers;
 window.refreshTeachersList = refreshTeachersList;
 window.refreshStudentsList = refreshStudentsList;
+window.fixStudentButtons = fixStudentButtons;
