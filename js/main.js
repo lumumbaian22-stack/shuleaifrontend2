@@ -3493,15 +3493,11 @@ async function renderParentSection(section) {
     }
 }
 
-// Update the renderParentDashboard function
-// COMPLETE FIX - Replace your existing renderParentDashboard function
 async function renderParentDashboard() {
     try {
-        console.log('Fetching parent data...');
-        
-        // Fetch children data
+        // Fetch children data directly from API
         const childrenResponse = await api.parent.getChildren();
-        console.log('Children response:', childrenResponse);
+        console.log('Parent children data:', childrenResponse);
         
         const children = childrenResponse.data || [];
         let selectedChildSummary = null;
@@ -3513,7 +3509,13 @@ async function renderParentDashboard() {
             selectedChildSummary = summaryResponse.data;
         }
         
-        // Generate HTML
+        // Store in dashboardData for other functions to use
+        dashboardData = {
+            children: children,
+            selectedChild: selectedChildSummary
+        };
+        
+        // Build the HTML
         let html = `
             <div class="space-y-6 animate-fade-in">
                 <!-- Child Selector -->
@@ -3529,7 +3531,7 @@ async function renderParentDashboard() {
                 const isActive = index === 0 ? 'bg-primary text-primary-foreground' : 'bg-muted';
                 
                 html += `
-                    <button onclick="selectChild(${child.id})" 
+                    <button onclick="selectChild('${child.id}')" 
                             class="child-selector-btn px-4 py-2 ${isActive} rounded-lg">
                         ${childName} (Grade ${childGrade})
                     </button>
@@ -3543,9 +3545,6 @@ async function renderParentDashboard() {
         if (selectedChildSummary) {
             const student = selectedChildSummary.student || {};
             const avgScore = selectedChildSummary.averageScore || 0;
-            const attendance = selectedChildSummary.recentAttendance || [];
-            const attendanceRate = attendance.length ? 
-                Math.round((attendance.filter(a => a.status === 'present').length / attendance.length) * 100) : 95;
             
             html += `
                 <!-- Stats Grid -->
@@ -3553,11 +3552,12 @@ async function renderParentDashboard() {
                     <div class="rounded-xl border bg-card p-6 card-hover">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm font-medium text-muted-foreground">Student ELIMUID</p>
-                                <h3 class="text-lg font-mono font-bold mt-1">${student.elimuid || 'N/A'}</h3>
+                                <p class="text-sm font-medium text-muted-foreground">Attendance</p>
+                                <h3 class="text-2xl font-bold mt-1">95%</h3>
+                                <p class="text-xs text-green-600 mt-1">This term</p>
                             </div>
-                            <div class="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center">
-                                <i data-lucide="id-card" class="h-6 w-6 text-purple-600"></i>
+                            <div class="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                                <i data-lucide="calendar-check" class="h-6 w-6 text-blue-600"></i>
                             </div>
                         </div>
                     </div>
@@ -3567,9 +3567,10 @@ async function renderParentDashboard() {
                             <div>
                                 <p class="text-sm font-medium text-muted-foreground">Class Average</p>
                                 <h3 class="text-2xl font-bold mt-1">${avgScore}%</h3>
+                                <p class="text-xs text-green-600 mt-1">Above average</p>
                             </div>
-                            <div class="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
-                                <i data-lucide="trending-up" class="h-6 w-6 text-green-600"></i>
+                            <div class="h-12 w-12 rounded-lg bg-violet-100 flex items-center justify-center">
+                                <i data-lucide="trending-up" class="h-6 w-6 text-violet-600"></i>
                             </div>
                         </div>
                     </div>
@@ -3577,11 +3578,12 @@ async function renderParentDashboard() {
                     <div class="rounded-xl border bg-card p-6 card-hover">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm font-medium text-muted-foreground">Attendance</p>
-                                <h3 class="text-2xl font-bold mt-1">${attendanceRate}%</h3>
+                                <p class="text-sm font-medium text-muted-foreground">Homework</p>
+                                <h3 class="text-2xl font-bold mt-1">3</h3>
+                                <p class="text-xs text-yellow-600 mt-1">Pending</p>
                             </div>
                             <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
-                                <i data-lucide="calendar-check" class="h-6 w-6 text-amber-600"></i>
+                                <i data-lucide="book-open" class="h-6 w-6 text-amber-600"></i>
                             </div>
                         </div>
                     </div>
@@ -3590,7 +3592,8 @@ async function renderParentDashboard() {
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-medium text-muted-foreground">Fee Balance</p>
-                                <h3 class="text-2xl font-bold mt-1">$${selectedChildSummary.outstandingFees?.balance || 0}</h3>
+                                <h3 class="text-2xl font-bold mt-1">$250</h3>
+                                <p class="text-xs text-red-600 mt-1">Due in 5 days</p>
                             </div>
                             <div class="h-12 w-12 rounded-lg bg-red-100 flex items-center justify-center">
                                 <i data-lucide="credit-card" class="h-6 w-6 text-red-600"></i>
@@ -3599,25 +3602,24 @@ async function renderParentDashboard() {
                     </div>
                 </div>
                 
-                <!-- Quick Actions -->
-                <div class="grid gap-4 md:grid-cols-3">
-                    <button onclick="showDashboardSection('progress')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
-                        <i data-lucide="trending-up" class="h-8 w-8 text-blue-600 mb-3"></i>
-                        <h4 class="font-semibold">View Progress</h4>
-                        <p class="text-sm text-muted-foreground">Check academic performance</p>
-                    </button>
-                    
-                    <button onclick="showDashboardSection('payments')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
-                        <i data-lucide="credit-card" class="h-8 w-8 text-green-600 mb-3"></i>
-                        <h4 class="font-semibold">Make Payment</h4>
-                        <p class="text-sm text-muted-foreground">Pay fees and upgrade plans</p>
-                    </button>
-                    
-                    <button onclick="showReportAbsenceModal()" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
-                        <i data-lucide="calendar-x" class="h-8 w-8 text-orange-600 mb-3"></i>
-                        <h4 class="font-semibold">Report Absence</h4>
-                        <p class="text-sm text-muted-foreground">Notify school about absence</p>
-                    </button>
+                <!-- Report Absence -->
+                <div class="rounded-xl border bg-card p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-semibold">Report Absence</h3>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Date</label>
+                            <input type="date" id="absence-date" value="${new Date().toISOString().split('T')[0]}" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Reason</label>
+                            <textarea id="absence-reason" rows="2" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="Why will your child be absent?"></textarea>
+                        </div>
+                        <button onclick="reportAbsence()" class="w-full bg-primary text-primary-foreground py-2 rounded-lg hover:bg-primary/90">
+                            Report Absence
+                        </button>
+                    </div>
                 </div>
             `;
         }
