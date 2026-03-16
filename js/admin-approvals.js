@@ -1035,6 +1035,9 @@ function formatDate(dateString) {
 }
 
 // ============ EXPORT FUNCTIONS ============
+window.suspendTeacher = suspendTeacher;
+window.reactivateTeacher = reactivateTeacher;
+window.removeTeacher = removeTeacher;
 
 window.loadPendingTeachers = loadPendingTeachers;
 window.loadAllTeachers = loadAllTeachers;
