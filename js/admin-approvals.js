@@ -1003,22 +1003,3 @@ window.renderStudentsTable = renderStudentsTable;
 window.refreshPendingTeachers = refreshPendingTeachers;
 window.refreshTeachersList = refreshTeachersList;
 window.refreshStudentsList = refreshStudentsList;
-// Forcefully override any other viewStudent functions
-window.viewStudent = function(studentId) {
-    console.log('✅ Admin viewStudent called for ID:', studentId);
-    showLoading();
-    api.admin.getStudentDetails(studentId)
-        .then(response => {
-            hideLoading();
-            if (response && response.data) {
-                showStudentDetailsModal(response.data);
-            } else {
-                showToast('Student not found', 'error');
-            }
-        })
-        .catch(error => {
-            hideLoading();
-            console.error('Error:', error);
-            showToast('Failed to load student details', 'error');
-        });
-};
