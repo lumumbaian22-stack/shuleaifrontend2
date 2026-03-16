@@ -974,8 +974,16 @@ window.renderStudentsTable = renderStudentsTable;
 window.refreshPendingTeachers = refreshPendingTeachers;
 window.refreshTeachersList = refreshTeachersList;
 window.refreshStudentsList = refreshStudentsList;
-// Redirect any calls to viewStudentDetails to the correct viewStudent function
-window.viewStudentDetails = function(studentId) {
-    console.log('⚠️ Redirecting viewStudentDetails to viewStudent');
-    return window.viewStudent(studentId);
-};
+// Force our viewStudent to be the one that's used
+window.viewStudent = (function(original) {
+    return function(studentId) {
+        console.log('Using admin viewStudent for ID:', studentId);
+        return original(studentId);
+    };
+})(window.viewStudent);
+
+// Prevent teacher version from overwriting ours
+Object.defineProperty(window, 'viewStudent', {
+    writable: false,
+    configurable: false
+});
