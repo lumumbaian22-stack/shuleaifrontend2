@@ -1,4 +1,4 @@
-<div class="space-y-6 animate-fade-in">
+<div class="space-y-6 animate-fade-in" id="teacher-dashboard-content">
     <!-- Stats Grid -->
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-xl border bg-card p-6 card-hover">
@@ -13,48 +13,33 @@
                 </div>
             </div>
         </div>
-        
         <div class="rounded-xl border bg-card p-6 card-hover">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-muted-foreground">Class Average</p>
                     <h3 class="text-2xl font-bold mt-1" id="class-average">0%</h3>
-                    <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
-                        <i data-lucide="trending-up" class="h-3 w-3"></i>
-                        +<span id="average-growth">0</span>% from last term
-                    </p>
                 </div>
                 <div class="h-12 w-12 rounded-lg bg-violet-100 flex items-center justify-center">
                     <i data-lucide="trending-up" class="h-6 w-6 text-violet-600"></i>
                 </div>
             </div>
         </div>
-        
         <div class="rounded-xl border bg-card p-6 card-hover">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-muted-foreground">Attendance Today</p>
                     <h3 class="text-2xl font-bold mt-1" id="attendance-today">0/0</h3>
-                    <p class="text-xs text-yellow-600 mt-1 flex items-center gap-1">
-                        <i data-lucide="alert-circle" class="h-3 w-3"></i>
-                        <span id="absent-count">0</span> absent
-                    </p>
                 </div>
                 <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
                     <i data-lucide="calendar-check" class="h-6 w-6 text-amber-600"></i>
                 </div>
             </div>
         </div>
-        
         <div class="rounded-xl border bg-card p-6 card-hover">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-muted-foreground">Pending Tasks</p>
                     <h3 class="text-2xl font-bold mt-1" id="pending-tasks">0</h3>
-                    <p class="text-xs text-red-600 mt-1 flex items-center gap-1">
-                        <i data-lucide="clock" class="h-3 w-3"></i>
-                        <span id="overdue-tasks">0</span> overdue
-                    </p>
                 </div>
                 <div class="h-12 w-12 rounded-lg bg-red-100 flex items-center justify-center">
                     <i data-lucide="check-square" class="h-6 w-6 text-red-600"></i>
@@ -62,535 +47,81 @@
             </div>
         </div>
     </div>
-    
-    <!-- Student Management Hub -->
-    <div class="grid gap-4 md:grid-cols-2">
-        <div class="rounded-xl border bg-card p-6">
-            <h3 class="font-semibold mb-4">Add New Student</h3>
-            <div class="space-y-3">
-                <input type="text" id="student-name" placeholder="Full Name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                <input type="text" id="student-grade" placeholder="Grade/Class" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                <input type="email" id="parent-email" placeholder="Parent Email" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                <button onclick="showAddStudentModal()" class="w-full bg-primary text-primary-foreground py-2 rounded-lg hover:bg-primary/90">
-                    <i data-lucide="user-plus" class="h-4 w-4 inline mr-2"></i>
-                    Generate ELIMUID & Add
-                </button>
-            </div>
-        </div>
-        
-        <div class="rounded-xl border bg-card p-6">
-            <h3 class="font-semibold mb-4">CSV Bulk Upload</h3>
-            <div id="csv-drop-zone" class="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                <i data-lucide="upload" class="h-8 w-8 mx-auto text-muted-foreground"></i>
-                <p class="text-sm mt-2">Drag & drop CSV or click to browse</p>
-                <p class="text-xs text-muted-foreground mt-1">Analytics engine will process automatically</p>
-                <input type="file" id="csv-file-input" accept=".csv" class="hidden">
-            </div>
-            <div id="upload-progress-container" class="mt-3 hidden">
-                <div class="w-full bg-muted rounded-full h-2">
-                    <div id="upload-progress" class="bg-primary h-2 rounded-full" style="width: 0%"></div>
-                </div>
-                <p id="upload-progress-text" class="text-xs text-center mt-1">0%</p>
-            </div>
-            <button onclick="downloadTemplate('students')" class="mt-2 text-sm text-primary hover:underline flex items-center gap-1">
-                <i data-lucide="download" class="h-4 w-4"></i>
-                Download CSV Template
-            </button>
-        </div>
+
+    <!-- Quick Actions -->
+    <div class="grid gap-4 md:grid-cols-4">
+        <button onclick="showDashboardSection('students')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
+            <i data-lucide="users" class="h-6 w-6 text-blue-600 mb-2"></i>
+            <p class="font-medium">My Students</p>
+        </button>
+        <button onclick="showDashboardSection('attendance')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
+            <i data-lucide="calendar-check" class="h-6 w-6 text-green-600 mb-2"></i>
+            <p class="font-medium">Attendance</p>
+        </button>
+        <button onclick="showDashboardSection('grades')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
+            <i data-lucide="trending-up" class="h-6 w-6 text-purple-600 mb-2"></i>
+            <p class="font-medium">Grades</p>
+        </button>
+        <button onclick="showDashboardSection('tasks')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
+            <i data-lucide="check-square" class="h-6 w-6 text-amber-600 mb-2"></i>
+            <p class="font-medium">Tasks</p>
+        </button>
     </div>
-    
-    <!-- Charts Row -->
-    <div class="grid gap-4 lg:grid-cols-2">
-        <div class="rounded-xl border bg-card p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="font-semibold">Class Performance</h3>
-                <select class="text-sm border rounded-md px-2 py-1 bg-background" onchange="updateTeacherChart(this.value)" id="subject-filter">
-                    <option value="all">All Subjects</option>
-                    <option value="math">Mathematics</option>
-                    <option value="english">English</option>
-                    <option value="science">Science</option>
-                </select>
-            </div>
-            <div class="chart-container h-64">
-                <canvas id="teacher-performanceChart"></canvas>
-            </div>
-        </div>
-        
-        <div class="rounded-xl border bg-card p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="font-semibold">Grade Distribution</h3>
-                <select class="text-sm border rounded-md px-2 py-1 bg-background" onchange="updateTeacherGradeChart(this.value)" id="class-filter">
-                    <option value="all">All Classes</option>
-                    <option value="10a">Class 10A</option>
-                    <option value="10b">Class 10B</option>
-                </select>
-            </div>
-            <div class="chart-container h-64">
-                <canvas id="teacher-gradeChart"></canvas>
-            </div>
-        </div>
-    </div>
-    
+
     <!-- Students Table -->
     <div class="rounded-xl border bg-card overflow-hidden">
         <div class="p-4 border-b flex justify-between items-center">
             <h3 class="font-semibold">My Students</h3>
-            <div class="flex gap-2">
-                <button onclick="refreshMyStudents()" class="text-sm text-primary hover:underline flex items-center gap-1">
-                    <i data-lucide="refresh-cw" class="h-3 w-3"></i>
-                    Refresh
-                </button>
-                <button onclick="exportElimuids()" class="text-sm text-primary hover:underline flex items-center gap-1">
-                    <i data-lucide="download" class="h-3 w-3"></i>
-                    Export All IDs
-                </button>
-            </div>
+            <button onclick="showAddStudentModal()" class="px-3 py-1 bg-primary text-primary-foreground text-sm rounded-lg">+ Add Student</button>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead class="bg-muted/50">
-                    <tr>
-                        <th class="px-4 py-3 text-left font-medium">Student</th>
-                        <th class="px-4 py-3 text-left font-medium">Class</th>
-                        <th class="px-4 py-3 text-left font-medium">ELIMUID</th>
-                        <th class="px-4 py-3 text-left font-medium">Attendance</th>
-                        <th class="px-4 py-3 text-left font-medium">Average</th>
-                        <th class="px-4 py-3 text-right font-medium">Actions</th>
-                    </tr>
+                    <tr><th class="px-4 py-3 text-left">Student</th><th class="px-4 py-3 text-left">Class</th><th class="px-4 py-3 text-left">ELIMUID</th><th class="px-4 py-3 text-left">Attendance</th><th class="px-4 py-3 text-left">Average</th><th class="px-4 py-3 text-right">Actions</th></tr>
                 </thead>
                 <tbody class="divide-y" id="my-students-table">
-                    <tr>
-                        <td colspan="6" class="px-4 py-8 text-center text-muted-foreground">
-                            <i data-lucide="users" class="h-8 w-8 mx-auto mb-2 opacity-50"></i>
-                            <p>No students yet. Click "Add Student" to get started.</p>
-                        </td>
-                    </tr>
+                    <tr><td colspan="6" class="px-4 py-8 text-center text-muted-foreground">Click refresh to load students</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
-    
-    <!-- Duty & Tasks -->
-    <div class="grid gap-4 md:grid-cols-2">
-        <div class="rounded-xl border bg-card p-6" id="duty-card">
-            <div class="flex justify-between items-start">
-                <div>
-                    <h3 class="font-semibold">Today's Duty</h3>
-                    <p class="text-sm text-muted-foreground" id="duty-location">Loading...</p>
-                </div>
-                <span class="duty-status px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full" id="duty-status">Not Checked In</span>
-            </div>
-            <div class="mt-4 flex gap-3">
-                <button onclick="handleCheckIn()" class="flex-1 bg-primary text-primary-foreground py-2 rounded-lg hover:bg-primary/90" id="check-in-btn">
-                    <i data-lucide="log-in" class="inline h-4 w-4 mr-2"></i>
-                    Check In
-                </button>
-                <button onclick="handleCheckOut()" class="flex-1 border border-input bg-background py-2 rounded-lg hover:bg-accent" id="check-out-btn" disabled>
-                    <i data-lucide="log-out" class="inline h-4 w-4 mr-2"></i>
-                    Check Out
-                </button>
-            </div>
-            <div class="mt-3 flex justify-between items-center">
-                <div class="text-xs text-muted-foreground" id="duty-rating">
-                    Last duty rating: <span id="last-rating">4.5</span>/5
-                </div>
-                <button onclick="showDutySwapModal()" class="text-xs text-primary hover:underline flex items-center gap-1">
-                    <i data-lucide="refresh-cw" class="h-3 w-3"></i>
-                    Request Swap
-                </button>
-            </div>
+
+    <!-- Duty Card -->
+    <div class="rounded-xl border bg-card p-6" id="duty-card">
+        <div class="flex justify-between items-start">
+            <div><h3 class="font-semibold">Today's Duty</h3><p class="text-sm text-muted-foreground" id="duty-location">Loading...</p></div>
+            <span class="duty-status px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full" id="duty-status">Not Checked In</span>
         </div>
-        
-        <div class="rounded-xl border bg-card p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="font-semibold">My Tasks</h3>
-                <span class="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full" id="task-count">0 pending</span>
-            </div>
-            <div class="space-y-2" id="teacher-tasks-container">
-                <!-- Tasks will be loaded dynamically -->
-                <div class="text-center py-8 text-muted-foreground">
-                    <i data-lucide="check-square" class="h-8 w-8 mx-auto mb-2 opacity-50"></i>
-                    <p class="text-sm">No tasks yet</p>
-                </div>
-            </div>
-            <button onclick="addTeacherTask()" class="mt-4 w-full py-2 border border-dashed rounded-lg hover:bg-accent flex items-center justify-center gap-2 text-sm">
-                <i data-lucide="plus" class="h-4 w-4"></i>
-                Add New Task
-            </button>
+        <div class="mt-4 flex gap-3">
+            <button onclick="checkInDuty()" class="flex-1 bg-primary text-primary-foreground py-2 rounded-lg" id="check-in-btn">Check In</button>
+            <button onclick="checkOutDuty()" class="flex-1 border border-input bg-background py-2 rounded-lg" id="check-out-btn" disabled>Check Out</button>
         </div>
-    </div>
-    
-    <!-- Quick Actions -->
-    <div class="grid gap-4 md:grid-cols-4">
-        <button onclick="showDashboardSection('attendance')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
-            <i data-lucide="calendar-check" class="h-6 w-6 text-blue-600 mb-2"></i>
-            <p class="font-medium">Take Attendance</p>
-            <p class="text-xs text-muted-foreground">Mark today's attendance</p>
-        </button>
-        <button onclick="showDashboardSection('grades')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
-            <i data-lucide="trending-up" class="h-6 w-6 text-green-600 mb-2"></i>
-            <p class="font-medium">Enter Marks</p>
-            <p class="text-xs text-muted-foreground">Record exam results</p>
-        </button>
-        <button onclick="showDashboardSection('students')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
-            <i data-lucide="users" class="h-6 w-6 text-purple-600 mb-2"></i>
-            <p class="font-medium">Manage Students</p>
-            <p class="text-xs text-muted-foreground">Add or view students</p>
-        </button>
-        <button onclick="showDashboardSection('chat')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
-            <i data-lucide="message-circle" class="h-6 w-6 text-amber-600 mb-2"></i>
-            <p class="font-medium">Staff Chat</p>
-            <p class="text-xs text-muted-foreground">Message other teachers & parents</p>
-        </button>
+        <div class="mt-3 flex justify-between">
+            <span class="text-xs text-muted-foreground" id="duty-rating">Last rating: <span id="last-rating">4.5</span>/5</span>
+            <button onclick="showDutySwapModal()" class="text-xs text-primary hover:underline">Request Swap</button>
+        </div>
     </div>
 </div>
 
 <!-- Add Student Modal -->
-<div id="add-student-modal" class="fixed inset-0 z-50 hidden">
-    <div class="absolute inset-0 bg-black/50" onclick="closeAddStudentModal()"></div>
-    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
-        <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
-            <h3 class="text-lg font-semibold mb-4">Add New Student</h3>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Full Name *</label>
-                    <input type="text" id="modal-student-name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Grade/Class *</label>
-                    <input type="text" id="modal-student-grade" placeholder="e.g., 10A, Form 2" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Parent Email</label>
-                    <input type="email" id="modal-parent-email" placeholder="parent@example.com" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                    <p class="text-xs text-muted-foreground mt-1">Parent will use this email to sign up</p>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Date of Birth</label>
-                    <input type="date" id="modal-student-dob" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Gender</label>
-                    <select id="modal-student-gender" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                        <option value="">Select</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-            </div>
-            <div class="flex justify-end gap-2 mt-6">
-                <button onclick="closeAddStudentModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
-                <button onclick="handleAddStudentModal()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Add Student</button>
-            </div>
-        </div>
-    </div>
-</div>
-
+<div id="add-student-modal" class="fixed inset-0 z-50 hidden">[modal content from js]</div>
 <!-- Student Details Modal -->
-<div id="student-details-modal" class="fixed inset-0 z-50 hidden">
-    <div class="absolute inset-0 bg-black/50" onclick="closeStudentDetailsModal()"></div>
-    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
-        <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">Student Details</h3>
-                <button onclick="closeStudentDetailsModal()" class="p-2 hover:bg-accent rounded-lg">
-                    <i data-lucide="x" class="h-5 w-5"></i>
-                </button>
-            </div>
-            <div class="modal-content space-y-4" id="student-details-content">
-                <!-- Content will be filled dynamically -->
-            </div>
-        </div>
-    </div>
-</div>
-
+<div id="student-details-modal" class="fixed inset-0 z-50 hidden">[modal content from js]</div>
 <!-- Add Task Modal -->
-<div id="add-task-modal" class="fixed inset-0 z-50 hidden">
-    <div class="absolute inset-0 bg-black/50" onclick="closeAddTaskModal()"></div>
-    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
-        <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
-            <h3 class="text-lg font-semibold mb-4">Add New Task</h3>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Task Title *</label>
-                    <input type="text" id="task-title" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Description</label>
-                    <textarea id="task-description" rows="3" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="Task details..."></textarea>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Due Date</label>
-                    <input type="date" id="task-due-date" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Priority</label>
-                    <select id="task-priority" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                        <option value="low">Low</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="high">High</option>
-                        <option value="urgent">Urgent</option>
-                    </select>
-                </div>
-            </div>
-            <div class="flex justify-end gap-2 mt-6">
-                <button onclick="closeAddTaskModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
-                <button onclick="handleAddTask()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Add Task</button>
-            </div>
-        </div>
-    </div>
-</div>
-
+<div id="add-task-modal" class="fixed inset-0 z-50 hidden">[modal content from js]</div>
 <!-- Duty Swap Modal -->
-<div id="duty-swap-modal" class="fixed inset-0 z-50 hidden">
-    <div class="absolute inset-0 bg-black/50" onclick="closeDutySwapModal()"></div>
-    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
-        <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
-            <h3 class="text-lg font-semibold mb-4">Request Duty Swap</h3>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Date</label>
-                    <input type="date" id="swap-date" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Reason</label>
-                    <textarea id="swap-reason" rows="3" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="Why do you need to swap?" required></textarea>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Swap With (Optional)</label>
-                    <select id="swap-target" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                        <option value="">Any available teacher</option>
-                        <!-- Options will be loaded dynamically -->
-                    </select>
-                </div>
-            </div>
-            <div class="flex justify-end gap-2 mt-6">
-                <button onclick="closeDutySwapModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
-                <button onclick="handleDutySwapRequest()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Submit Request</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Staff Chat Modal (For private messaging) -->
-<div id="staff-chat-modal" class="fixed inset-0 z-50 hidden">
-    <div class="absolute inset-0 bg-black/50" onclick="closeStaffChatModal()"></div>
-    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl p-4">
-        <div class="rounded-xl border bg-card shadow-xl animate-fade-in h-[600px] flex flex-col">
-            <div class="p-4 border-b flex justify-between items-center">
-                <h3 class="text-lg font-semibold" id="chat-modal-title">Private Chat</h3>
-                <button onclick="closeStaffChatModal()" class="p-2 hover:bg-accent rounded-lg">
-                    <i data-lucide="x" class="h-5 w-5"></i>
-                </button>
-            </div>
-            <div class="flex-1 overflow-y-auto p-4 space-y-4" id="chat-modal-messages">
-                <!-- Messages will appear here -->
-            </div>
-            <div class="p-4 border-t">
-                <div class="flex gap-2">
-                    <input type="text" id="chat-modal-input" placeholder="Type your message..." class="flex-1 rounded-lg border border-input bg-background px-4 py-3 text-sm">
-                    <button onclick="sendPrivateMessageFromModal()" class="px-4 py-3 bg-primary text-primary-foreground rounded-lg">
-                        <i data-lucide="send" class="h-4 w-4"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Staff Group Chat Page -->
-<div id="staff-chat-page" class="hidden">
-    <div class="grid grid-cols-4 gap-4 h-[700px]">
-        <!-- Sidebar -->
-        <div class="col-span-1 rounded-xl border bg-card overflow-hidden flex flex-col">
-            <div class="p-4 border-b">
-                <h3 class="font-semibold">Staff Communications</h3>
-            </div>
-            <div class="flex-1 overflow-y-auto p-2">
-                <div class="space-y-1">
-                    <button onclick="switchToStaffGroupChat()" class="w-full text-left p-3 rounded-lg bg-accent transition-colors">
-                        <div class="flex items-center gap-3">
-                            <div class="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                <i data-lucide="users" class="h-4 w-4 text-primary"></i>
-                            </div>
-                            <div>
-                                <p class="font-medium">Staff Group</p>
-                                <p class="text-xs text-muted-foreground">All teachers</p>
-                            </div>
-                        </div>
-                    </button>
-                    
-                    <div class="pt-2 mt-2 border-t">
-                        <p class="text-xs font-medium text-muted-foreground px-3 mb-2">TEACHERS</p>
-                        <div id="teachers-list">
-                            <!-- Teachers will be loaded here -->
-                            <div class="text-center py-4 text-sm text-muted-foreground">Loading teachers...</div>
-                        </div>
-                    </div>
-                    
-                    <div class="pt-2 mt-2 border-t">
-                        <p class="text-xs font-medium text-muted-foreground px-3 mb-2">PARENTS</p>
-                        <div id="parents-list">
-                            <!-- Parents will be loaded here -->
-                            <div class="text-center py-4 text-sm text-muted-foreground">Loading parents...</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Chat Area -->
-        <div class="col-span-3 rounded-xl border bg-card flex flex-col">
-            <div class="p-4 border-b flex justify-between items-center">
-                <h3 class="font-semibold" id="current-chat-title">Staff Group Chat</h3>
-                <div class="flex gap-2">
-                    <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full" id="online-status">5 online</span>
-                </div>
-            </div>
-            
-            <div class="flex-1 overflow-y-auto p-4 space-y-4" id="staff-chat-messages">
-                <div class="text-center text-muted-foreground py-8">
-                    <i data-lucide="message-circle" class="h-8 w-8 mx-auto mb-2 opacity-50"></i>
-                    <p>Loading messages...</p>
-                </div>
-            </div>
-            
-            <div class="p-4 border-t">
-                <div class="flex gap-2">
-                    <input type="text" id="staff-chat-input" placeholder="Type your message..." class="flex-1 rounded-lg border border-input bg-background px-4 py-3 text-sm">
-                    <button onclick="sendStaffGroupMessage()" class="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
-                        <i data-lucide="send" class="h-4 w-4"></i>
-                        Send
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Staff Group Chat Section (for main dashboard) -->
-<div id="staff-group-chat-section" class="hidden">
-    <!-- This will be populated by JavaScript when needed -->
-</div>
+<div id="duty-swap-modal" class="fixed inset-0 z-50 hidden">[modal content from js]</div>
 
 <script>
-    // Initialize teacher dashboard with real data
-    document.addEventListener('DOMContentLoaded', function() {
-        // Check if we're on the teacher dashboard
-        if (typeof loadMyStudents === 'function') {
-            setTimeout(() => {
-                refreshMyStudents();
-                updateTeacherStats();
-            }, 500);
-        }
-    });
-
-    // Update teacher stats
-    async function updateTeacherStats() {
-        try {
-            const students = await loadMyStudents();
-            document.getElementById('my-students-count').textContent = students.length;
-            
-            // Calculate class average
-            let totalAvg = 0;
-            let avgCount = 0;
-            students.forEach(s => {
-                if (s.average) {
-                    totalAvg += s.average;
-                    avgCount++;
-                }
-            });
-            const classAvg = avgCount > 0 ? Math.round(totalAvg / avgCount) : 0;
-            document.getElementById('class-average').textContent = classAvg + '%';
-            
-            // Load tasks
-            const tasks = await loadTeacherTasks();
-            const pendingCount = tasks.filter(t => !t.completed).length;
-            document.getElementById('pending-tasks').textContent = pendingCount;
-            document.getElementById('task-count').textContent = pendingCount + ' pending';
-            
-        } catch (error) {
-            console.error('Error updating teacher stats:', error);
-        }
-    }
-
-    // Staff chat functions
-    function switchToStaffGroupChat() {
-        document.getElementById('current-chat-title').textContent = 'Staff Group Chat';
-        loadStaffGroupMessages();
-    }
-
-    function switchToPrivateChat(teacherId, teacherName) {
-        document.getElementById('current-chat-title').textContent = `Chat with ${teacherName}`;
-        loadPrivateMessages(teacherId);
-    }
-
-    function switchToParentChat(parentId, parentName) {
-        document.getElementById('current-chat-title').textContent = `Chat with ${parentName}`;
-        loadParentMessages(parentId);
-    }
-
-    async function loadStaffGroupMessages() {
-        const container = document.getElementById('staff-chat-messages');
-        container.innerHTML = '<div class="text-center text-muted-foreground py-8">Loading messages...</div>';
-        // This would load from API or localStorage
-        setTimeout(() => {
-            container.innerHTML = `
-                <div class="flex justify-start">
-                    <div class="chat-bubble-received max-w-[70%]">
-                        <p class="text-sm font-medium">Mr. Kamau</p>
-                        <p class="text-sm">Good morning everyone! Don't forget the staff meeting at 2pm.</p>
-                        <p class="text-xs text-muted-foreground mt-1">10 minutes ago</p>
-                    </div>
-                </div>
-                <div class="flex justify-end">
-                    <div class="chat-bubble-sent max-w-[70%]">
-                        <p class="text-sm font-medium">You</p>
-                        <p class="text-sm">Thanks for the reminder!</p>
-                        <p class="text-xs text-muted-foreground mt-1">5 minutes ago</p>
-                    </div>
-                </div>
-            `;
-        }, 500);
-    }
-
-    function sendStaffGroupMessage() {
-        const input = document.getElementById('staff-chat-input');
-        const message = input.value.trim();
-        if (!message) return;
-        
-        const container = document.getElementById('staff-chat-messages');
-        container.innerHTML += `
-            <div class="flex justify-end">
-                <div class="chat-bubble-sent max-w-[70%]">
-                    <p class="text-sm font-medium">You</p>
-                    <p class="text-sm">${message}</p>
-                    <p class="text-xs text-muted-foreground mt-1">just now</p>
-                </div>
-            </div>
-        `;
-        input.value = '';
-        container.scrollTop = container.scrollHeight;
-        
-        // Simulate response
-        setTimeout(() => {
-            container.innerHTML += `
-                <div class="flex justify-start">
-                    <div class="chat-bubble-received max-w-[70%]">
-                        <p class="text-sm font-medium">Mr. Kamau</p>
-                        <p class="text-sm">Thanks for your message!</p>
-                        <p class="text-xs text-muted-foreground mt-1">just now</p>
-                    </div>
-                </div>
-            `;
-            container.scrollTop = container.scrollHeight;
-        }, 1000);
-    }
-
-    // Modal functions
-    window.closeStaffChatModal = function() {
-        document.getElementById('staff-chat-modal').classList.add('hidden');
-    }
+// Auto-refresh on load
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        if (typeof refreshMyStudents === 'function') refreshMyStudents();
+        if (typeof loadTodayDuty === 'function') loadTodayDuty().then(d => {
+            if (d?.duties?.length) {
+                document.getElementById('duty-location').textContent = d.duties[0].area || 'No duty';
+            }
+        });
+    }, 500);
+});
 </script>
-
