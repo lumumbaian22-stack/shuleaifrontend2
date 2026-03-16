@@ -949,6 +949,35 @@ function formatDate(dateString) {
         day: 'numeric'
     });
 }
+\// Force all student view buttons to use the admin function
+function fixStudentButtons() {
+    document.querySelectorAll('button').forEach(button => {
+        const onclick = button.getAttribute('onclick');
+        if (onclick && onclick.includes('viewStudentDetails')) {
+            const match = onclick.match(/viewStudentDetails\(['"](\d+)['"]\)/);
+            if (match && match[1]) {
+                const studentId = match[1];
+                button.removeAttribute('onclick');
+                button.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.viewStudent(studentId);
+                    return false;
+                };
+            }
+        }
+    });
+}
+
+// Run it whenever the dashboard content changes
+const observer = new MutationObserver(fixStudentButtons);
+observer.observe(document.getElementById('dashboard-content'), { 
+    childList: true, 
+    subtree: true 
+});
+
+// Run it immediately
+setTimeout(fixStudentButtons, 500);
 
 // ============ EXPORT FUNCTIONS ============
 
