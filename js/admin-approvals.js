@@ -873,6 +873,7 @@ function renderTeachersTable(teachers) {
                 <tbody class="divide-y">
                     ${teachers.map(teacher => {
                         const user = teacher.User || {};
+                        const status = teacher.approvalStatus || 'active';
                         return `
                             <tr class="hover:bg-accent/50 transition-colors">
                                 <td class="px-4 py-3">
@@ -889,16 +890,31 @@ function renderTeachersTable(teachers) {
                                 <td class="px-4 py-3">${(teacher.subjects || []).join(', ')}</td>
                                 <td class="px-4 py-3">${teacher.department || 'general'}</td>
                                 <td class="px-4 py-3">
-                                    <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-100 text-green-700">
-                                        ${teacher.approvalStatus || 'active'}
+                                    <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium 
+                                        ${status === 'active' ? 'bg-green-100 text-green-700' : 
+                                          status === 'suspended' ? 'bg-yellow-100 text-yellow-700' : 
+                                          'bg-gray-100 text-gray-700'}">
+                                        ${status}
                                     </span>
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    <button onclick="viewTeacher('${teacher.id}')" class="p-2 hover:bg-accent rounded-lg">
+                                    <button onclick="viewTeacher('${teacher.id}')" class="p-2 hover:bg-accent rounded-lg" title="View">
                                         <i data-lucide="eye" class="h-4 w-4"></i>
                                     </button>
-                                    <button onclick="editTeacher('${teacher.id}')" class="p-2 hover:bg-accent rounded-lg">
+                                    <button onclick="editTeacher('${teacher.id}')" class="p-2 hover:bg-accent rounded-lg" title="Edit">
                                         <i data-lucide="edit" class="h-4 w-4"></i>
+                                    </button>
+                                    ${status === 'active' ? `
+                                        <button onclick="suspendTeacher('${teacher.id}')" class="p-2 hover:bg-yellow-100 rounded-lg text-yellow-600" title="Suspend">
+                                            <i data-lucide="pause-circle" class="h-4 w-4"></i>
+                                        </button>
+                                    ` : status === 'suspended' ? `
+                                        <button onclick="reactivateTeacher('${teacher.id}')" class="p-2 hover:bg-green-100 rounded-lg text-green-600" title="Reactivate">
+                                            <i data-lucide="play-circle" class="h-4 w-4"></i>
+                                        </button>
+                                    ` : ''}
+                                    <button onclick="removeTeacher('${teacher.id}')" class="p-2 hover:bg-red-100 rounded-lg text-red-600" title="Delete">
+                                        <i data-lucide="trash-2" class="h-4 w-4"></i>
                                     </button>
                                 </td>
                             </tr>
