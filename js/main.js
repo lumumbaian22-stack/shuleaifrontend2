@@ -5030,3 +5030,5 @@ window.calendarChangeMonth = calendarChangeMonth;
 window.calendarGoToToday = calendarGoToToday;
 window.calendarGoToDate = calendarGoToDate;
 window.closeDayDetailsModal = closeDayDetailsModal;
+window.renderAdminCustomSubjects = renderAdminCustomSubjects;
+window.renderAdminSettings = renderAdminSettings;
