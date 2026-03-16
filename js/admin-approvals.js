@@ -1,5 +1,26 @@
 // admin-approvals.js - Complete fixed version with working view and edit functions for both teachers and students
 
+// View student details (admin version)
+async function viewStudent(studentId) {
+    showLoading();
+    try {
+        // Use admin API to get student details
+        const response = await api.admin.getStudentDetails(studentId);
+        
+        if (!response || !response.data) {
+            showToast('Student not found', 'error');
+            return;
+        }
+        
+        showStudentDetailsModal(response.data);
+    } catch (error) {
+        console.error('Error viewing student:', error);
+        showToast('Failed to load student details: ' + error.message, 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
 // ============ LOAD FUNCTIONS ============
 
 // Load pending teachers
