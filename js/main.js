@@ -1949,7 +1949,6 @@ async function renderAdminTeacherWorkload() {
 }
 
 // ============ MISSING ADMIN FUNCTIONS ============
-
 // Render admin custom subjects
 function renderAdminCustomSubjects() {
     const curriculum = schoolSettings.curriculum || 'cbc';
@@ -1974,17 +1973,31 @@ function renderAdminCustomSubjects() {
                         </button>
                     </div>
                     
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        ${allSubjects.map(subject => `
-                            <div class="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
-                                <span class="text-sm">${subject}</span>
-                                ${customSubjects?.includes(subject) ? `
-                                    <button onclick="removeCustomSubject('${subject}')" class="text-red-600 hover:text-red-800">
-                                        <i data-lucide="x" class="h-4 w-4"></i>
-                                    </button>
-                                ` : ''}
-                            </div>
-                        `).join('')}
+                    <div>
+                        <h4 class="text-sm font-medium mb-2">Curriculum Subjects</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
+                            ${subjectInfo.map(subject => `
+                                <div class="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
+                                    <span class="text-sm">${subject}</span>
+                                    <span class="text-xs text-blue-600">core</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <h4 class="text-sm font-medium mb-2">Custom Subjects</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            ${customSubjects && customSubjects.length > 0 ? 
+                                customSubjects.map(subject => `
+                                    <div class="flex items-center justify-between p-2 bg-purple-50 rounded-lg">
+                                        <span class="text-sm">${subject}</span>
+                                        <button onclick="removeCustomSubject('${subject}')" class="text-red-600 hover:text-red-800">
+                                            <i data-lucide="x" class="h-4 w-4"></i>
+                                        </button>
+                                    </div>
+                                `).join('') 
+                                : '<p class="text-sm text-muted-foreground col-span-3">No custom subjects added yet</p>'
+                            }
+                        </div>
                     </div>
                 </div>
             </div>
@@ -4578,6 +4591,7 @@ window.addTerm = function() {
     termsContainer.insertBefore(newTermDiv, document.querySelector('button[onclick="addTerm()"]').parentNode);
 };
 
+// Add custom subject
 window.addCustomSubject = function() {
     const newSubject = document.getElementById('new-subject-name')?.value.trim();
     if (!newSubject) {
@@ -4586,9 +4600,20 @@ window.addCustomSubject = function() {
     }
     
     if (!customSubjects) customSubjects = [];
+    
+    // Check if subject already exists
+    if (customSubjects.includes(newSubject)) {
+        showToast('Subject already exists', 'warning');
+        return;
+    }
+    
     customSubjects.push(newSubject);
     schoolSettings.customSubjects = customSubjects;
     
+    // Update localStorage temporarily
+    localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings));
+    
+    // Update the UI immediately
     const subjectsContainer = document.querySelector('.grid.grid-cols-2.md\\:grid-cols-3.gap-2');
     if (subjectsContainer) {
         subjectsContainer.innerHTML += `
@@ -4603,23 +4628,36 @@ window.addCustomSubject = function() {
     
     document.getElementById('new-subject-name').value = '';
     showToast(`Subject "${newSubject}" added`, 'success');
-    lucide.createIcons();
+    
+    // Refresh icons
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
 };
 
+// Remove custom subject
 window.removeCustomSubject = function(subject) {
+    if (!confirm(`Remove "${subject}" from custom subjects?`)) return;
+    
     customSubjects = customSubjects.filter(s => s !== subject);
     schoolSettings.customSubjects = customSubjects;
     
+    // Update localStorage
+    localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings));
+    
+    // Refresh the custom subjects section
     const section = currentSection;
     showDashboardSection(section);
     showToast(`Subject "${subject}" removed`, 'info');
 };
 
+// Save all settings (includes custom subjects)
 window.saveAllSettings = async function() {
     const curriculum = document.getElementById('settings-curriculum')?.value;
     const schoolName = document.getElementById('settings-school-name')?.value;
     const schoolLevel = document.getElementById('settings-school-level')?.value;
     
+    // Collect terms
     const terms = [];
     document.querySelectorAll('.grid.grid-cols-3').forEach((termDiv) => {
         const nameInput = termDiv.querySelector('.term-name');
@@ -4642,7 +4680,34 @@ window.saveAllSettings = async function() {
         customSubjects: customSubjects || []
     };
     
-    await saveSchoolSettings(newSettings);
+    // Show loading
+    showLoading();
+    
+    try {
+        // Save to backend
+        const response = await api.admin.updateSchoolSettings(newSettings);
+        
+        if (response && response.success) {
+            // Update local settings
+            schoolSettings = response.data;
+            customSubjects = response.data.customSubjects || [];
+            
+            // Update localStorage
+            localStorage.setItem('schoolSettings', JSON.stringify(response.data));
+            
+            showToast('✅ Settings saved successfully!', 'success');
+            
+            // Refresh the current section to show updated data
+            await showDashboardSection(currentSection);
+        } else {
+            throw new Error('Failed to save settings');
+        }
+    } catch (error) {
+        console.error('Save settings error:', error);
+        showToast(error.message || 'Failed to save settings', 'error');
+    } finally {
+        hideLoading();
+    }
 };
 
 // ============ DUTY HANDLERS ============
