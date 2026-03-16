@@ -774,12 +774,14 @@ async function approveNameChange(requestId) {
         if (approvedRequest) {
             const newSchoolName = approvedRequest.newName;
             const schoolCode = approvedRequest.schoolCode;
+            const schoolId = approvedRequest.School?.id;
             
-            console.log('School name changed to:', newSchoolName);
+            console.log('✅ School name changed to:', newSchoolName);
+            console.log('School code:', schoolCode);
             
-            // CRITICAL FIX: Save to localStorage
+            // ============ METHOD 1: Update localStorage ============
             const schoolData = {
-                id: approvedRequest.School?.id,
+                id: schoolId,
                 schoolId: schoolCode,
                 shortCode: approvedRequest.School?.shortCode,
                 name: newSchoolName,
@@ -794,22 +796,88 @@ async function approveNameChange(requestId) {
             settings.schoolName = newSchoolName;
             localStorage.setItem('schoolSettings', JSON.stringify(settings));
             
-            // 👇 ADD THE FUNCTION CALL HERE
-            updateSchoolNameInAllPlaces(newSchoolName);
-            
-            // Update the UI immediately
-            const schoolNameElement = document.querySelector('h2.text-2xl.font-bold');
-            if (schoolNameElement) {
-                schoolNameElement.textContent = newSchoolName;
+            // ============ METHOD 2: Update global variables if they exist ============
+            if (typeof window.currentSchool !== 'undefined') {
+                window.currentSchool = schoolData;
             }
             
-            showToast(`School name updated to "${newSchoolName}"`, 'success');
+            if (typeof window.schoolSettings !== 'undefined') {
+                window.schoolSettings.schoolName = newSchoolName;
+            }
+            
+            // ============ METHOD 3: Update all possible UI elements ============
+            updateAllSchoolNameElements(newSchoolName);
+            
+            // ============ METHOD 4: Dispatch custom event ============
+            window.dispatchEvent(new CustomEvent('school-name-changed', { 
+                detail: { newName: newSchoolName, schoolCode: schoolCode } 
+            }));
+            
+            showToast(`✅ School name updated to "${newSchoolName}"`, 'success');
         }
         
         return response;
     } catch (error) {
-        console.error('Approve name change error:', error);
+        console.error('❌ Approve name change error:', error);
         showToast(error.message || 'Failed to approve name change', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Helper function to update all school name elements
+function updateAllSchoolNameElements(newName) {
+    // All possible selectors where school name might appear
+    const selectors = [
+        '#school-name',
+        '.school-name',
+        '.school-name-display',
+        'h2.text-2xl.font-bold',  // Main school name in admin dashboard
+        '.school-profile h2',
+        '.dashboard-header h1',
+        '[data-testid="school-name"]',
+        '.card .font-semibold', // School name in cards
+        '.bg-gradient-to-r h2' // School name in gradient header
+    ];
+    
+    selectors.forEach(selector => {
+        document.querySelectorAll(selector).forEach(el => {
+            // Only update if it contains a school name (not "ShuleAI" platform name)
+            if (el.textContent && 
+                !el.textContent.includes('ShuleAI') && 
+                !el.textContent.includes('Dashboard') &&
+                el.textContent.length > 3) {
+                console.log(`Updating element with selector "${selector}":`, el);
+                el.textContent = newName;
+            }
+        });
+    });
+    
+    // Also update elements with specific classes
+    document.querySelectorAll('.font-bold').forEach(el => {
+        if (el.textContent && 
+            !el.textContent.includes('ShuleAI') && 
+            !el.textContent.includes('Dashboard') &&
+            el.textContent.length > 3 &&
+            el.textContent.length < 50) { // School names are usually short
+            el.textContent = newName;
+        }
+    });
+}
+
+// Reject name change
+async function rejectNameChange(requestId) {
+    const reason = prompt('Please enter rejection reason:');
+    if (reason === null) return;
+    
+    showLoading();
+    try {
+        const response = await api.superAdmin.rejectRequest(requestId, reason);
+        showToast('Name change rejected', 'info');
+        await refreshNameChangeRequests();
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to reject name change', 'error');
     } finally {
         hideLoading();
     }
@@ -1100,5 +1168,4 @@ window.renderSchoolsTable = renderSchoolsTable;
 window.renderSuspendedSchoolsTable = renderSuspendedSchoolsTable;
 window.renderNameChangeRequestsTable = renderNameChangeRequestsTable;
 window.refreshNameChangeRequests = refreshNameChangeRequests;
-
 
