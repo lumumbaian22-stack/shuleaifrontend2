@@ -215,6 +215,10 @@ const adminAPI = {
             body: JSON.stringify(data)
         }),
     getClasses: () => apiRequest('/api/admin/classes'),
+
+    // Add to adminAPI in api.js
+    getStudentDetails: (studentId) => 
+         apiRequest(`/api/admin/students/${studentId}`),
     
     // Duty management
     generateDutyRoster: (startDate, endDate) => 
