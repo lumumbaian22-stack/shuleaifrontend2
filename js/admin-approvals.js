@@ -974,3 +974,8 @@ window.renderStudentsTable = renderStudentsTable;
 window.refreshPendingTeachers = refreshPendingTeachers;
 window.refreshTeachersList = refreshTeachersList;
 window.refreshStudentsList = refreshStudentsList;
+// Redirect any calls to viewStudentDetails to the correct viewStudent function
+window.viewStudentDetails = function(studentId) {
+    console.log('⚠️ Redirecting viewStudentDetails to viewStudent');
+    return window.viewStudent(studentId);
+};
