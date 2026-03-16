@@ -70,7 +70,15 @@ async function teacherSignup(teacherData) {
 // Parent signup with student ELIMUID
 async function parentSignup(parentData) {
     try {
-        const response = await api.auth.parentSignup(parentData);
+        // Make sure you're sending the ELIMUID
+        const response = await api.auth.parentSignup({
+            name: parentData.name,
+            email: parentData.email,
+            password: parentData.password,
+            phone: parentData.phone,
+            studentElimuid: parentData.studentElimuid  // This is the key!
+        });
+        
         return response;
     } catch (error) {
         throw error;
