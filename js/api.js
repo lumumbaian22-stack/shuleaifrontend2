@@ -205,7 +205,6 @@ const adminAPI = {
             body: JSON.stringify({ action, rejectionReason })
         }),
     
-    // Teacher suspend/reactivate/delete
     suspendTeacher: (teacherId, reason) => 
         apiRequest(`/api/admin/teachers/${teacherId}/suspend`, {
             method: 'POST',
@@ -230,7 +229,7 @@ const adminAPI = {
             body: JSON.stringify(data)
         }),
     
-    // ============ CLASS MANAGEMENT (ADDED) ============
+    // ============ CLASS MANAGEMENT ============
     // Create a new class
     createClass: (data) => 
         apiRequest('/api/admin/classes', {
@@ -273,8 +272,6 @@ const adminAPI = {
     // Get students in a specific class
     getClassStudents: (classId) => 
         apiRequest(`/api/admin/classes/${classId}/students`),
-    
-    // ============ END OF CLASS MANAGEMENT ============
     
     // Student details
     getStudentDetails: (studentId) => 
