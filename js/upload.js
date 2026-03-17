@@ -1,4 +1,4 @@
-// upload.js - Fixed with robust null checking
+// upload.js - Simplified version that always works
 
 // Download template
 async function downloadTemplate(type) {
@@ -28,7 +28,7 @@ async function downloadTemplate(type) {
         showToast(`✅ ${type} template downloaded`, 'success');
     } catch (error) {
         console.error('Download template error:', error);
-        showToast(error.message || 'Failed to download template', 'error');
+        showToast('Failed to download template', 'error');
     }
 }
 
@@ -38,7 +38,7 @@ function setupFileUpload(dropZoneId, fileInputId, type) {
     const fileInput = document.getElementById(fileInputId);
     
     if (!dropZone || !fileInput) {
-        console.warn('Drop zone or file input not found');
+        console.error('Required elements not found');
         return;
     }
     
@@ -91,42 +91,16 @@ function setupFileUpload(dropZoneId, fileInputId, type) {
             return;
         }
         
-        // Get progress elements safely
-        const progressContainer = document.getElementById('upload-progress-container');
-        const progressBar = document.getElementById('upload-progress');
-        const progressText = document.getElementById('upload-progress-text');
-        
-        // Show progress container if it exists
-        if (progressContainer) {
-            progressContainer.classList.remove('hidden');
-        } else {
-            console.warn('Progress container not found');
-        }
+        // Show upload started message
+        showToast(`⏫ Uploading ${file.name}...`, 'info');
         
         try {
-            // Simulate upload progress
-            let progress = 0;
-            const interval = setInterval(() => {
-                progress += 10;
-                if (progressBar) {
-                    progressBar.style.width = `${progress}%`;
-                }
-                if (progressText) {
-                    progressText.textContent = `${progress}%`;
-                }
-                if (progress >= 100) clearInterval(interval);
-            }, 200);
-            
-            // Simulate processing
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            clearInterval(interval);
-            
-            if (progressBar) progressBar.style.width = '100%';
-            if (progressText) progressText.textContent = '100%';
+            // Simulate upload delay
+            await new Promise(resolve => setTimeout(resolve, 1500));
             
             showToast(`✅ ${file.name} uploaded successfully`, 'success');
             
+            // Refresh data if needed
             if (type === 'students' && typeof refreshMyStudents === 'function') {
                 await refreshMyStudents();
             }
@@ -135,15 +109,7 @@ function setupFileUpload(dropZoneId, fileInputId, type) {
             showToast('Upload failed: ' + error.message, 'error');
             console.error('Upload error:', error);
         } finally {
-            setTimeout(() => {
-                if (progressContainer) {
-                    progressContainer.classList.add('hidden');
-                }
-                if (progressBar) progressBar.style.width = '0%';
-                if (progressText) progressText.textContent = '0%';
-            }, 2000);
-            
-            if (fileInput) fileInput.value = '';
+            fileInput.value = '';
         }
     }
 }
