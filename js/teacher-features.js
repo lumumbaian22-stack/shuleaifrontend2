@@ -179,6 +179,160 @@ function updateStats(students) {
     }
 }
 
+// ============ STUDENT DETAILS MODAL ============
+
+// View student details - FIXED version
+async function viewStudentDetails(studentId) {
+    showLoading();
+    try {
+        const students = await loadMyStudents();
+        const student = students.find(s => s.id == studentId);
+        
+        if (!student) {
+            showToast('Student not found', 'error');
+            return;
+        }
+        
+        showStudentDetailsModal(student);
+    } catch (error) {
+        console.error('Error viewing student:', error);
+        showToast('Failed to load student details', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Show student details modal
+function showStudentDetailsModal(student) {
+    let modal = document.getElementById('student-details-modal');
+    
+    if (!modal) {
+        createStudentDetailsModal();
+        modal = document.getElementById('student-details-modal');
+    }
+    
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) {
+        modalContent.innerHTML = getStudentDetailsHTML(student);
+    }
+    
+    modal.classList.remove('hidden');
+    
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+// Create student details modal
+function createStudentDetailsModal() {
+    const modalHTML = `
+        <div id="student-details-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeStudentDetailsModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Student Details</h3>
+                        <button onclick="closeStudentDetailsModal()" class="p-2 hover:bg-accent rounded-lg">
+                            <i data-lucide="x" class="h-5 w-5"></i>
+                        </button>
+                    </div>
+                    <div class="modal-content space-y-4">
+                        <!-- Content will be filled dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// Get student details HTML
+function getStudentDetailsHTML(student) {
+    const user = student.User || {};
+    
+    return `
+        <div class="space-y-4">
+            <div class="flex items-center gap-4">
+                <div class="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
+                    <span class="font-medium text-green-700 text-xl">${getInitials(user.name)}</span>
+                </div>
+                <div>
+                    <h4 class="font-medium text-lg">${user.name || 'N/A'}</h4>
+                    <p class="text-sm text-muted-foreground">${user.email || 'No email'}</p>
+                </div>
+            </div>
+            
+            <div class="border-t pt-4">
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                        <p class="text-muted-foreground">ELIMUID</p>
+                        <p class="font-mono text-xs bg-muted px-2 py-1 rounded inline-block">${student.elimuid || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <p class="text-muted-foreground">Grade</p>
+                        <p class="font-medium">${student.grade || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <p class="text-muted-foreground">Gender</p>
+                        <p class="font-medium">${student.gender || 'Not specified'}</p>
+                    </div>
+                    <div>
+                        <p class="text-muted-foreground">Date of Birth</p>
+                        <p class="font-medium">${student.dateOfBirth ? formatDate(student.dateOfBirth) : 'Not specified'}</p>
+                    </div>
+                    <div>
+                        <p class="text-muted-foreground">Status</p>
+                        <p><span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-100 text-green-700">
+                            ${student.status || 'active'}
+                        </span></p>
+                    </div>
+                    <div>
+                        <p class="text-muted-foreground">Enrolled</p>
+                        <p class="font-medium">${student.enrollmentDate ? formatDate(student.enrollmentDate) : 'N/A'}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-t pt-4">
+                <h4 class="font-medium mb-2">Parent Information</h4>
+                ${student.parentEmail ? 
+                    `<p class="text-sm">Parent Email: ${student.parentEmail}</p>` : 
+                    '<p class="text-sm text-muted-foreground">No parent email provided</p>'}
+            </div>
+            
+            <div class="border-t pt-4">
+                <h4 class="font-medium mb-2">Academic Information</h4>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                        <p class="text-muted-foreground">Attendance</p>
+                        <p class="font-medium">${student.attendance || 95}%</p>
+                    </div>
+                    <div>
+                        <p class="text-muted-foreground">Average Score</p>
+                        <p class="font-medium">${student.average || 0}%</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-2 pt-4 border-t">
+                <button onclick="closeStudentDetailsModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Close</button>
+                <button onclick="copyElimuid('${student.elimuid}')" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
+                    <i data-lucide="copy" class="h-4 w-4"></i>
+                    Copy ELIMUID
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// Close student details modal
+function closeStudentDetailsModal() {
+    const modal = document.getElementById('student-details-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
 // Render students table
 function renderStudentsTable(students) {
     if (!students || students.length === 0) {
@@ -225,10 +379,10 @@ function renderStudentsTable(students) {
                                 <span class="font-semibold ${(student.average || 0) > 80 ? 'text-green-600' : (student.average || 0) > 60 ? 'text-yellow-600' : 'text-red-600'}">${student.average || 0}%</span>
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <button onclick="copyElimuid('${student.elimuid}')" class="p-2 hover:bg-accent rounded-lg">
+                                <button onclick="copyElimuid('${student.elimuid}')" class="p-2 hover:bg-accent rounded-lg" title="Copy ELIMUID">
                                     <i data-lucide="copy" class="h-4 w-4"></i>
                                 </button>
-                                <button onclick="viewStudentDetails('${student.id}')" class="p-2 hover:bg-accent rounded-lg">
+                                <button onclick="viewStudentDetails('${student.id}')" class="p-2 hover:bg-accent rounded-lg" title="View Details">
                                     <i data-lucide="eye" class="h-4 w-4"></i>
                                 </button>
                             </td>
@@ -240,11 +394,6 @@ function renderStudentsTable(students) {
     `;
 }
 
-// View student details
-function viewStudentDetails(studentId) {
-    showToast(`Viewing student ${studentId}`, 'info');
-}
-
 // Copy ELIMUID to clipboard
 function copyElimuid(elimuid) {
     navigator.clipboard.writeText(elimuid).then(() => {
@@ -252,6 +401,22 @@ function copyElimuid(elimuid) {
     }).catch(() => {
         showToast('Failed to copy', 'error');
     });
+}
+
+// Helper function for formatting dates
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+// Helper function for initials
+function getInitials(name) {
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 }
 
 // ============ TASK MANAGEMENT ============
@@ -438,6 +603,7 @@ window.loadMyStudents = loadMyStudents;
 window.refreshMyStudents = refreshMyStudents;
 window.renderStudentsTable = renderStudentsTable;
 window.viewStudentDetails = viewStudentDetails;
+window.closeStudentDetailsModal = closeStudentDetailsModal;
 window.copyElimuid = copyElimuid;
 window.addTeacherTask = addTeacherTask;
 window.enterMarks = enterMarks;
@@ -447,3 +613,5 @@ window.takeAttendance = takeAttendance;
 window.saveAttendance = saveAttendance;
 window.addComment = addComment;
 window.uploadMarksCSV = uploadMarksCSV;
+window.formatDate = formatDate;
+window.getInitials = getInitials;
