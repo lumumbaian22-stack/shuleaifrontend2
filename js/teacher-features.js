@@ -125,13 +125,44 @@ async function refreshMyStudents() {
     if (!container) return;
     
     const students = await loadMyStudents();
+    
+    // Update the table
     if (students && students.length > 0) {
         container.innerHTML = renderStudentsTable(students);
-        updateStats(students);
     } else {
-        container.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-muted-foreground">No students yet. Click "Add Student" to get started.</td></tr>';
+        container.innerHTML = '<div class="text-center py-8 text-muted-foreground">No students yet. Click "Add Student" to get started.</div>';
     }
-    if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+    
+    // Update stats with null checks
+    updateStats(students);
+    
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+// Add this helper function
+function updateStats(students) {
+    // Safely update student count
+    const countElement = document.getElementById('my-students-count');
+    if (countElement) {
+        countElement.textContent = students ? students.length : 0;
+    }
+    
+    // Safely update classes count (if you have that element)
+    const classesElement = document.getElementById('my-classes-count');
+    if (classesElement && students) {
+        // Get unique grades/classes
+        const uniqueClasses = [...new Set(students.map(s => s.grade))];
+        classesElement.textContent = uniqueClasses.length;
+    }
+    
+    // Safely update class average (if you have that element)
+    const avgElement = document.getElementById('class-average');
+    if (avgElement && students && students.length > 0) {
+        const avg = students.reduce((sum, s) => sum + (s.average || 0), 0) / students.length;
+        avgElement.textContent = Math.round(avg) + '%';
+    }
 }
 
 // Update stats
