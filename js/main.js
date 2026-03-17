@@ -1968,6 +1968,7 @@ async function renderAdminTeacherWorkload() {
 }
 
 // ============ MISSING ADMIN FUNCTIONS ============
+
 // Render admin custom subjects - WITH PROPER SELECTORS
 function renderAdminCustomSubjects() {
     const curriculum = schoolSettings.curriculum || 'cbc';
@@ -2117,6 +2118,197 @@ function renderAdminSettings() {
         </div>
     `;
 }
+
+// ============ CLASS MANAGEMENT (NEW) ============
+
+// Render class management for admin
+async function renderClassManagement() {
+    try {
+        const [classes, teachers] = await Promise.all([
+            api.admin.getClasses().catch(() => ({ data: [] })),
+            api.admin.getAvailableTeachers().catch(() => ({ data: [] }))
+        ]);
+        
+        return `
+            <div class="space-y-6 animate-fade-in">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold">Class Teacher Assignment</h2>
+                    <button onclick="showAddClassModal()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
+                        <i data-lucide="plus" class="h-4 w-4"></i>
+                        Add New Class
+                    </button>
+                </div>
+                
+                <div class="grid gap-4">
+                    ${classes.data?.length > 0 ? classes.data.map(cls => {
+                        const currentTeacher = cls.Teacher?.User?.name || 'Not assigned';
+                        const teacherOptions = teachers.data?.map(t => `
+                            <option value="${t.id}" ${t.id === cls.teacherId ? 'selected' : ''}>
+                                ${t.User?.name || 'Unknown'} (${t.subjects?.join(', ') || 'No subjects'})
+                            </option>
+                        `).join('') || '<option value="">No teachers available</option>';
+                        
+                        return `
+                            <div class="border rounded-lg p-4 bg-card hover:shadow-md transition-shadow">
+                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                    <div>
+                                        <h3 class="font-semibold text-lg">${cls.name}</h3>
+                                        <p class="text-sm text-muted-foreground">Grade: ${cls.grade} | Stream: ${cls.stream || 'N/A'}</p>
+                                        <p class="text-sm mt-1">
+                                            <span class="font-medium">Current Teacher:</span> 
+                                            <span class="${cls.Teacher ? 'text-green-600' : 'text-yellow-600'}">${currentTeacher}</span>
+                                        </p>
+                                        ${cls.studentCount ? `<p class="text-xs text-muted-foreground mt-1">${cls.studentCount} students enrolled</p>` : ''}
+                                    </div>
+                                    
+                                    <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                                        <select id="teacher-${cls.id}" class="rounded-lg border border-input bg-background px-3 py-2 text-sm min-w-[200px]">
+                                            <option value="">-- Select Teacher --</option>
+                                            ${teacherOptions}
+                                        </select>
+                                        <button onclick="assignClassTeacher('${cls.id}')" 
+                                                class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm whitespace-nowrap">
+                                            Assign Teacher
+                                        </button>
+                                        <button onclick="editClass('${cls.id}')" 
+                                                class="p-2 border rounded-lg hover:bg-accent">
+                                            <i data-lucide="edit" class="h-4 w-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('') : `
+                        <div class="text-center py-12 border rounded-lg bg-card">
+                            <i data-lucide="users" class="h-12 w-12 mx-auto text-muted-foreground mb-4"></i>
+                            <p class="text-muted-foreground">No classes found. Click "Add New Class" to create one.</p>
+                        </div>
+                    `}
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error loading classes:', error);
+        return `<div class="text-center py-12 text-red-500">Error loading classes: ${error.message}</div>`;
+    }
+}
+
+// Show add class modal
+function showAddClassModal() {
+    let modal = document.getElementById('add-class-modal');
+    
+    if (!modal) {
+        createAddClassModal();
+        modal = document.getElementById('add-class-modal');
+    }
+    
+    // Clear previous values
+    document.getElementById('modal-class-name').value = '';
+    document.getElementById('modal-class-grade').value = '';
+    document.getElementById('modal-class-stream').value = '';
+    
+    modal.classList.remove('hidden');
+}
+
+// Create add class modal
+function createAddClassModal() {
+    const modalHTML = `
+        <div id="add-class-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeAddClassModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                    <h3 class="text-lg font-semibold mb-4">Add New Class</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Class Name *</label>
+                            <input type="text" id="modal-class-name" placeholder="e.g., Form 1A, Grade 10 Science" 
+                                   class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Grade/Level *</label>
+                            <input type="text" id="modal-class-grade" placeholder="e.g., 10, Form 1" 
+                                   class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Stream (Optional)</label>
+                            <input type="text" id="modal-class-stream" placeholder="e.g., A, B, Science, Arts" 
+                                   class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button onclick="closeAddClassModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
+                        <button onclick="handleAddClass()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Create Class</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// Close add class modal
+function closeAddClassModal() {
+    const modal = document.getElementById('add-class-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+// Handle add class
+async function handleAddClass() {
+    const name = document.getElementById('modal-class-name')?.value;
+    const grade = document.getElementById('modal-class-grade')?.value;
+    const stream = document.getElementById('modal-class-stream')?.value;
+    
+    if (!name || !grade) {
+        showToast('Class name and grade are required', 'error');
+        return;
+    }
+    
+    showLoading();
+    try {
+        await api.admin.createClass({ name, grade, stream });
+        showToast('✅ Class created successfully', 'success');
+        closeAddClassModal();
+        await showDashboardSection('class-management');
+    } catch (error) {
+        showToast(error.message || 'Failed to create class', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Assign class teacher
+window.assignClassTeacher = async function(classId) {
+    const select = document.getElementById(`teacher-${classId}`);
+    const teacherId = select?.value;
+    
+    if (!teacherId) {
+        showToast('Please select a teacher', 'error');
+        return;
+    }
+    
+    showLoading();
+    try {
+        await api.admin.assignTeacherToClass(classId, teacherId);
+        showToast('✅ Teacher assigned successfully', 'success');
+        
+        // Refresh the class management view
+        await showDashboardSection('class-management');
+    } catch (error) {
+        showToast(error.message || 'Failed to assign teacher', 'error');
+    } finally {
+        hideLoading();
+    }
+};
+
+// Edit class
+window.editClass = async function(classId) {
+    // You can implement class editing here
+    showToast('Edit class feature coming soon', 'info');
+};
 
 // ============ CALENDAR STATE ============
 let calendarState = {
@@ -5590,7 +5782,8 @@ function updateSidebar(role) {
             ],
             settings: [
                 { icon: 'settings', label: 'School Settings', section: 'settings' },
-                { icon: 'help-circle', label: 'Help', section: 'help' }
+                { icon: 'help-circle', label: 'Help', section: 'help' },
+                { icon: 'users', label: 'Classes', section: 'class-management' }
             ]
         },
         teacher: {
