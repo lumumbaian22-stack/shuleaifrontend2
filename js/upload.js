@@ -1,9 +1,8 @@
-// upload.js - Fixed version with null checks
+// upload.js - Fixed with robust null checking
 
 // Download template
 async function downloadTemplate(type) {
     try {
-        // For CSV templates, we'll create them locally instead of API call
         const templates = {
             students: 'name,grade,parentEmail,dateOfBirth,gender\nJohn Doe,10A,parent@example.com,2010-01-01,male\nJane Smith,10B,jane.parent@example.com,2010-02-15,female',
             marks: 'studentId,elimuid,subject,score,assessmentType,date\n,ELI-2024-001,Mathematics,85,exam,2024-03-15\n,ELI-2024-002,English,78,test,2024-03-14',
@@ -38,7 +37,10 @@ function setupFileUpload(dropZoneId, fileInputId, type) {
     const dropZone = document.getElementById(dropZoneId);
     const fileInput = document.getElementById(fileInputId);
     
-    if (!dropZone || !fileInput) return;
+    if (!dropZone || !fileInput) {
+        console.warn('Drop zone or file input not found');
+        return;
+    }
     
     // Prevent default drag behaviors
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -46,7 +48,6 @@ function setupFileUpload(dropZoneId, fileInputId, type) {
         document.body.addEventListener(eventName, preventDefaults, false);
     });
     
-    // Highlight drop zone on drag over
     ['dragenter', 'dragover'].forEach(eventName => {
         dropZone.addEventListener(eventName, highlight, false);
     });
@@ -55,15 +56,8 @@ function setupFileUpload(dropZoneId, fileInputId, type) {
         dropZone.addEventListener(eventName, unhighlight, false);
     });
     
-    // Handle dropped files
     dropZone.addEventListener('drop', handleDrop, false);
-    
-    // Click to browse
-    dropZone.addEventListener('click', () => {
-        fileInput.click();
-    });
-    
-    // Handle file input change
+    dropZone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', handleFileSelect, false);
     
     function preventDefaults(e) {
@@ -81,44 +75,74 @@ function setupFileUpload(dropZoneId, fileInputId, type) {
     
     function handleDrop(e) {
         const dt = e.dataTransfer;
-        const files = dt.files;
-        handleFiles(files);
+        handleFiles(dt.files);
     }
     
     function handleFileSelect(e) {
-        const files = e.target.files;
-        handleFiles(files);
+        handleFiles(e.target.files);
     }
     
     async function handleFiles(files) {
         const file = files[0];
-        
         if (!file) return;
         
-        // Validate file type
         if (!file.name.endsWith('.csv')) {
             showToast('Please upload a CSV file', 'error');
             return;
         }
         
-        // Show loading toast instead of progress bar
-        showToast(`⏫ Uploading ${file.name}...`, 'info');
+        // Get progress elements safely
+        const progressContainer = document.getElementById('upload-progress-container');
+        const progressBar = document.getElementById('upload-progress');
+        const progressText = document.getElementById('upload-progress-text');
+        
+        // Show progress container if it exists
+        if (progressContainer) {
+            progressContainer.classList.remove('hidden');
+        } else {
+            console.warn('Progress container not found');
+        }
         
         try {
-            // Simulate upload delay
+            // Simulate upload progress
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 10;
+                if (progressBar) {
+                    progressBar.style.width = `${progress}%`;
+                }
+                if (progressText) {
+                    progressText.textContent = `${progress}%`;
+                }
+                if (progress >= 100) clearInterval(interval);
+            }, 200);
+            
+            // Simulate processing
             await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            clearInterval(interval);
+            
+            if (progressBar) progressBar.style.width = '100%';
+            if (progressText) progressText.textContent = '100%';
             
             showToast(`✅ ${file.name} uploaded successfully`, 'success');
             
-            // Refresh data if needed
             if (type === 'students' && typeof refreshMyStudents === 'function') {
                 await refreshMyStudents();
             }
             
         } catch (error) {
             showToast('Upload failed: ' + error.message, 'error');
+            console.error('Upload error:', error);
         } finally {
-            // Reset file input
+            setTimeout(() => {
+                if (progressContainer) {
+                    progressContainer.classList.add('hidden');
+                }
+                if (progressBar) progressBar.style.width = '0%';
+                if (progressText) progressText.textContent = '0%';
+            }, 2000);
+            
             if (fileInput) fileInput.value = '';
         }
     }
@@ -127,7 +151,6 @@ function setupFileUpload(dropZoneId, fileInputId, type) {
 // Load upload history
 async function loadUploadHistory() {
     try {
-        // Mock data for now
         const history = [
             { type: 'students', count: 25, timestamp: new Date(), status: 'success' },
             { type: 'marks', count: 50, timestamp: new Date(Date.now() - 86400000), status: 'success' },
@@ -140,7 +163,6 @@ async function loadUploadHistory() {
     }
 }
 
-// Render upload history
 function renderUploadHistory(history) {
     const container = document.getElementById('upload-history');
     if (!container) return;
@@ -162,7 +184,6 @@ function renderUploadHistory(history) {
     `;
 }
 
-// Helper function to format date
 function formatDate(date) {
     return new Date(date).toLocaleDateString('en-US', {
         month: 'short',
