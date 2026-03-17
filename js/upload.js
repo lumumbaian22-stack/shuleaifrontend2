@@ -1,4 +1,4 @@
-// upload.js - Complete with null checks
+// upload.js - Fixed version with null checks
 
 // Download template
 async function downloadTemplate(type) {
@@ -101,39 +101,12 @@ function setupFileUpload(dropZoneId, fileInputId, type) {
             return;
         }
         
-        // Get progress elements with null checks
-        const progressContainer = document.getElementById('upload-progress-container');
-        const progressBar = document.getElementById('upload-progress');
-        const progressText = document.getElementById('upload-progress-text');
-        
-        // Only show progress container if it exists
-        if (progressContainer) {
-            progressContainer.classList.remove('hidden');
-        }
+        // Show loading toast instead of progress bar
+        showToast(`⏫ Uploading ${file.name}...`, 'info');
         
         try {
-            // Simulate upload progress
-            let progress = 0;
-            const interval = setInterval(() => {
-                progress += 10;
-                // Only update if elements exist
-                if (progressBar) {
-                    progressBar.style.width = `${progress}%`;
-                }
-                if (progressText) {
-                    progressText.textContent = `${progress}%`;
-                }
-                if (progress >= 100) clearInterval(interval);
-            }, 200);
-            
-            // Simulate processing
+            // Simulate upload delay
             await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            clearInterval(interval);
-            
-            // Final update
-            if (progressBar) progressBar.style.width = '100%';
-            if (progressText) progressText.textContent = '100%';
             
             showToast(`✅ ${file.name} uploaded successfully`, 'success');
             
@@ -145,15 +118,6 @@ function setupFileUpload(dropZoneId, fileInputId, type) {
         } catch (error) {
             showToast('Upload failed: ' + error.message, 'error');
         } finally {
-            // Hide progress container after delay
-            setTimeout(() => {
-                if (progressContainer) {
-                    progressContainer.classList.add('hidden');
-                }
-                if (progressBar) progressBar.style.width = '0%';
-                if (progressText) progressText.textContent = '0%';
-            }, 2000);
-            
             // Reset file input
             if (fileInput) fileInput.value = '';
         }
