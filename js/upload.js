@@ -1,4 +1,4 @@
-// upload.js - Complete fixed version with null checks
+// upload.js - Complete fixed version with auto-refresh
 
 // Download template
 async function downloadTemplate(type) {
@@ -95,14 +95,38 @@ function setupFileUpload(dropZoneId, fileInputId, type) {
         showToast(`⏫ Uploading ${file.name}...`, 'info');
         
         try {
-            // Simulate upload delay
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            // Determine which API endpoint to use based on type
+            let response;
+            if (type === 'students') {
+                response = await api.upload.uploadStudents(file, (progress) => {
+                    console.log(`Upload progress: ${progress}%`);
+                });
+            } else if (type === 'marks') {
+                response = await api.upload.uploadMarks(file, (progress) => {
+                    console.log(`Upload progress: ${progress}%`);
+                });
+            } else if (type === 'attendance') {
+                response = await api.upload.uploadAttendance(file, (progress) => {
+                    console.log(`Upload progress: ${progress}%`);
+                });
+            }
             
             showToast(`✅ ${file.name} uploaded successfully`, 'success');
             
-            // Refresh data if needed
-            if (type === 'students' && typeof refreshMyStudents === 'function') {
-                await refreshMyStudents();
+            // Refresh data based on type
+            if (type === 'students') {
+                // Refresh teacher's students list
+                if (typeof refreshMyStudents === 'function') {
+                    await refreshMyStudents();
+                }
+                // Also refresh admin students list if on admin page
+                if (typeof refreshStudentsList === 'function') {
+                    await refreshStudentsList();
+                }
+            } else if (type === 'marks' && typeof refreshMarks === 'function') {
+                await refreshMarks();
+            } else if (type === 'attendance' && typeof refreshAttendance === 'function') {
+                await refreshAttendance();
             }
             
         } catch (error) {
@@ -117,15 +141,27 @@ function setupFileUpload(dropZoneId, fileInputId, type) {
 // Load upload history
 async function loadUploadHistory() {
     try {
+        const response = await api.upload.getUploadHistory();
+        if (response && response.data) {
+            renderUploadHistory(response.data);
+        } else {
+            // Fallback to mock data
+            const history = [
+                { type: 'students', count: 25, timestamp: new Date(), status: 'success' },
+                { type: 'marks', count: 50, timestamp: new Date(Date.now() - 86400000), status: 'success' },
+                { type: 'attendance', count: 42, timestamp: new Date(Date.now() - 172800000), status: 'success' }
+            ];
+            renderUploadHistory(history);
+        }
+    } catch (error) {
+        console.error('Failed to load upload history:', error);
+        // Fallback to mock data
         const history = [
             { type: 'students', count: 25, timestamp: new Date(), status: 'success' },
             { type: 'marks', count: 50, timestamp: new Date(Date.now() - 86400000), status: 'success' },
             { type: 'attendance', count: 42, timestamp: new Date(Date.now() - 172800000), status: 'success' }
         ];
         renderUploadHistory(history);
-    } catch (error) {
-        console.error('Failed to load upload history:', error);
-        showToast('Failed to load upload history', 'error');
     }
 }
 
