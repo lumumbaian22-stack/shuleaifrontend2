@@ -25,13 +25,24 @@ async function loadAllTeachers() {
     }
 }
 
-// Load all students
+// Load all students (ADMIN ONLY)
 async function loadAllStudents() {
     try {
         const response = await api.admin.getStudents();
         return response.data || [];
     } catch (error) {
         console.error('Failed to load students:', error);
+        return [];
+    }
+}
+
+// Load teacher's students (TEACHER ONLY)
+async function loadMyStudents() {
+    try {
+        const response = await api.teacher.getMyStudents();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load my students:', error);
         return [];
     }
 }
@@ -450,16 +461,36 @@ async function updateTeacher(teacherId, teacherData) {
     }
 }
 
-// ============ STUDENT DETAILS MODAL ============
+// ============ STUDENT DETAILS MODAL - FIXED FOR TEACHER ACCESS ============
 
-// View student details - FIXED to use loadAllStudents instead of non-existent endpoint
+// View student details - FIXED to work for both admin and teacher
 async function viewStudent(studentId) {
     console.log('🔵 viewStudent called with ID:', studentId);
     showLoading();
     try {
-        console.log('📥 Loading all students...');
-        const students = await loadAllStudents();
-        console.log('📥 Loaded students:', students);
+        // Get current user role
+        const user = getCurrentUser();
+        console.log('👤 Current user role:', user?.role);
+        
+        let student = null;
+        let students = [];
+        
+        // If teacher, use teacher API
+        if (user?.role === 'teacher') {
+            console.log('📥 Loading teacher\'s students...');
+            students = await loadMyStudents();
+        } 
+        // If admin, use admin API
+        else if (user?.role === 'admin' || user?.role === 'super_admin') {
+            console.log('📥 Loading all students (admin)...');
+            students = await loadAllStudents();
+        } else {
+            console.log('❌ Unauthorized role');
+            showToast('You do not have permission to view students', 'error');
+            return;
+        }
+        
+        console.log('📥 Loaded students count:', students.length);
         
         if (!students || students.length === 0) {
             console.log('❌ No students loaded');
@@ -468,7 +499,7 @@ async function viewStudent(studentId) {
         }
         
         console.log('🔍 Looking for student with ID:', studentId);
-        const student = students.find(s => s.id == studentId);
+        student = students.find(s => s.id == studentId);
         
         console.log('🎯 Found student:', student);
         
@@ -610,7 +641,16 @@ function closeStudentDetailsModal() {
 async function editStudent(studentId) {
     showLoading();
     try {
-        const students = await loadAllStudents();
+        // Get current user role
+        const user = getCurrentUser();
+        let students = [];
+        
+        if (user?.role === 'teacher') {
+            students = await loadMyStudents();
+        } else {
+            students = await loadAllStudents();
+        }
+        
         const student = students.find(s => s.id == studentId);
         
         if (!student) {
@@ -754,7 +794,9 @@ async function updateStudent(studentId, studentData) {
     try {
         const response = await api.admin.updateStudent(studentId, studentData);
         showToast('✅ Student updated successfully', 'success');
-        await refreshStudentsList();
+        if (typeof refreshStudentsList === 'function') {
+            await refreshStudentsList();
+        }
         return response;
     } catch (error) {
         console.error('Update student error:', error);
@@ -771,8 +813,17 @@ async function updateStudent(studentId, studentData) {
 async function viewStudentAttendance(studentId) {
     showLoading();
     try {
-        const students = await loadAllStudents();
-        const student = students.find(s => s.id == studentId);
+        // Get current user role
+        const user = getCurrentUser();
+        let student = null;
+        
+        if (user?.role === 'teacher') {
+            const students = await loadMyStudents();
+            student = students.find(s => s.id == studentId);
+        } else {
+            const students = await loadAllStudents();
+            student = students.find(s => s.id == studentId);
+        }
         
         if (!student) {
             showToast('Student not found', 'error');
@@ -1223,6 +1274,19 @@ function copyElimuid(elimuid) {
     });
 }
 
+// Get current user helper
+function getCurrentUser() {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+        try {
+            return JSON.parse(userStr);
+        } catch (e) {
+            return null;
+        }
+    }
+    return null;
+}
+
 // ============ EXPORT FUNCTIONS ============
 window.suspendTeacher = suspendTeacher;
 window.reactivateTeacher = reactivateTeacher;
@@ -1231,6 +1295,7 @@ window.removeTeacher = removeTeacher;
 window.loadPendingTeachers = loadPendingTeachers;
 window.loadAllTeachers = loadAllTeachers;
 window.loadAllStudents = loadAllStudents;
+window.loadMyStudents = loadMyStudents;
 window.loadAllParents = loadAllParents;
 window.approveTeacher = approveTeacher;
 window.rejectTeacher = rejectTeacher;
@@ -1256,6 +1321,7 @@ window.copyElimuid = copyElimuid;
 window.timeAgo = timeAgo;
 window.getInitials = getInitials;
 window.formatDate = formatDate;
+window.getCurrentUser = getCurrentUser;
 
 // Simple fix - redirect any calls to viewStudentDetails
 window.viewStudentDetails = function(studentId) {
