@@ -230,14 +230,52 @@ const adminAPI = {
             body: JSON.stringify(data)
         }),
     
-    // Classes
+    // ============ CLASS MANAGEMENT (ADDED) ============
+    // Create a new class
     createClass: (data) => 
         apiRequest('/api/admin/classes', {
             method: 'POST',
             body: JSON.stringify(data)
         }),
+    
+    // Get all classes
     getClasses: () => apiRequest('/api/admin/classes'),
-
+    
+    // Update a class
+    updateClass: (classId, data) => 
+        apiRequest(`/api/admin/classes/${classId}`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        }),
+    
+    // Delete a class
+    deleteClass: (classId) => 
+        apiRequest(`/api/admin/classes/${classId}`, {
+            method: 'DELETE'
+        }),
+    
+    // Get available teachers for class assignment
+    getAvailableTeachers: () => apiRequest('/api/admin/available-teachers'),
+    
+    // Assign teacher to a class
+    assignTeacherToClass: (classId, teacherId) => 
+        apiRequest(`/api/admin/classes/${classId}/assign-teacher`, {
+            method: 'POST',
+            body: JSON.stringify({ teacherId })
+        }),
+    
+    // Remove teacher from a class
+    removeTeacherFromClass: (classId) => 
+        apiRequest(`/api/admin/classes/${classId}/remove-teacher`, {
+            method: 'POST'
+        }),
+    
+    // Get students in a specific class
+    getClassStudents: (classId) => 
+        apiRequest(`/api/admin/classes/${classId}/students`),
+    
+    // ============ END OF CLASS MANAGEMENT ============
+    
     // Student details
     getStudentDetails: (studentId) => 
         apiRequest(`/api/admin/students/${studentId}`),
