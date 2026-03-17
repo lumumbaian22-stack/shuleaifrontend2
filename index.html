@@ -495,7 +495,7 @@
                         </div>
                     </div>
 
-                    <!-- Student -->
+                    <!-- Student - FIXED: Removed Sign Up button -->
                     <div class="rounded-xl border bg-card p-6 card-hover flex flex-col items-center text-center">
                         <div class="h-16 w-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center mb-4 shadow-md">
                             <i data-lucide="graduation-cap" class="h-8 w-8 text-white"></i>
@@ -504,7 +504,7 @@
                         <p class="text-xs text-muted-foreground mt-1 mb-4">Learn & collaborate</p>
                         <div class="flex gap-2 w-full">
                             <button onclick="openAuthModal('student', 'signin')" class="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90">Sign In</button>
-                            <button onclick="openAuthModal('student', 'signup')" class="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium hover:bg-accent">Sign Up</button>
+                            <!-- Sign Up button removed - students cannot sign up, only login -->
                         </div>
                     </div>
                 </div>
@@ -795,6 +795,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </body>
 
 </html>
-
-
-
