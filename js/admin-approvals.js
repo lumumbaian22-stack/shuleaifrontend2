@@ -1,26 +1,5 @@
 // admin-approvals.js - Complete fixed version with working view and edit functions for both teachers and students
 
-// View student details (using the new admin endpoint)
-async function viewStudent(studentId) {
-    showLoading();
-    try {
-        // Use the new admin endpoint instead of loading all students
-        const response = await api.admin.getStudentDetails(studentId);
-        
-        if (!response || !response.data) {
-            showToast('Student not found', 'error');
-            return;
-        }
-        
-        showStudentDetailsModal(response.data);
-    } catch (error) {
-        console.error('Error viewing student:', error);
-        showToast('Failed to load student details: ' + error.message, 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
 // ============ LOAD FUNCTIONS ============
 
 // Load pending teachers
@@ -90,7 +69,23 @@ async function approveTeacher(teacherId) {
     }
 }
 
-// ============ TEACHER SUSPEND/REMOVE FUNCTIONS ============
+// Reject teacher
+async function rejectTeacher(teacherId) {
+    const reason = prompt('Please enter rejection reason:');
+    if (reason === null) return;
+    
+    showLoading();
+    try {
+        const response = await api.admin.approveTeacher(teacherId, 'reject', reason);
+        showToast('Teacher rejected', 'info');
+        await refreshPendingTeachers();
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to reject teacher', 'error');
+    } finally {
+        hideLoading();
+    }
+}
 
 // Suspend teacher
 async function suspendTeacher(teacherId) {
@@ -153,24 +148,6 @@ async function removeTeacher(teacherId) {
         return response;
     } catch (error) {
         showToast(error.message || 'Failed to remove teacher', 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-// Reject teacher
-async function rejectTeacher(teacherId) {
-    const reason = prompt('Please enter rejection reason:');
-    if (reason === null) return;
-    
-    showLoading();
-    try {
-        const response = await api.admin.approveTeacher(teacherId, 'reject', reason);
-        showToast('Teacher rejected', 'info');
-        await refreshPendingTeachers();
-        return response;
-    } catch (error) {
-        showToast(error.message || 'Failed to reject teacher', 'error');
     } finally {
         hideLoading();
     }
@@ -347,7 +324,6 @@ function showEditTeacherModal(teacher) {
     
     const user = teacher.User || {};
     
-    // Populate form with teacher data
     document.getElementById('edit-teacher-id').value = teacher.id;
     document.getElementById('edit-teacher-name').value = user.name || '';
     document.getElementById('edit-teacher-email').value = user.email || '';
@@ -461,7 +437,6 @@ async function handleUpdateTeacher() {
 async function updateTeacher(teacherId, teacherData) {
     showLoading();
     try {
-        // Assuming you have an API endpoint for updating teachers
         const response = await api.admin.updateTeacher(teacherId, teacherData);
         showToast('✅ Teacher updated successfully', 'success');
         await refreshTeachersList();
@@ -477,10 +452,9 @@ async function updateTeacher(teacherId, teacherData) {
 
 // ============ STUDENT DETAILS MODAL ============
 
-// View student details
+// View student details - FIXED to use loadAllStudents instead of non-existent endpoint
 async function viewStudent(studentId) {
     console.log('🔵 viewStudent called with ID:', studentId);
-    console.log('Stack trace:', new Error().stack);
     showLoading();
     try {
         console.log('📥 Loading all students...');
@@ -493,11 +467,8 @@ async function viewStudent(studentId) {
             return;
         }
         
-        console.log('🔍 Looking for student with ID:', studentId, '(type:', typeof studentId, ')');
-        const student = students.find(s => {
-            console.log('Comparing:', s.id, '(', typeof s.id, ') with', studentId, '(', typeof studentId, ')');
-            return s.id == studentId;
-        });
+        console.log('🔍 Looking for student with ID:', studentId);
+        const student = students.find(s => s.id == studentId);
         
         console.log('🎯 Found student:', student);
         
@@ -667,7 +638,6 @@ function showEditStudentModal(student) {
     
     const user = student.User || {};
     
-    // Populate form with student data
     document.getElementById('edit-student-id').value = student.id;
     document.getElementById('edit-student-name').value = user.name || '';
     document.getElementById('edit-student-email').value = user.email || '';
@@ -782,7 +752,6 @@ async function handleUpdateStudent() {
 async function updateStudent(studentId, studentData) {
     showLoading();
     try {
-        // Assuming you have an API endpoint for updating students
         const response = await api.admin.updateStudent(studentId, studentData);
         showToast('✅ Student updated successfully', 'success');
         await refreshStudentsList();
@@ -802,15 +771,14 @@ async function updateStudent(studentId, studentData) {
 async function viewStudentAttendance(studentId) {
     showLoading();
     try {
-        // Get student details first
-        const student = await api.admin.getStudentDetails(studentId);
+        const students = await loadAllStudents();
+        const student = students.find(s => s.id == studentId);
         
-        if (!student || !student.data) {
+        if (!student) {
             showToast('Student not found', 'error');
             return;
         }
         
-        // Get attendance records for this student
         const response = await api.analytics.getStudentAnalytics(studentId);
         
         if (!response || !response.data) {
@@ -818,7 +786,7 @@ async function viewStudentAttendance(studentId) {
             return;
         }
         
-        showAttendanceModal(student.data, response.data);
+        showAttendanceModal(student, response.data);
     } catch (error) {
         console.error('Error loading attendance:', error);
         showToast('Failed to load attendance data', 'error');
@@ -1209,6 +1177,52 @@ function formatDate(dateString) {
     });
 }
 
+// Helper function for time ago
+function timeAgo(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    const intervals = {
+        year: 31536000,
+        month: 2592000,
+        week: 604800,
+        day: 86400,
+        hour: 3600,
+        minute: 60
+    };
+    
+    for (const [unit, secondsInUnit] of Object.entries(intervals)) {
+        const interval = Math.floor(seconds / secondsInUnit);
+        if (interval >= 1) {
+            return `${interval} ${unit}${interval === 1 ? '' : 's'} ago`;
+        }
+    }
+    
+    return 'just now';
+}
+
+// Helper function for initials
+function getInitials(name) {
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+}
+
+// Copy ELIMUID to clipboard
+function copyElimuid(elimuid) {
+    if (!elimuid) {
+        showToast('No ELIMUID to copy', 'error');
+        return;
+    }
+    
+    navigator.clipboard.writeText(elimuid).then(() => {
+        showToast('✅ ELIMUID copied to clipboard', 'success');
+    }).catch(() => {
+        showToast('Failed to copy', 'error');
+    });
+}
+
 // ============ EXPORT FUNCTIONS ============
 window.suspendTeacher = suspendTeacher;
 window.reactivateTeacher = reactivateTeacher;
@@ -1238,6 +1252,11 @@ window.refreshTeachersList = refreshTeachersList;
 window.refreshStudentsList = refreshStudentsList;
 window.viewStudentAttendance = viewStudentAttendance;
 window.closeAttendanceModal = closeAttendanceModal;
+window.copyElimuid = copyElimuid;
+window.timeAgo = timeAgo;
+window.getInitials = getInitials;
+window.formatDate = formatDate;
+
 // Simple fix - redirect any calls to viewStudentDetails
 window.viewStudentDetails = function(studentId) {
     console.log('Redirecting to viewStudent');
