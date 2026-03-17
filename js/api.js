@@ -261,6 +261,7 @@ const adminAPI = {
 
 // ============ TEACHER ENDPOINTS ============
 const teacherAPI = {
+    // Student management
     getMyStudents: () => apiRequest('/api/teacher/students'),
     addStudent: (data) => 
         apiRequest('/api/teacher/students', {
@@ -283,7 +284,20 @@ const teacherAPI = {
             body: JSON.stringify(data)
         }),
     uploadMarksCSV: (formData) => 
-        uploadFile('/api/teacher/upload/marks', formData)
+        uploadFile('/api/teacher/upload/marks', formData),
+    
+    // Message system for parent communication
+    getConversations: () => apiRequest('/api/teacher/conversations'),
+    getMessages: (otherUserId) => apiRequest(`/api/teacher/messages/${otherUserId}`),
+    markMessagesAsRead: (otherUserId) => 
+        apiRequest(`/api/teacher/messages/read/${otherUserId}`, {
+            method: 'PUT'
+        }),
+    replyToParent: (data) => 
+        apiRequest('/api/teacher/reply', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        })
 };
 
 // ============ PARENT ENDPOINTS ============
