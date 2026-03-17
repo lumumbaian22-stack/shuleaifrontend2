@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = 'https://shuleaibackend-32h1.onrender.com'; // Your Render backend URL
+const API_BASE_URL = 'https://shuleaibackend-32h1.onrender.com';
 
 // Token management
 let authToken = localStorage.getItem('authToken');
@@ -28,7 +28,6 @@ async function apiRequest(endpoint, options = {}) {
         const response = await fetch(url, config);
         const data = await response.json();
         
-        // Handle token refresh
         if (response.status === 401 && refreshToken) {
             const refreshed = await refreshAuthToken();
             if (refreshed) {
@@ -194,7 +193,6 @@ const superAdminAPI = {
 
 // ============ ADMIN ENDPOINTS ============
 const adminAPI = {
-    // Teacher management
     getTeachers: () => apiRequest('/api/admin/teachers'),
     getStudents: () => apiRequest('/api/admin/students'),
     getParents: () => apiRequest('/api/admin/parents'),
@@ -204,43 +202,24 @@ const adminAPI = {
             method: 'POST',
             body: JSON.stringify({ action, rejectionReason })
         }),
-    
-    // Teacher suspend/reactivate/delete
-    suspendTeacher: (teacherId, reason) => 
-        apiRequest(`/api/admin/teachers/${teacherId}/suspend`, {
-            method: 'POST',
-            body: JSON.stringify({ reason })
-        }),
-    
-    reactivateTeacher: (teacherId) => 
-        apiRequest(`/api/admin/teachers/${teacherId}/reactivate`, {
-            method: 'POST'
-        }),
-    
-    deleteTeacher: (teacherId) => 
-        apiRequest(`/api/admin/teachers/${teacherId}`, {
-            method: 'DELETE'
-        }),
-    
-    // School settings
     getSchoolSettings: () => apiRequest('/api/admin/settings'),
     updateSchoolSettings: (data) => 
         apiRequest('/api/admin/settings', {
             method: 'PUT',
             body: JSON.stringify(data)
         }),
-    
-    // Classes
     createClass: (data) => 
         apiRequest('/api/admin/classes', {
             method: 'POST',
             body: JSON.stringify(data)
         }),
     getClasses: () => apiRequest('/api/admin/classes'),
-
-    // Student details
-    getStudentDetails: (studentId) => 
-        apiRequest(`/api/admin/students/${studentId}`),
+    assignTeacherToClass: (classId, teacherId) => 
+        apiRequest(`/api/admin/classes/${classId}/assign-teacher`, {
+            method: 'POST',
+            body: JSON.stringify({ teacherId })
+        }),
+    getAvailableTeachers: () => apiRequest('/api/admin/available-teachers'),
     
     // Duty management
     generateDutyRoster: (startDate, endDate) => 
@@ -283,33 +262,58 @@ const teacherAPI = {
             body: JSON.stringify(data)
         }),
     uploadMarksCSV: (formData) => 
-        uploadFile('/api/teacher/upload/marks', formData)
+        uploadFile('/api/teacher/upload/marks', formData),
+    getConversations: () => apiRequest('/api/teacher/conversations'),
+    getMessages: (otherUserId) => apiRequest(`/api/teacher/messages/${otherUserId}`),
+    replyToParent: (data) => 
+        apiRequest('/api/teacher/reply', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        })
 };
 
 // ============ PARENT ENDPOINTS ============
 const parentAPI = {
-    // ... existing functions ...
-    
-    sendMessage: (data) => 
-        apiRequest('/api/parent/message', {
+    // Core parent functions
+    getChildren: () => apiRequest('/api/parent/children'),
+    getChildSummary: (studentId) => 
+        apiRequest(`/api/parent/child/${studentId}/summary`),
+    reportAbsence: (data) => 
+        apiRequest('/api/parent/report-absence', {
             method: 'POST',
             body: JSON.stringify(data)
         }),
+    makePayment: (data) => 
+        apiRequest('/api/parent/pay', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        }),
+    getPayments: () => apiRequest('/api/parent/payments'),
     
-    getSubscriptionPlans: () => 
-        apiRequest('/api/parent/plans'),
-    
+    // Subscription and plans
+    getSubscriptionPlans: () => apiRequest('/api/parent/plans'),
     upgradePlan: (data) => 
         apiRequest('/api/parent/upgrade-plan', {
             method: 'POST',
             body: JSON.stringify(data)
         }),
     
+    // Messaging
+    sendMessage: (data) => 
+        apiRequest('/api/parent/message', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        }),
+    getConversations: () => apiRequest('/api/parent/conversations'),
     getMessages: (otherUserId) => 
         apiRequest(`/api/parent/messages/${otherUserId}`),
     
-    getConversations: () => 
-        apiRequest('/api/parent/conversations')
+    // Payment confirmation
+    confirmPayment: (data) => 
+        apiRequest('/api/parent/payment-confirm', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        })
 };
 
 // ============ STUDENT ENDPOINTS ============
@@ -352,7 +356,7 @@ const dutyAPI = {
         })
 };
 
-// ============ SCHOOL ENDPOINTS (for name change requests) ============
+// ============ SCHOOL ENDPOINTS ============
 const schoolAPI = {
     createNameChangeRequest: (data) => 
         apiRequest('/api/school/name-change-request', {
@@ -430,7 +434,7 @@ async function uploadFile(endpoint, file, onProgress) {
     });
 }
 
-// ============ SINGLE EXPORT STATEMENT ============
+// Export all APIs
 window.api = {
     auth: authAPI,
     superAdmin: superAdminAPI,
@@ -448,6 +452,3 @@ window.api = {
 // Legacy support
 window.apiRequest = apiRequest;
 window.uploadFile = uploadFile;
-
-// Log to verify schoolAPI is loaded
-console.log('✅ API loaded. schoolAPI available:', !!window.api.school);
