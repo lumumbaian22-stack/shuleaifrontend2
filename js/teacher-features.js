@@ -1,4 +1,4 @@
-// teacher-features.js - Complete file with all teacher functions
+// teacher-features.js - Complete file with all teacher functions including delete
 
 // ============ STUDENT MANAGEMENT ============
 
@@ -49,6 +49,12 @@ function createAddStudentModal() {
                                 <option value="female">Female</option>
                                 <option value="other">Other</option>
                             </select>
+                        </div>
+                        <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                            <p class="text-xs text-blue-600 dark:text-blue-400 flex items-start gap-2">
+                                <i data-lucide="info" class="h-4 w-4 flex-shrink-0 mt-0.5"></i>
+                                <span>Default password: <strong>Student123!</strong> Student will be prompted to change on first login.</span>
+                            </p>
                         </div>
                     </div>
                     <div class="flex justify-end gap-2 mt-6">
@@ -135,7 +141,6 @@ async function refreshMyStudents() {
         container.innerHTML = '<div class="text-center py-8 text-muted-foreground">No students yet. Click "Add Student" to get started.</div>';
     }
     
-    // Update stats with null checks
     updateStats(students);
     
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
@@ -145,20 +150,17 @@ async function refreshMyStudents() {
 
 // Update stats with null checks
 function updateStats(students) {
-    // Update student count
     const countElement = document.getElementById('my-students-count');
     if (countElement) {
         countElement.textContent = students ? students.length : 0;
     }
     
-    // Update classes count
     const classesElement = document.getElementById('my-classes-count');
     if (classesElement && students) {
         const uniqueClasses = [...new Set(students.map(s => s.grade).filter(Boolean))];
         classesElement.textContent = uniqueClasses.length;
     }
     
-    // Update class average
     const avgElement = document.getElementById('class-average');
     if (avgElement && students && students.length > 0) {
         const total = students.reduce((sum, s) => sum + (s.average || 0), 0);
@@ -166,13 +168,11 @@ function updateStats(students) {
         avgElement.textContent = avg + '%';
     }
     
-    // Update attendance today (placeholder)
     const attendanceElement = document.getElementById('attendance-today');
     if (attendanceElement) {
         attendanceElement.textContent = '0/0';
     }
     
-    // Update pending tasks (placeholder)
     const tasksElement = document.getElementById('pending-tasks');
     if (tasksElement) {
         tasksElement.textContent = '0';
@@ -181,7 +181,6 @@ function updateStats(students) {
 
 // ============ STUDENT DETAILS MODAL ============
 
-// View student details - FIXED version
 async function viewStudentDetails(studentId) {
     showLoading();
     try {
@@ -202,7 +201,6 @@ async function viewStudentDetails(studentId) {
     }
 }
 
-// Show student details modal
 function showStudentDetailsModal(student) {
     let modal = document.getElementById('student-details-modal');
     
@@ -223,7 +221,6 @@ function showStudentDetailsModal(student) {
     }
 }
 
-// Create student details modal
 function createStudentDetailsModal() {
     const modalHTML = `
         <div id="student-details-modal" class="fixed inset-0 z-50 hidden">
@@ -246,7 +243,6 @@ function createStudentDetailsModal() {
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
-// Get student details HTML
 function getStudentDetailsHTML(student) {
     const user = student.User || {};
     
@@ -282,7 +278,7 @@ function getStudentDetailsHTML(student) {
                     </div>
                     <div>
                         <p class="text-muted-foreground">Status</p>
-                        <p><span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-100 text-green-700">
+                        <p><span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(student.status)}">
                             ${student.status || 'active'}
                         </span></p>
                     </div>
@@ -325,7 +321,6 @@ function getStudentDetailsHTML(student) {
     `;
 }
 
-// Close student details modal
 function closeStudentDetailsModal() {
     const modal = document.getElementById('student-details-modal');
     if (modal) {
@@ -333,7 +328,8 @@ function closeStudentDetailsModal() {
     }
 }
 
-// Render students table
+// ============ RENDER STUDENTS TABLE WITH DELETE BUTTON ============
+
 function renderStudentsTable(students) {
     if (!students || students.length === 0) {
         return '<div class="text-center py-8 text-muted-foreground">No students found</div>';
@@ -349,52 +345,93 @@ function renderStudentsTable(students) {
                         <th class="px-4 py-3 text-left font-medium">ELIMUID</th>
                         <th class="px-4 py-3 text-left font-medium">Attendance</th>
                         <th class="px-4 py-3 text-left font-medium">Average</th>
+                        <th class="px-4 py-3 text-center font-medium">Status</th>
                         <th class="px-4 py-3 text-right font-medium">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y">
-                    ${students.map(student => `
-                        <tr class="hover:bg-accent/50 transition-colors">
-                            <td class="px-4 py-3">
-                                <div class="flex items-center gap-3">
-                                    <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                        <span class="font-medium text-blue-700 text-sm">${getInitials(student.User?.name)}</span>
+                    ${students.map(student => {
+                        const user = student.User || {};
+                        const status = student.status || 'active';
+                        const statusColor = getStatusColor(status);
+                        
+                        return `
+                            <tr class="hover:bg-accent/50 transition-colors">
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                            <span class="font-medium text-blue-700 text-sm">${getInitials(user.name)}</span>
+                                        </div>
+                                        <span class="font-medium">${user.name || 'Unknown'}</span>
                                     </div>
-                                    <span class="font-medium">${student.User?.name || 'Unknown'}</span>
-                                </div>
-                            </td>
-                            <td class="px-4 py-3">${student.grade || 'N/A'}</td>
-                            <td class="px-4 py-3">
-                                <span class="font-mono text-xs bg-muted px-2 py-1 rounded">${student.elimuid || 'N/A'}</span>
-                            </td>
-                            <td class="px-4 py-3">
-                                <div class="flex items-center gap-2">
-                                    <div class="h-2 w-16 rounded-full bg-muted overflow-hidden">
-                                        <div class="h-full w-[${student.attendance || 95}%] bg-green-500 rounded-full"></div>
+                                </td>
+                                <td class="px-4 py-3">${student.grade || 'N/A'}</td>
+                                <td class="px-4 py-3">
+                                    <span class="font-mono text-xs bg-muted px-2 py-1 rounded">${student.elimuid || 'N/A'}</span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-2">
+                                        <div class="h-2 w-16 rounded-full bg-muted overflow-hidden">
+                                            <div class="h-full w-[${student.attendance || 95}%] bg-green-500 rounded-full"></div>
+                                        </div>
+                                        <span class="text-xs">${student.attendance || 95}%</span>
                                     </div>
-                                    <span class="text-xs">${student.attendance || 95}%</span>
-                                </div>
-                            </td>
-                            <td class="px-4 py-3">
-                                <span class="font-semibold ${(student.average || 0) > 80 ? 'text-green-600' : (student.average || 0) > 60 ? 'text-yellow-600' : 'text-red-600'}">${student.average || 0}%</span>
-                            </td>
-                            <td class="px-4 py-3 text-right">
-                                <button onclick="copyElimuid('${student.elimuid}')" class="p-2 hover:bg-accent rounded-lg" title="Copy ELIMUID">
-                                    <i data-lucide="copy" class="h-4 w-4"></i>
-                                </button>
-                                <button onclick="viewStudentDetails('${student.id}')" class="p-2 hover:bg-accent rounded-lg" title="View Details">
-                                    <i data-lucide="eye" class="h-4 w-4"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `).join('')}
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="font-semibold ${(student.average || 0) > 80 ? 'text-green-600' : (student.average || 0) > 60 ? 'text-yellow-600' : 'text-red-600'}">${student.average || 0}%</span>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${statusColor}">
+                                        ${status}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <button onclick="copyElimuid('${student.elimuid}')" class="p-2 hover:bg-accent rounded-lg" title="Copy ELIMUID">
+                                            <i data-lucide="copy" class="h-4 w-4"></i>
+                                        </button>
+                                        <button onclick="viewStudentDetails('${student.id}')" class="p-2 hover:bg-accent rounded-lg" title="View Details">
+                                            <i data-lucide="eye" class="h-4 w-4"></i>
+                                        </button>
+                                        <button onclick="deleteStudent('${student.id}', '${user.name || 'Unknown'}')" 
+                                                class="p-2 hover:bg-red-100 rounded-lg text-red-600" title="Delete Student">
+                                            <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
                 </tbody>
             </table>
         </div>
     `;
 }
 
-// Copy ELIMUID to clipboard
+// ============ DELETE STUDENT FUNCTION ============
+
+async function deleteStudent(studentId, studentName) {
+    if (!confirm(`⚠️ Are you sure you want to remove ${studentName} from your class? This action cannot be undone.`)) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.teacher.deleteStudent(studentId);
+        
+        if (response.success) {
+            showToast(`✅ ${studentName} removed from class`, 'success');
+            await refreshMyStudents();
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to delete student', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// ============ UTILITY FUNCTIONS ============
+
 function copyElimuid(elimuid) {
     navigator.clipboard.writeText(elimuid).then(() => {
         showToast('✅ ELIMUID copied to clipboard', 'success');
@@ -403,7 +440,6 @@ function copyElimuid(elimuid) {
     });
 }
 
-// Helper function for formatting dates
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -413,22 +449,29 @@ function formatDate(dateString) {
     });
 }
 
-// Helper function for initials
 function getInitials(name) {
     if (!name) return '?';
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 }
 
+function getStatusColor(status) {
+    switch(status?.toLowerCase()) {
+        case 'active': return 'bg-green-100 text-green-700';
+        case 'suspended': return 'bg-red-100 text-red-700';
+        case 'graduated': return 'bg-blue-100 text-blue-700';
+        case 'transferred': return 'bg-purple-100 text-purple-700';
+        default: return 'bg-gray-100 text-gray-700';
+    }
+}
+
 // ============ TASK MANAGEMENT ============
 
-// Add teacher task
 function addTeacherTask() {
     showToast('Add task feature coming soon', 'info');
 }
 
 // ============ MARKS MANAGEMENT ============
 
-// Enter marks
 async function enterMarks(marksData) {
     showLoading();
     try {
@@ -443,7 +486,6 @@ async function enterMarks(marksData) {
     }
 }
 
-// Save student grade
 async function saveStudentGrade(button) {
     const row = button.closest('tr');
     const studentId = row.dataset.studentId;
@@ -473,7 +515,6 @@ async function saveStudentGrade(button) {
     }
 }
 
-// Update grade display
 function updateGradeDisplay(input, curriculum, level) {
     const row = input.closest('tr');
     const score = parseInt(input.value);
@@ -506,7 +547,6 @@ function updateGradeDisplay(input, curriculum, level) {
 
 // ============ ATTENDANCE MANAGEMENT ============
 
-// Take attendance
 async function takeAttendance(attendanceData) {
     showLoading();
     try {
@@ -521,7 +561,6 @@ async function takeAttendance(attendanceData) {
     }
 }
 
-// Save attendance
 async function saveAttendance() {
     const rows = document.querySelectorAll('[data-student-id]');
     const attendanceData = [];
@@ -561,7 +600,6 @@ async function saveAttendance() {
 
 // ============ COMMENT MANAGEMENT ============
 
-// Add comment
 async function addComment(studentId, comment) {
     showLoading();
     try {
@@ -578,7 +616,6 @@ async function addComment(studentId, comment) {
 
 // ============ CSV UPLOAD ============
 
-// Upload marks CSV
 async function uploadMarksCSV(file, onProgress) {
     const formData = new FormData();
     formData.append('file', file);
@@ -593,26 +630,65 @@ async function uploadMarksCSV(file, onProgress) {
     }
 }
 
-// Delete student from class
-async function deleteStudent(studentId, studentName) {
-    if (!confirm(`⚠️ Are you sure you want to remove ${studentName} from your class? This action cannot be undone.`)) {
-        return;
-    }
-    
-    showLoading();
+// ============ PARENT MESSAGING ============
+
+async function loadTeacherMessages() {
     try {
-        const response = await api.teacher.deleteStudent(studentId);
+        const response = await api.teacher.getConversations();
+        const conversations = response.data || [];
         
-        if (response.success) {
-            showToast(`✅ ${studentName} removed from class`, 'success');
-            
-            // Refresh the students list
-            await refreshMyStudents();
+        const container = document.getElementById('teacher-messages-list');
+        const badge = document.getElementById('teacher-message-count-badge');
+        
+        if (!container) return;
+        
+        let totalUnread = 0;
+        let html = '';
+        
+        if (conversations.length === 0) {
+            html = `
+                <div class="text-center text-muted-foreground py-8">
+                    <i data-lucide="message-circle" class="h-12 w-12 mx-auto mb-3 opacity-50"></i>
+                    <p>No messages from parents yet</p>
+                </div>
+            `;
+        } else {
+            conversations.forEach(conv => {
+                totalUnread += conv.unreadCount || 0;
+                
+                html += `
+                    <div class="p-3 border rounded-lg hover:bg-accent cursor-pointer transition-all ${conv.unreadCount > 0 ? 'bg-primary/5 border-primary' : ''}"
+                         onclick="openTeacherConversation('${conv.userId}')">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-medium">${conv.userName || 'Parent'}</p>
+                                <p class="text-xs text-muted-foreground">${conv.studentName ? `about ${conv.studentName}` : ''}</p>
+                                <p class="text-sm mt-1">${conv.lastMessage?.substring(0, 50) || ''}${conv.lastMessage?.length > 50 ? '...' : ''}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-muted-foreground">${timeAgo(conv.lastMessageTime)}</p>
+                                ${conv.unreadCount > 0 ? 
+                                    `<span class="bg-red-500 text-white text-xs rounded-full px-2 py-1 mt-1 inline-block">${conv.unreadCount}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
         }
+        
+        if (badge) {
+            badge.textContent = totalUnread;
+            if (totalUnread > 0) badge.classList.remove('hidden');
+        }
+        
+        container.innerHTML = html;
+        
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+        
     } catch (error) {
-        showToast(error.message || 'Failed to delete student', 'error');
-    } finally {
-        hideLoading();
+        console.error('Load messages error:', error);
     }
 }
 
@@ -639,3 +715,5 @@ window.uploadMarksCSV = uploadMarksCSV;
 window.formatDate = formatDate;
 window.getInitials = getInitials;
 window.deleteStudent = deleteStudent;
+window.loadTeacherMessages = loadTeacherMessages;
+window.getStatusColor = getStatusColor;
