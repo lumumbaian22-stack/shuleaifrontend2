@@ -805,7 +805,6 @@ async function processNameChange() {
 
 // ============ STUDENT AUTHENTICATION FUNCTIONS ============
 
-// Dedicated student login function
 function openStudentLoginModal() {
     currentRole = 'student';
     const modal = document.getElementById('auth-modal');
@@ -820,7 +819,7 @@ function openStudentLoginModal() {
             <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-4">
                 <p class="text-xs text-blue-600 dark:text-blue-400 flex items-start gap-2">
                     <i data-lucide="info" class="h-4 w-4 flex-shrink-0 mt-0.5"></i>
-                    <span>Welcome! Please login with your ELIMUID and password.</span>
+                    <span>Welcome! Use your ELIMUID and the default password: <strong>Student123!</strong></span>
                 </p>
             </div>
             <div>
@@ -830,7 +829,7 @@ function openStudentLoginModal() {
             </div>
             <div>
                 <label class="block text-sm font-medium mb-1">Password</label>
-                <input type="password" id="auth-password" 
+                <input type="password" id="auth-password" placeholder="Enter your password" 
                        class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
             </div>
             <div class="flex justify-end gap-2 mt-6">
@@ -839,7 +838,7 @@ function openStudentLoginModal() {
             </div>
             <div class="text-center mt-4 pt-4 border-t">
                 <p class="text-xs text-muted-foreground">
-                    First time? Use the temporary password provided by your teacher.<br>
+                    First time? Use default password: <strong>Student123!</strong><br>
                     You'll be asked to change it after logging in.
                 </p>
             </div>
