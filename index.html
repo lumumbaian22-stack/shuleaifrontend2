@@ -452,7 +452,6 @@
                         <p class="text-xs text-muted-foreground mt-1 mb-4">Platform oversight</p>
                         <div class="flex gap-2 w-full">
                             <button onclick="openAuthModal('superadmin', 'signin')" class="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90">Sign In</button>
-                            <button onclick="openAuthModal('superadmin', 'signup')" class="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium hover:bg-accent">Sign Up</button>
                         </div>
                     </div>
 
@@ -495,17 +494,17 @@
                         </div>
                     </div>
 
-                    <!-- Student - FIXED: Removed Sign Up button -->
+                    <!-- Student - UPDATED CARD -->
                     <div class="rounded-xl border bg-card p-6 card-hover flex flex-col items-center text-center">
                         <div class="h-16 w-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center mb-4 shadow-md">
                             <i data-lucide="graduation-cap" class="h-8 w-8 text-white"></i>
                         </div>
                         <h3 class="font-semibold text-lg">Student</h3>
-                        <p class="text-xs text-muted-foreground mt-1 mb-4">Learn & collaborate</p>
+                        <p class="text-xs text-muted-foreground mt-1 mb-4">Access your learning portal</p>
                         <div class="flex gap-2 w-full">
-                            <button onclick="openAuthModal('student', 'signin')" class="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90">Sign In</button>
-                            <!-- Sign Up button removed - students cannot sign up, only login -->
+                            <button onclick="openStudentLoginModal()" class="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90">Login</button>
                         </div>
+                        <p class="text-xs text-muted-foreground mt-3">New students: Get ELIMUID from your teacher</p>
                     </div>
                 </div>
             </div>
@@ -580,48 +579,26 @@
                     </button>
                 </div>
                 <div id="auth-modal-content" class="space-y-4"></div>
-                <div class="flex justify-end gap-2 mt-6">
-                    <button onclick="closeAuthModal()" class="px-4 py-2 text-sm font-medium rounded-lg border hover:bg-accent">Cancel</button>
-                    <button onclick="handleAuthSubmit()" class="px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Name Change Modal -->
+    <div id="name-change-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50" onclick="closeNameChangeModal()"></div>
+        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+            <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                <h3 class="text-lg font-semibold mb-4">Change School Name</h3>
+                <p class="text-sm text-muted-foreground mb-4">Fee: $50 (one-time payment)</p>
+                <input type="text" id="new-school-name" placeholder="New School Name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm mb-4">
+                <div class="flex justify-end gap-2">
+                    <button onclick="closeNameChangeModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
+                    <button onclick="processNameChange()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Proceed to Payment</button>
                 </div>
             </div>
         </div>
     </div>
 
-<!-- Name Change Modal -->
-<div id="name-change-modal" class="fixed inset-0 z-50 hidden">
-    <div class="absolute inset-0 bg-black/50" onclick="closeNameChangeModal()"></div>
-    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
-        <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
-            <h3 class="text-lg font-semibold mb-4">Request School Name Change</h3>
-            <p class="text-sm text-muted-foreground mb-4">Fee: $50 (one-time payment)</p>
-            
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">New School Name</label>
-                    <input type="text" id="new-school-name" placeholder="Enter new school name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium mb-1">Reason for Change (Optional)</label>
-                    <textarea id="change-reason" rows="3" placeholder="Why do you want to change the school name?" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"></textarea>
-                </div>
-                
-                <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-                    <p class="text-xs text-blue-600 dark:text-blue-400 flex items-start gap-2">
-                        <i data-lucide="info" class="h-4 w-4 flex-shrink-0 mt-0.5"></i>
-                        <span>Your request will be sent to Super Admin for approval. You'll be notified once it's processed.</span>
-                    </p>
-                </div>
-            </div>
-            
-            <div class="flex justify-end gap-2 mt-6">
-                <button onclick="closeNameChangeModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
-                <button onclick="processNameChange()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Submit Request</button>
-            </div>
-        </div>
-    </div>
-</div>
     <!-- DASHBOARD CONTAINER -->
     <div id="dashboard-container" style="display: none;">
         <!-- Mobile overlay -->
@@ -636,10 +613,7 @@
                         <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-violet-600">
                             <i data-lucide="graduation-cap" class="h-5 w-5 text-white"></i>
                         </div>
-                        <div class="flex flex-col">
-                            <span class="text-lg font-bold bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">ShuleAI</span>
-                            <span id="sidebar-school-name" class="text-xs text-muted-foreground truncate max-w-[150px]"></span>
-                        </div>
+                        <span class="text-lg font-bold bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">ShuleAI</span>
                     </div>
                 </div>
                 
@@ -749,49 +723,12 @@
         </div>
     </div>
 
-<!-- JavaScript Modules - Load in correct order -->
-<script src="js/api.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/websocket.js"></script>
-<script src="js/duty.js"></script>                 <!-- Defines loadTodayDuty, loadWeeklyDuty, etc. -->
-<script src="js/super-admin-approvals.js"></script> <!-- Defines loadPendingSchools, loadAllSchools, etc. -->
-<script src="js/admin-approvals.js"></script>      <!-- Defines loadPendingTeachers, loadAllTeachers, etc. -->
-<script src="js/teacher-features.js"></script>     <!-- Defines loadMyStudents, etc. -->
-<script src="js/upload.js"></script>
-<script src="js/analytics.js"></script>
-<script src="js/main.js"></script>                  <!-- This should be LAST -->
-
-<script>
-// FINAL FIX - This runs after all scripts and ensures correct functions
-document.addEventListener('DOMContentLoaded', function() {
-    // Store the correct admin function
-    const adminViewStudent = window.viewStudent;
-    
-    // Override any attempts to use the wrong function
-    window.viewStudentDetails = function(id) {
-        console.log('Redirecting to admin viewStudent');
-        if (adminViewStudent) {
-            return adminViewStudent(id);
-        }
-        alert('Error: View function not available');
-    };
-    
-    // Fix all buttons on the page
-    function fixAllButtons() {
-        document.querySelectorAll('button[onclick*="viewStudentDetails"]').forEach(btn => {
-            const match = btn.getAttribute('onclick').match(/\d+/);
-            if (match) {
-                btn.setAttribute('onclick', `viewStudent('${match[0]}')`);
-            }
-        });
-    }
-    
-    // Run immediately and observe changes
-    fixAllButtons();
-    const observer = new MutationObserver(fixAllButtons);
-    observer.observe(document.body, { childList: true, subtree: true });
-});
-</script>
+    <!-- JavaScript Modules -->
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/upload.js"></script>
+    <script src="js/websocket.js"></script>
+    <script src="js/main.js"></script>
 </body>
-
 </html>
