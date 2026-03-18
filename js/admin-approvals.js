@@ -1,4 +1,4 @@
-// admin-approvals.js - Complete with suspend/reactivate functions
+// admin-approvals.js - Complete with suspend/reactivate, expel, and class management
 
 // ============ LOAD FUNCTIONS ============
 
@@ -158,8 +158,9 @@ async function removeTeacher(teacherId) {
     }
 }
 
-// ============ STUDENT SUSPEND/REACTIVATE FUNCTIONS ============
+// ============ STUDENT SUSPEND/REACTIVATE/EXPEL FUNCTIONS ============
 
+// Suspend student
 async function suspendStudent(studentId, studentName) {
     const reason = prompt(`Enter suspension reason for ${studentName}:`);
     if (!reason) return;
@@ -183,6 +184,7 @@ async function suspendStudent(studentId, studentName) {
     }
 }
 
+// Reactivate student
 async function reactivateStudent(studentId, studentName) {
     if (!confirm(`Reactivate ${studentName}? The student will be able to log in again.`)) {
         return;
@@ -198,6 +200,56 @@ async function reactivateStudent(studentId, studentName) {
         }
     } catch (error) {
         showToast(error.message || 'Failed to reactivate student', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Expel student (permanent removal from school)
+async function expelStudent(studentId, studentName) {
+    const reason = prompt(`Enter reason for expelling ${studentName}:`);
+    if (!reason) return;
+    
+    if (!confirm(`⚠️⚠️ WARNING: This will permanently expel ${studentName} from the school. All data will be archived. Continue?`)) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.admin.expelStudent(studentId, { reason });
+        
+        if (response.success) {
+            showToast(`✅ ${studentName} expelled from school`, 'success');
+            await refreshStudentsList();
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to expel student', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Delete student (permanent deletion)
+async function deleteStudent(studentId, studentName) {
+    if (!confirm(`⚠️ Are you sure you want to permanently delete ${studentName}? This action cannot be undone.`)) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.admin.deleteStudent(studentId);
+        
+        if (response.success) {
+            showToast(`✅ ${studentName} deleted successfully`, 'success');
+            await refreshStudentsList();
+        }
+    } catch (error) {
+        console.error('Delete error:', error);
+        if (error.message.includes('403') || error.message.includes('Forbidden')) {
+            showToast('You do not have permission to delete students. Contact super admin.', 'error');
+        } else {
+            showToast(error.message || 'Failed to delete student', 'error');
+        }
     } finally {
         hideLoading();
     }
@@ -234,25 +286,24 @@ async function viewStudent(studentId) {
 
     showLoading();
     try {
-        const user = getCurrentUser();
-        let students = [];
-
-        if (user?.role === 'teacher') {
-            students = await loadMyStudents();
-        } else if (user?.role === 'admin' || user?.role === 'super_admin') {
-            students = await loadAllStudents();
-        } else {
-            showToast('Unauthorized', 'error');
-            return;
+        // Try direct API call first
+        let student = null;
+        
+        try {
+            const response = await api.admin.getStudentDetails(studentId);
+            if (response.success && response.data) {
+                student = response.data;
+            }
+        } catch (directError) {
+            console.log('Direct fetch failed, trying fallback');
         }
-
-        if (!Array.isArray(students) || students.length === 0) {
-            showToast('No students found', 'error');
-            return;
+        
+        // Fallback: search in all students
+        if (!student) {
+            const students = await loadAllStudents();
+            student = students.find(s => s.id == studentId);
         }
-
-        const student = students.find(s => s?.id == studentId);
-
+        
         if (!student) {
             showToast('Student not found', 'error');
             return;
@@ -450,6 +501,14 @@ function renderStudentsTable(students) {
                                                 <i data-lucide="check-circle" class="h-4 w-4 text-green-600"></i>
                                             </button>`
                                         }
+                                        <button onclick="expelStudent('${student.id}', '${user.name || 'Unknown'}')" 
+                                                class="p-2 hover:bg-red-100 rounded-lg text-red-600" title="Expel">
+                                            <i data-lucide="user-x" class="h-4 w-4"></i>
+                                        </button>
+                                        <button onclick="deleteStudent('${student.id}', '${user.name || 'Unknown'}')" 
+                                                class="p-2 hover:bg-red-100 rounded-lg text-red-600" title="Delete">
+                                            <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                        </button>
                                         <button onclick="copyElimuid('${student.elimuid}')" class="p-2 hover:bg-purple-50 rounded-lg" title="Copy">
                                             <i data-lucide="copy" class="h-4 w-4 text-purple-600"></i>
                                         </button>
@@ -694,6 +753,16 @@ function getStudentDetailsHTML(student) {
                     '<p class="text-sm text-muted-foreground">No parents linked</p>'}
             </div>
             
+            <div class="border-t pt-4">
+                <h4 class="font-medium mb-2">Assigned Teacher</h4>
+                ${student.teacher ? 
+                    `<div class="p-2 bg-muted/30 rounded">
+                        <p class="font-medium">${student.teacher.User?.name || 'Unknown'}</p>
+                        <p class="text-xs text-muted-foreground">${student.teacher.User?.email || ''}</p>
+                    </div>` : 
+                    '<p class="text-sm text-muted-foreground">No teacher assigned</p>'}
+            </div>
+            
             <div class="flex justify-end gap-2 pt-4 border-t">
                 <button onclick="closeStudentDetailsModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Close</button>
                 <button onclick="editStudent('${student.id}')" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Edit Student</button>
@@ -704,6 +773,11 @@ function getStudentDetailsHTML(student) {
             </div>
         </div>
     `;
+}
+
+function showTeacherDetailsModal(teacher) {
+    const user = teacher.User || {};
+    alert(`Teacher: ${user.name}\nEmail: ${user.email}\nSubjects: ${(teacher.subjects || []).join(', ')}`);
 }
 
 function editStudent(studentId) {
@@ -717,6 +791,8 @@ window.reactivateTeacher = reactivateTeacher;
 window.removeTeacher = removeTeacher;
 window.suspendStudent = suspendStudent;
 window.reactivateStudent = reactivateStudent;
+window.expelStudent = expelStudent;
+window.deleteStudent = deleteStudent;
 window.loadPendingTeachers = loadPendingTeachers;
 window.loadAllTeachers = loadAllTeachers;
 window.loadAllStudents = loadAllStudents;
