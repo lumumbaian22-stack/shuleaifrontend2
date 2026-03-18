@@ -1,5 +1,4 @@
 // admin-approvals.js - Complete with suspend/reactivate, expel, and class management
-
 // ============ LOAD FUNCTIONS ============
 
 async function loadPendingTeachers() {
@@ -134,6 +133,63 @@ async function reactivateTeacher(teacherId) {
     }
 }
 
+// ============ TEACHER ACTIVATION/DEACTIVATION ============
+
+// Deactivate teacher (suspend without deleting)
+async function deactivateTeacher(teacherId, teacherName) {
+    const reason = prompt(`Enter reason for deactivating ${teacherName}:`);
+    if (!reason) return;
+    
+    if (!confirm(`⚠️ Deactivate ${teacherName}? They will not be able to log in.`)) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.admin.deactivateTeacher(teacherId, { reason });
+        
+        if (response.success) {
+            showToast(`✅ ${teacherName} deactivated`, 'success');
+            await refreshTeachersList();
+            
+            // Emit real-time update
+            if (typeof emitTeacherUpdate === 'function') {
+                emitTeacherUpdate('deactivated', { id: teacherId, name: teacherName, reason });
+            }
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to deactivate teacher', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Activate teacher
+async function activateTeacher(teacherId, teacherName) {
+    if (!confirm(`Activate ${teacherName}? They will be able to log in again.`)) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.admin.activateTeacher(teacherId);
+        
+        if (response.success) {
+            showToast(`✅ ${teacherName} activated`, 'success');
+            await refreshTeachersList();
+            
+            // Emit real-time update
+            if (typeof emitTeacherUpdate === 'function') {
+                emitTeacherUpdate('activated', { id: teacherId, name: teacherName });
+            }
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to activate teacher', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
 async function removeTeacher(teacherId) {
     if (!teacherId) return;
     if (!confirm('⚠️ PERMANENT DELETE?')) return;
@@ -176,6 +232,11 @@ async function suspendStudent(studentId, studentName) {
         if (response.success) {
             showToast(`✅ ${studentName} suspended successfully`, 'success');
             await refreshStudentsList();
+            
+            // Emit real-time update
+            if (typeof emitStudentUpdate === 'function') {
+                emitStudentUpdate('suspended', { id: studentId, name: studentName, reason });
+            }
         }
     } catch (error) {
         showToast(error.message || 'Failed to suspend student', 'error');
@@ -197,6 +258,11 @@ async function reactivateStudent(studentId, studentName) {
         if (response.success) {
             showToast(`✅ ${studentName} reactivated`, 'success');
             await refreshStudentsList();
+            
+            // Emit real-time update
+            if (typeof emitStudentUpdate === 'function') {
+                emitStudentUpdate('reactivated', { id: studentId, name: studentName });
+            }
         }
     } catch (error) {
         showToast(error.message || 'Failed to reactivate student', 'error');
@@ -221,6 +287,11 @@ async function expelStudent(studentId, studentName) {
         if (response.success) {
             showToast(`✅ ${studentName} expelled from school`, 'success');
             await refreshStudentsList();
+            
+            // Emit real-time update
+            if (typeof emitStudentUpdate === 'function') {
+                emitStudentUpdate('expelled', { id: studentId, name: studentName, reason });
+            }
         }
     } catch (error) {
         showToast(error.message || 'Failed to expel student', 'error');
@@ -242,6 +313,11 @@ async function deleteStudent(studentId, studentName) {
         if (response.success) {
             showToast(`✅ ${studentName} deleted successfully`, 'success');
             await refreshStudentsList();
+            
+            // Emit real-time update
+            if (typeof emitStudentUpdate === 'function') {
+                emitStudentUpdate('deleted', { id: studentId, name: studentName });
+            }
         }
     } catch (error) {
         console.error('Delete error:', error);
@@ -314,6 +390,370 @@ async function viewStudent(studentId) {
     } catch (error) {
         console.error(error);
         showToast(error.message || 'Failed to load student', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// ============ EDIT TEACHER - WORKING MODAL ============
+
+async function editTeacher(teacherId) {
+    if (!teacherId) return;
+    
+    showLoading();
+    try {
+        const teachers = await loadAllTeachers();
+        const teacher = teachers.find(t => t?.id == teacherId);
+
+        if (!teacher) {
+            showToast('Teacher not found', 'error');
+            return;
+        }
+
+        showEditTeacherModal(teacher);
+    } catch (error) {
+        console.error(error);
+        showToast('Failed to load teacher data', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+function showEditTeacherModal(teacher) {
+    let modal = document.getElementById('edit-teacher-modal');
+    
+    if (!modal) {
+        createEditTeacherModal();
+        modal = document.getElementById('edit-teacher-modal');
+    }
+    
+    const user = teacher.User || {};
+    
+    // Populate form fields
+    document.getElementById('edit-teacher-id').value = teacher.id;
+    document.getElementById('edit-teacher-name').value = user.name || '';
+    document.getElementById('edit-teacher-email').value = user.email || '';
+    document.getElementById('edit-teacher-phone').value = user.phone || '';
+    document.getElementById('edit-teacher-department').value = teacher.department || 'general';
+    document.getElementById('edit-teacher-subjects').value = (teacher.subjects || []).join(', ');
+    document.getElementById('edit-teacher-qualification').value = teacher.qualification || '';
+    
+    modal.classList.remove('hidden');
+    
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+function createEditTeacherModal() {
+    const modalHTML = `
+        <div id="edit-teacher-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeEditTeacherModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Edit Teacher</h3>
+                        <button onclick="closeEditTeacherModal()" class="p-2 hover:bg-accent rounded-lg">
+                            <i data-lucide="x" class="h-5 w-5"></i>
+                        </button>
+                    </div>
+                    
+                    <input type="hidden" id="edit-teacher-id">
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Full Name</label>
+                            <input type="text" id="edit-teacher-name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Email</label>
+                            <input type="email" id="edit-teacher-email" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Phone</label>
+                            <input type="tel" id="edit-teacher-phone" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Department</label>
+                            <select id="edit-teacher-department" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                                <option value="general">General</option>
+                                <option value="mathematics">Mathematics</option>
+                                <option value="science">Science</option>
+                                <option value="languages">Languages</option>
+                                <option value="humanities">Humanities</option>
+                                <option value="technical">Technical</option>
+                                <option value="sports">Sports</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Subjects (comma separated)</label>
+                            <input type="text" id="edit-teacher-subjects" placeholder="Mathematics, Physics, Chemistry" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Qualification</label>
+                            <input type="text" id="edit-teacher-qualification" placeholder="e.g., B.Ed, M.Sc" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button onclick="closeEditTeacherModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
+                        <button onclick="saveTeacherChanges()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function closeEditTeacherModal() {
+    const modal = document.getElementById('edit-teacher-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function saveTeacherChanges() {
+    const teacherId = document.getElementById('edit-teacher-id')?.value;
+    if (!teacherId) {
+        showToast('Teacher ID not found', 'error');
+        return;
+    }
+    
+    const subjectsRaw = document.getElementById('edit-teacher-subjects')?.value || '';
+    const teacherData = {
+        name: document.getElementById('edit-teacher-name')?.value,
+        email: document.getElementById('edit-teacher-email')?.value,
+        phone: document.getElementById('edit-teacher-phone')?.value,
+        department: document.getElementById('edit-teacher-department')?.value,
+        subjects: subjectsRaw ? subjectsRaw.split(',').map(s => s.trim()) : [],
+        qualification: document.getElementById('edit-teacher-qualification')?.value
+    };
+    
+    if (!teacherData.name) {
+        showToast('Teacher name is required', 'error');
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.admin.updateTeacher(teacherId, teacherData);
+        
+        if (response.success) {
+            showToast('✅ Teacher updated successfully', 'success');
+            closeEditTeacherModal();
+            await refreshTeachersList();
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to update teacher', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// ============ EDIT STUDENT - WORKING MODAL ============
+
+async function editStudent(studentId) {
+    if (!studentId) return;
+    
+    showLoading();
+    try {
+        // Try direct API first
+        let student = null;
+        
+        try {
+            const response = await api.admin.getStudentDetails(studentId);
+            if (response.success && response.data) {
+                student = response.data;
+            }
+        } catch (directError) {
+            console.log('Direct fetch failed, falling back to list');
+        }
+        
+        // Fallback to list
+        if (!student) {
+            const students = await loadAllStudents();
+            student = students.find(s => s.id == studentId);
+        }
+        
+        if (!student) {
+            showToast('Student not found', 'error');
+            return;
+        }
+
+        showEditStudentModal(student);
+    } catch (error) {
+        console.error(error);
+        showToast('Failed to load student data', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+function showEditStudentModal(student) {
+    let modal = document.getElementById('edit-student-modal');
+    
+    if (!modal) {
+        createEditStudentModal();
+        modal = document.getElementById('edit-student-modal');
+    }
+    
+    const user = student.User || {};
+    
+    // Populate form fields
+    document.getElementById('edit-student-id').value = student.id;
+    document.getElementById('edit-student-name').value = user.name || '';
+    document.getElementById('edit-student-email').value = user.email || '';
+    document.getElementById('edit-student-grade').value = student.grade || '';
+    document.getElementById('edit-student-gender').value = student.gender || '';
+    document.getElementById('edit-student-dob').value = student.dateOfBirth ? student.dateOfBirth.split('T')[0] : '';
+    document.getElementById('edit-student-status').value = student.status || 'active';
+    
+    // Show/hide suspension reason based on status
+    const reasonContainer = document.getElementById('suspension-reason-container');
+    if (reasonContainer) {
+        if (student.status === 'suspended') {
+            reasonContainer.classList.remove('hidden');
+            document.getElementById('edit-suspension-reason').value = student.suspensionReason || '';
+        } else {
+            reasonContainer.classList.add('hidden');
+        }
+    }
+    
+    modal.classList.remove('hidden');
+    
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+function createEditStudentModal() {
+    const modalHTML = `
+        <div id="edit-student-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeEditStudentModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Edit Student</h3>
+                        <button onclick="closeEditStudentModal()" class="p-2 hover:bg-accent rounded-lg">
+                            <i data-lucide="x" class="h-5 w-5"></i>
+                        </button>
+                    </div>
+                    
+                    <input type="hidden" id="edit-student-id">
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Full Name</label>
+                            <input type="text" id="edit-student-name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Email (optional)</label>
+                            <input type="email" id="edit-student-email" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Grade/Class</label>
+                            <input type="text" id="edit-student-grade" placeholder="e.g., 10A, Form 2" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Gender</label>
+                                <select id="edit-student-gender" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                                    <option value="">Select</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Date of Birth</label>
+                                <input type="date" id="edit-student-dob" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Status</label>
+                            <select id="edit-student-status" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" onchange="toggleSuspensionReason(this.value)">
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                                <option value="graduated">Graduated</option>
+                                <option value="transferred">Transferred</option>
+                                <option value="suspended">Suspended</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Suspension Reason (shown when status is suspended) -->
+                        <div id="suspension-reason-container" class="hidden">
+                            <label class="block text-sm font-medium mb-1">Suspension Reason</label>
+                            <textarea id="edit-suspension-reason" rows="2" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="Enter reason for suspension..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button onclick="closeEditStudentModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
+                        <button onclick="saveStudentChanges()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// Global function for toggling suspension reason
+window.toggleSuspensionReason = function(status) {
+    const container = document.getElementById('suspension-reason-container');
+    if (container) {
+        if (status === 'suspended') {
+            container.classList.remove('hidden');
+        } else {
+            container.classList.add('hidden');
+        }
+    }
+};
+
+function closeEditStudentModal() {
+    const modal = document.getElementById('edit-student-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function saveStudentChanges() {
+    const studentId = document.getElementById('edit-student-id')?.value;
+    if (!studentId) {
+        showToast('Student ID not found', 'error');
+        return;
+    }
+    
+    const status = document.getElementById('edit-student-status')?.value;
+    const suspensionReason = document.getElementById('edit-suspension-reason')?.value;
+    
+    const studentData = {
+        name: document.getElementById('edit-student-name')?.value,
+        email: document.getElementById('edit-student-email')?.value,
+        grade: document.getElementById('edit-student-grade')?.value,
+        gender: document.getElementById('edit-student-gender')?.value,
+        dateOfBirth: document.getElementById('edit-student-dob')?.value,
+        status: status
+    };
+    
+    // Add suspension reason if status is suspended
+    if (status === 'suspended' && suspensionReason) {
+        studentData.suspensionReason = suspensionReason;
+    }
+    
+    if (!studentData.name || !studentData.grade) {
+        showToast('Name and grade are required', 'error');
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.admin.updateStudent(studentId, studentData);
+        
+        if (response.success) {
+            showToast('✅ Student updated successfully', 'success');
+            closeEditStudentModal();
+            await refreshStudentsList();
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to update student', 'error');
     } finally {
         hideLoading();
     }
@@ -394,9 +834,11 @@ function renderTeachersTable(teachers) {
                 <tbody class="divide-y">
                     ${teachers.map(teacher => {
                         const user = teacher.User || {};
-                        const status = teacher.approvalStatus || 'active';
+                        const isActive = teacher.isActive !== false;
+                        const status = isActive ? 'active' : 'inactive';
+                        
                         return `
-                            <tr class="hover:bg-accent/50 transition-colors">
+                            <tr class="hover:bg-accent/50 transition-colors" data-teacher-id="${teacher.id}">
                                 <td class="px-4 py-3">
                                     <div class="flex items-center gap-3">
                                         <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
@@ -412,16 +854,32 @@ function renderTeachersTable(teachers) {
                                 <td class="px-4 py-3">${teacher.department || 'general'}</td>
                                 <td class="px-4 py-3">
                                     <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium 
-                                        ${status === 'active' ? 'bg-green-100 text-green-700' : 
-                                          status === 'suspended' ? 'bg-yellow-100 text-yellow-700' : 
-                                          'bg-gray-100 text-gray-700'}">
+                                        ${isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}">
                                         ${status}
                                     </span>
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    <button onclick="viewTeacher('${teacher.id}')" class="p-2 hover:bg-accent rounded-lg" title="View">
-                                        <i data-lucide="eye" class="h-4 w-4"></i>
-                                    </button>
+                                    <div class="flex items-center justify-end gap-1">
+                                        <button onclick="viewTeacher('${teacher.id}')" class="p-2 hover:bg-accent rounded-lg" title="View">
+                                            <i data-lucide="eye" class="h-4 w-4"></i>
+                                        </button>
+                                        <button onclick="editTeacher('${teacher.id}')" class="p-2 hover:bg-accent rounded-lg" title="Edit">
+                                            <i data-lucide="edit" class="h-4 w-4"></i>
+                                        </button>
+                                        ${isActive ? 
+                                            `<button onclick="deactivateTeacher('${teacher.id}', '${user.name}')" 
+                                                    class="p-2 hover:bg-yellow-100 rounded-lg text-yellow-600" title="Deactivate">
+                                                <i data-lucide="pause-circle" class="h-4 w-4"></i>
+                                            </button>` : 
+                                            `<button onclick="activateTeacher('${teacher.id}', '${user.name}')" 
+                                                    class="p-2 hover:bg-green-100 rounded-lg text-green-600" title="Activate">
+                                                <i data-lucide="play-circle" class="h-4 w-4"></i>
+                                            </button>`
+                                        }
+                                        <button onclick="removeTeacher('${teacher.id}')" class="p-2 hover:bg-red-100 rounded-lg text-red-600" title="Delete">
+                                            <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         `;
@@ -460,7 +918,7 @@ function renderStudentsTable(students) {
                         const teacherName = student.teacher?.User?.name || 'Not assigned';
                         
                         return `
-                            <tr class="hover:bg-accent/50 transition-colors">
+                            <tr class="hover:bg-accent/50 transition-colors" data-student-id="${student.id}">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-4">
                                         <div class="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-semibold shadow-sm">
@@ -640,6 +1098,7 @@ function showStudentDetailsModal(student) {
     }
     
     modal.classList.remove('hidden');
+    modal.dataset.studentId = student.id;
     
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
         lucide.createIcons();
@@ -777,17 +1236,115 @@ function getStudentDetailsHTML(student) {
 
 function showTeacherDetailsModal(teacher) {
     const user = teacher.User || {};
-    alert(`Teacher: ${user.name}\nEmail: ${user.email}\nSubjects: ${(teacher.subjects || []).join(', ')}`);
+    const subjects = teacher.subjects || [];
+    
+    let modal = document.getElementById('teacher-details-modal');
+    
+    if (!modal) {
+        createTeacherDetailsModal();
+        modal = document.getElementById('teacher-details-modal');
+    }
+    
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) {
+        modalContent.innerHTML = `
+            <div class="space-y-4">
+                <div class="flex items-center gap-4">
+                    <div class="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
+                        <span class="font-medium text-blue-700 text-xl">${getInitials(user.name)}</span>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-lg">${user.name || 'N/A'}</h4>
+                        <p class="text-sm text-muted-foreground">${user.email || 'No email'}</p>
+                    </div>
+                </div>
+                
+                <div class="border-t pt-4">
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                            <p class="text-muted-foreground">Employee ID</p>
+                            <p class="font-medium">${teacher.employeeId || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p class="text-muted-foreground">Phone</p>
+                            <p class="font-medium">${user.phone || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p class="text-muted-foreground">Department</p>
+                            <p class="font-medium">${teacher.department || 'general'}</p>
+                        </div>
+                        <div>
+                            <p class="text-muted-foreground">Status</p>
+                            <p><span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${teacher.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}">
+                                ${teacher.isActive ? 'Active' : 'Inactive'}
+                            </span></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="border-t pt-4">
+                    <h4 class="font-medium mb-2">Subjects</h4>
+                    <div class="flex flex-wrap gap-2">
+                        ${subjects.map(subject => `
+                            <span class="px-2 py-1 bg-muted/30 rounded text-xs">${subject}</span>
+                        `).join('')}
+                        ${subjects.length === 0 ? '<p class="text-sm text-muted-foreground">No subjects assigned</p>' : ''}
+                    </div>
+                </div>
+                
+                <div class="border-t pt-4">
+                    <h4 class="font-medium mb-2">Qualification</h4>
+                    <p class="text-sm">${teacher.qualification || 'Not specified'}</p>
+                </div>
+                
+                <div class="flex justify-end gap-2 pt-4 border-t">
+                    <button onclick="closeTeacherDetailsModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Close</button>
+                    <button onclick="editTeacher('${teacher.id}')" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Edit Teacher</button>
+                </div>
+            </div>
+        `;
+    }
+    
+    modal.classList.remove('hidden');
+    
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
 }
 
-function editStudent(studentId) {
-    showToast(`Edit student ${studentId}`, 'info');
+function createTeacherDetailsModal() {
+    const modalHTML = `
+        <div id="teacher-details-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeTeacherDetailsModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Teacher Details</h3>
+                        <button onclick="closeTeacherDetailsModal()" class="p-2 hover:bg-accent rounded-lg">
+                            <i data-lucide="x" class="h-5 w-5"></i>
+                        </button>
+                    </div>
+                    <div class="modal-content space-y-4">
+                        <!-- Content will be filled dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function closeTeacherDetailsModal() {
+    const modal = document.getElementById('teacher-details-modal');
+    if (modal) modal.classList.add('hidden');
 }
 
 // ============ EXPORT FUNCTIONS ============
 
 window.suspendTeacher = suspendTeacher;
 window.reactivateTeacher = reactivateTeacher;
+window.deactivateTeacher = deactivateTeacher;
+window.activateTeacher = activateTeacher;
 window.removeTeacher = removeTeacher;
 window.suspendStudent = suspendStudent;
 window.reactivateStudent = reactivateStudent;
@@ -802,6 +1359,13 @@ window.approveTeacher = approveTeacher;
 window.rejectTeacher = rejectTeacher;
 window.viewTeacher = viewTeacher;
 window.viewStudent = viewStudent;
+window.editTeacher = editTeacher;
+window.editStudent = editStudent;
+window.saveTeacherChanges = saveTeacherChanges;
+window.saveStudentChanges = saveStudentChanges;
+window.closeEditTeacherModal = closeEditTeacherModal;
+window.closeEditStudentModal = closeEditStudentModal;
+window.closeTeacherDetailsModal = closeTeacherDetailsModal;
 window.refreshPendingTeachers = refreshPendingTeachers;
 window.refreshTeachersList = refreshTeachersList;
 window.refreshStudentsList = refreshStudentsList;
