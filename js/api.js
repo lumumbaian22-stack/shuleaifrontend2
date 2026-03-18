@@ -229,42 +229,51 @@ const adminAPI = {
             body: JSON.stringify(data)
         }),
     
-    // Class Management
+    // ============ CLASS MANAGEMENT ============
+    // Create a new class
     createClass: (data) => 
         apiRequest('/api/admin/classes', {
             method: 'POST',
             body: JSON.stringify(data)
         }),
     
+    // Get all classes
     getClasses: () => apiRequest('/api/admin/classes'),
     
+    // Update a class
     updateClass: (classId, data) => 
         apiRequest(`/api/admin/classes/${classId}`, {
             method: 'PUT',
             body: JSON.stringify(data)
         }),
     
+    // Delete a class
     deleteClass: (classId) => 
         apiRequest(`/api/admin/classes/${classId}`, {
             method: 'DELETE'
         }),
     
+    // Get available teachers for class assignment
     getAvailableTeachers: () => apiRequest('/api/admin/available-teachers'),
     
+    // Assign teacher to a class
     assignTeacherToClass: (classId, teacherId) => 
         apiRequest(`/api/admin/classes/${classId}/assign-teacher`, {
             method: 'POST',
             body: JSON.stringify({ teacherId })
         }),
     
+    // Remove teacher from a class
     removeTeacherFromClass: (classId) => 
         apiRequest(`/api/admin/classes/${classId}/remove-teacher`, {
             method: 'POST'
         }),
     
+    // Get students in a specific class
     getClassStudents: (classId) => 
         apiRequest(`/api/admin/classes/${classId}/students`),
     
+    // Student details
     getStudentDetails: (studentId) => 
         apiRequest(`/api/admin/students/${studentId}`),
     
@@ -314,9 +323,9 @@ const teacherAPI = {
     
     // Message system for parent communication
     getConversations: () => apiRequest('/api/teacher/conversations'),
-    getMessages: (parentId) => apiRequest(`/api/teacher/messages/${parentId}`),
-    markMessagesAsRead: (parentId) => 
-        apiRequest(`/api/teacher/messages/read/${parentId}`, {
+    getMessages: (otherUserId) => apiRequest(`/api/teacher/messages/${otherUserId}`),
+    markMessagesAsRead: (otherUserId) => 
+        apiRequest(`/api/teacher/messages/read/${otherUserId}`, {
             method: 'PUT'
         }),
     replyToParent: (data) => 
@@ -328,34 +337,55 @@ const teacherAPI = {
 
 // ============ PARENT ENDPOINTS ============
 const parentAPI = {
+    // Get all children linked to this parent
     getChildren: () => apiRequest('/api/parent/children'),
+    
+    // Get summary for a specific child
     getChildSummary: (studentId) => 
         apiRequest(`/api/parent/child/${studentId}/summary`),
+    
+    // Report absence for a child
     reportAbsence: (data) => 
         apiRequest('/api/parent/report-absence', {
             method: 'POST',
             body: JSON.stringify(data)
         }),
+    
+    // Make a payment
     makePayment: (data) => 
         apiRequest('/api/parent/pay', {
             method: 'POST',
             body: JSON.stringify(data)
         }),
+    
+    // Get payment history
     getPayments: () => apiRequest('/api/parent/payments'),
+    
+    // Get available subscription plans
     getSubscriptionPlans: () => apiRequest('/api/parent/plans'),
+    
+    // Upgrade subscription plan
     upgradePlan: (data) => 
         apiRequest('/api/parent/upgrade-plan', {
             method: 'POST',
             body: JSON.stringify(data)
         }),
+    
+    // Send message to teacher or admin
     sendMessage: (data) => 
-        apiRequest('/api/parent/send-message', {
+        apiRequest('/api/parent/message', {
             method: 'POST',
             body: JSON.stringify(data)
         }),
+    
+    // Get all conversations
     getConversations: () => apiRequest('/api/parent/conversations'),
-    getMessages: (teacherId) => 
-        apiRequest(`/api/parent/messages/${teacherId}`),
+    
+    // Get messages with a specific user
+    getMessages: (otherUserId) => 
+        apiRequest(`/api/parent/messages/${otherUserId}`),
+    
+    // Confirm payment
     confirmPayment: (data) => 
         apiRequest('/api/parent/payment-confirm', {
             method: 'POST',
@@ -365,10 +395,8 @@ const parentAPI = {
 
 // ============ STUDENT ENDPOINTS ============
 const studentAPI = {
-    getProfile: () => apiRequest('/api/student/profile'),
     getGrades: () => apiRequest('/api/student/grades'),
     getAttendance: () => apiRequest('/api/student/attendance'),
-    getSchedule: () => apiRequest('/api/student/schedule'),
     getMaterials: () => apiRequest('/api/student/materials'),
     sendMessage: (receiverId, content) => 
         apiRequest('/api/student/message', {
@@ -377,6 +405,7 @@ const studentAPI = {
         }),
     getMessages: (otherUserId) => 
         apiRequest(`/api/student/messages/${otherUserId}`),
+    // NEW: Set first password for students
     setFirstPassword: (data) => 
         apiRequest('/api/student/set-first-password', {
             method: 'POST',
