@@ -1,4 +1,29 @@
-// teacher-features.js - Complete file with all teacher functions including delete
+// teacher-features.js - Complete file with all teacher functions including delete, auto-class assignment, and attendance
+
+// ============ GLOBAL VARIABLES ============
+let teacherClass = null;
+
+// ============ INITIALIZATION ============
+async function initTeacherFeatures() {
+    // Get teacher's assigned class from user data
+    const user = getCurrentUser();
+    if (user && user.teacherClass) {
+        teacherClass = user.teacherClass;
+    } else {
+        // Try to fetch from API
+        try {
+            const response = await api.teacher.getMyProfile();
+            if (response.success && response.data) {
+                teacherClass = response.data.classTeacher;
+                // Update user object
+                user.teacherClass = teacherClass;
+                localStorage.setItem('user', JSON.stringify(user));
+            }
+        } catch (error) {
+            console.error('Failed to fetch teacher class:', error);
+        }
+    }
+}
 
 // ============ STUDENT MANAGEMENT ============
 
@@ -29,9 +54,11 @@ function createAddStudentModal() {
                             <label class="block text-sm font-medium mb-1">Full Name *</label>
                             <input type="text" id="modal-student-name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Grade/Class *</label>
-                            <input type="text" id="modal-student-grade" placeholder="e.g., 10A, Form 2" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
+                        <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                            <p class="text-xs text-blue-600 dark:text-blue-400 flex items-start gap-2">
+                                <i data-lucide="info" class="h-4 w-4 flex-shrink-0 mt-0.5"></i>
+                                <span>Student will be automatically assigned to your class: <strong id="teacher-class-display"></strong></span>
+                            </p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Parent Email</label>
@@ -66,6 +93,12 @@ function createAddStudentModal() {
         </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Update the teacher class display
+    const displayEl = document.getElementById('teacher-class-display');
+    if (displayEl && teacherClass) {
+        displayEl.textContent = teacherClass;
+    }
 }
 
 // Close add student modal
@@ -74,25 +107,36 @@ function closeAddStudentModal() {
     if (modal) {
         modal.classList.add('hidden');
         document.getElementById('modal-student-name') && (document.getElementById('modal-student-name').value = '');
-        document.getElementById('modal-student-grade') && (document.getElementById('modal-student-grade').value = '');
         document.getElementById('modal-parent-email') && (document.getElementById('modal-parent-email').value = '');
         document.getElementById('modal-student-dob') && (document.getElementById('modal-student-dob').value = '');
         document.getElementById('modal-student-gender') && (document.getElementById('modal-student-gender').value = '');
     }
 }
 
-// Handle add student from modal
+// Handle add student from modal - WITH AUTO CLASS ASSIGNMENT
 async function handleAddStudentModal() {
+    // Get current teacher's assigned class from user data
+    const user = getCurrentUser();
+    
+    if (!teacherClass && user?.teacherClass) {
+        teacherClass = user.teacherClass;
+    }
+    
+    if (!teacherClass) {
+        showToast('No class assigned to you. Please contact admin.', 'error');
+        return;
+    }
+    
     const studentData = {
         name: document.getElementById('modal-student-name')?.value,
-        grade: document.getElementById('modal-student-grade')?.value,
+        grade: teacherClass, // Auto-assign teacher's class
         parentEmail: document.getElementById('modal-parent-email')?.value,
         dateOfBirth: document.getElementById('modal-student-dob')?.value,
         gender: document.getElementById('modal-student-gender')?.value
     };
     
-    if (!studentData.name || !studentData.grade) {
-        showToast('Name and grade are required', 'error');
+    if (!studentData.name) {
+        showToast('Student name is required', 'error');
         return;
     }
     
@@ -105,8 +149,26 @@ async function addStudent(studentData) {
     showLoading();
     try {
         const response = await api.teacher.addStudent(studentData);
-        showToast(`✅ Student added! ELIMUID: ${response.data.elimuid}`, 'success');
-        await refreshMyStudents();
+        
+        if (response.success) {
+            showToast(`✅ Student added! ELIMUID: ${response.data.elimuid}`, 'success');
+            
+            // Refresh teacher's view
+            await refreshMyStudents();
+            
+            // Also notify admin dashboard to refresh (if open)
+            if (typeof window.refreshStudentsList === 'function') {
+                setTimeout(() => {
+                    window.refreshStudentsList();
+                }, 500);
+            }
+            
+            // Trigger a custom event for other tabs
+            window.dispatchEvent(new CustomEvent('student-added', { 
+                detail: { student: response.data }
+            }));
+        }
+        
         return response;
     } catch (error) {
         showToast(error.message || 'Failed to add student', 'error');
@@ -169,13 +231,126 @@ function updateStats(students) {
     }
     
     const attendanceElement = document.getElementById('attendance-today');
-    if (attendanceElement) {
-        attendanceElement.textContent = '0/0';
+    if (attendanceElement && students) {
+        // Calculate today's attendance
+        const today = new Date().toISOString().split('T')[0];
+        const presentToday = students.filter(s => {
+            const attendance = s.attendanceRecords || [];
+            return attendance.some(a => a.date === today && a.status === 'present');
+        }).length;
+        attendanceElement.textContent = `${presentToday}/${students.length}`;
     }
     
     const tasksElement = document.getElementById('pending-tasks');
     if (tasksElement) {
         tasksElement.textContent = '0';
+    }
+}
+
+// Render students table with delete button
+function renderStudentsTable(students) {
+    if (!students || students.length === 0) {
+        return '<div class="text-center py-8 text-muted-foreground">No students found</div>';
+    }
+    
+    return `
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-muted/50">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-medium">Student</th>
+                        <th class="px-4 py-3 text-left font-medium">Class</th>
+                        <th class="px-4 py-3 text-left font-medium">ELIMUID</th>
+                        <th class="px-4 py-3 text-left font-medium">Attendance</th>
+                        <th class="px-4 py-3 text-left font-medium">Average</th>
+                        <th class="px-4 py-3 text-center font-medium">Status</th>
+                        <th class="px-4 py-3 text-right font-medium">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+                    ${students.map(student => {
+                        const user = student.User || {};
+                        const status = student.status || 'active';
+                        const statusColor = getStatusColor(status);
+                        
+                        // Calculate attendance percentage
+                        const attendanceRecords = student.attendanceRecords || [];
+                        const presentCount = attendanceRecords.filter(a => a.status === 'present').length;
+                        const attendancePercent = attendanceRecords.length > 0 
+                            ? Math.round((presentCount / attendanceRecords.length) * 100) 
+                            : 95;
+                        
+                        return `
+                            <tr class="hover:bg-accent/50 transition-colors" data-student-id="${student.id}">
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                            <span class="font-medium text-blue-700 text-sm">${getInitials(user.name)}</span>
+                                        </div>
+                                        <span class="font-medium">${user.name || 'Unknown'}</span>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3">${student.grade || 'N/A'}</td>
+                                <td class="px-4 py-3">
+                                    <span class="font-mono text-xs bg-muted px-2 py-1 rounded">${student.elimuid || 'N/A'}</span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-2">
+                                        <div class="h-2 w-16 rounded-full bg-muted overflow-hidden">
+                                            <div class="h-full w-[${attendancePercent}%] bg-green-500 rounded-full"></div>
+                                        </div>
+                                        <span class="text-xs">${attendancePercent}%</span>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="font-semibold ${(student.average || 0) > 80 ? 'text-green-600' : (student.average || 0) > 60 ? 'text-yellow-600' : 'text-red-600'}">${student.average || 0}%</span>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${statusColor}">
+                                        ${status}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <button onclick="copyElimuid('${student.elimuid}')" class="p-2 hover:bg-accent rounded-lg" title="Copy ELIMUID">
+                                            <i data-lucide="copy" class="h-4 w-4"></i>
+                                        </button>
+                                        <button onclick="viewStudentDetails('${student.id}')" class="p-2 hover:bg-accent rounded-lg" title="View Details">
+                                            <i data-lucide="eye" class="h-4 w-4"></i>
+                                        </button>
+                                        <button onclick="deleteStudent('${student.id}', '${user.name || 'Unknown'}')" 
+                                                class="p-2 hover:bg-red-100 rounded-lg text-red-600" title="Delete Student">
+                                            <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+// Delete student from class
+async function deleteStudent(studentId, studentName) {
+    if (!confirm(`⚠️ Are you sure you want to remove ${studentName} from your class? This action cannot be undone.`)) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.teacher.deleteStudent(studentId);
+        
+        if (response.success) {
+            showToast(`✅ ${studentName} removed from class`, 'success');
+            await refreshMyStudents();
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to delete student', 'error');
+    } finally {
+        hideLoading();
     }
 }
 
@@ -245,6 +420,8 @@ function createStudentDetailsModal() {
 
 function getStudentDetailsHTML(student) {
     const user = student.User || {};
+    const status = student.status || 'active';
+    const statusColor = getStatusColor(status);
     
     return `
         <div class="space-y-4">
@@ -278,9 +455,7 @@ function getStudentDetailsHTML(student) {
                     </div>
                     <div>
                         <p class="text-muted-foreground">Status</p>
-                        <p><span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(student.status)}">
-                            ${student.status || 'active'}
-                        </span></p>
+                        <p><span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${statusColor}">${status}</span></p>
                     </div>
                     <div>
                         <p class="text-muted-foreground">Enrolled</p>
@@ -328,116 +503,141 @@ function closeStudentDetailsModal() {
     }
 }
 
-// ============ RENDER STUDENTS TABLE WITH DELETE BUTTON ============
+// ============ ATTENDANCE MANAGEMENT ============
 
-function renderStudentsTable(students) {
-    if (!students || students.length === 0) {
-        return '<div class="text-center py-8 text-muted-foreground">No students found</div>';
-    }
+// Save attendance - WITH AUTO REFRESH
+async function saveAttendance() {
+    const rows = document.querySelectorAll('[data-student-id]');
+    const attendanceData = [];
     
-    return `
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-muted/50">
-                    <tr>
-                        <th class="px-4 py-3 text-left font-medium">Student</th>
-                        <th class="px-4 py-3 text-left font-medium">Class</th>
-                        <th class="px-4 py-3 text-left font-medium">ELIMUID</th>
-                        <th class="px-4 py-3 text-left font-medium">Attendance</th>
-                        <th class="px-4 py-3 text-left font-medium">Average</th>
-                        <th class="px-4 py-3 text-center font-medium">Status</th>
-                        <th class="px-4 py-3 text-right font-medium">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y">
-                    ${students.map(student => {
-                        const user = student.User || {};
-                        const status = student.status || 'active';
-                        const statusColor = getStatusColor(status);
-                        
-                        return `
-                            <tr class="hover:bg-accent/50 transition-colors">
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center gap-3">
-                                        <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                            <span class="font-medium text-blue-700 text-sm">${getInitials(user.name)}</span>
-                                        </div>
-                                        <span class="font-medium">${user.name || 'Unknown'}</span>
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3">${student.grade || 'N/A'}</td>
-                                <td class="px-4 py-3">
-                                    <span class="font-mono text-xs bg-muted px-2 py-1 rounded">${student.elimuid || 'N/A'}</span>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center gap-2">
-                                        <div class="h-2 w-16 rounded-full bg-muted overflow-hidden">
-                                            <div class="h-full w-[${student.attendance || 95}%] bg-green-500 rounded-full"></div>
-                                        </div>
-                                        <span class="text-xs">${student.attendance || 95}%</span>
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <span class="font-semibold ${(student.average || 0) > 80 ? 'text-green-600' : (student.average || 0) > 60 ? 'text-yellow-600' : 'text-red-600'}">${student.average || 0}%</span>
-                                </td>
-                                <td class="px-4 py-3 text-center">
-                                    <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${statusColor}">
-                                        ${status}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    <div class="flex items-center justify-end gap-1">
-                                        <button onclick="copyElimuid('${student.elimuid}')" class="p-2 hover:bg-accent rounded-lg" title="Copy ELIMUID">
-                                            <i data-lucide="copy" class="h-4 w-4"></i>
-                                        </button>
-                                        <button onclick="viewStudentDetails('${student.id}')" class="p-2 hover:bg-accent rounded-lg" title="View Details">
-                                            <i data-lucide="eye" class="h-4 w-4"></i>
-                                        </button>
-                                        <button onclick="deleteStudent('${student.id}', '${user.name || 'Unknown'}')" 
-                                                class="p-2 hover:bg-red-100 rounded-lg text-red-600" title="Delete Student">
-                                            <i data-lucide="trash-2" class="h-4 w-4"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-                    }).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
-}
-
-// ============ DELETE STUDENT FUNCTION ============
-
-async function deleteStudent(studentId, studentName) {
-    if (!confirm(`⚠️ Are you sure you want to remove ${studentName} from your class? This action cannot be undone.`)) {
+    rows.forEach(row => {
+        const studentId = row.dataset.studentId;
+        const status = row.querySelector('.attendance-status')?.value;
+        const note = row.querySelector('.attendance-note')?.value;
+        
+        if (status) {
+            attendanceData.push({
+                studentId: parseInt(studentId),
+                date: new Date().toISOString().split('T')[0],
+                status,
+                reason: note
+            });
+        }
+    });
+    
+    if (attendanceData.length === 0) {
+        showToast('No attendance data to save', 'error');
         return;
     }
     
     showLoading();
     try {
-        const response = await api.teacher.deleteStudent(studentId);
-        
-        if (response.success) {
-            showToast(`✅ ${studentName} removed from class`, 'success');
-            await refreshMyStudents();
+        for (const data of attendanceData) {
+            await takeAttendance(data);
         }
+        showToast(`✅ Saved ${attendanceData.length} attendance records`, 'success');
+        
+        // Refresh all relevant data
+        await refreshMyStudents(); // Refresh student list with updated attendance
+        
+        // Update analytics if needed
+        if (typeof loadStudentAnalytics === 'function') {
+            await loadStudentAnalytics();
+        }
+        
+        // Dispatch event for other tabs
+        window.dispatchEvent(new CustomEvent('attendance-updated'));
+        
     } catch (error) {
-        showToast(error.message || 'Failed to delete student', 'error');
+        console.error('Attendance save error:', error);
     } finally {
         hideLoading();
+    }
+}
+
+// Take attendance
+async function takeAttendance(attendanceData) {
+    showLoading();
+    try {
+        const response = await api.teacher.takeAttendance(attendanceData);
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to record attendance', 'error');
+        throw error;
+    } finally {
+        hideLoading();
+    }
+}
+
+// ============ PARENT MESSAGING ============
+
+async function loadTeacherMessages() {
+    try {
+        const response = await api.teacher.getConversations();
+        const conversations = response.data || [];
+        
+        const container = document.getElementById('teacher-messages-list');
+        const badge = document.getElementById('teacher-message-count-badge');
+        
+        if (!container) return;
+        
+        let totalUnread = 0;
+        let html = '';
+        
+        if (conversations.length === 0) {
+            html = `
+                <div class="text-center text-muted-foreground py-8">
+                    <i data-lucide="message-circle" class="h-12 w-12 mx-auto mb-3 opacity-50"></i>
+                    <p>No messages from parents yet</p>
+                </div>
+            `;
+        } else {
+            conversations.forEach(conv => {
+                totalUnread += conv.unreadCount || 0;
+                
+                html += `
+                    <div class="p-3 border rounded-lg hover:bg-accent cursor-pointer transition-all ${conv.unreadCount > 0 ? 'bg-primary/5 border-primary' : ''}"
+                         onclick="openTeacherConversation('${conv.userId}')">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-medium">${conv.userName || 'Parent'}</p>
+                                <p class="text-xs text-muted-foreground">${conv.studentName ? `about ${conv.studentName}` : ''}</p>
+                                <p class="text-sm mt-1">${conv.lastMessage?.substring(0, 50) || ''}${conv.lastMessage?.length > 50 ? '...' : ''}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-muted-foreground">${timeAgo(conv.lastMessageTime)}</p>
+                                ${conv.unreadCount > 0 ? 
+                                    `<span class="bg-red-500 text-white text-xs rounded-full px-2 py-1 mt-1 inline-block">${conv.unreadCount}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        if (badge) {
+            badge.textContent = totalUnread;
+            if (totalUnread > 0) badge.classList.remove('hidden');
+        }
+        
+        container.innerHTML = html;
+        
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+        
+    } catch (error) {
+        console.error('Load messages error:', error);
     }
 }
 
 // ============ UTILITY FUNCTIONS ============
 
 function copyElimuid(elimuid) {
-    navigator.clipboard.writeText(elimuid).then(() => {
-        showToast('✅ ELIMUID copied to clipboard', 'success');
-    }).catch(() => {
-        showToast('Failed to copy', 'error');
-    });
+    if (!elimuid) return showToast('No ELIMUID', 'error');
+    navigator.clipboard.writeText(elimuid)
+        .then(() => showToast('✅ Copied', 'success'))
+        .catch(() => showToast('Failed to copy', 'error'));
 }
 
 function formatDate(dateString) {
@@ -451,7 +651,7 @@ function formatDate(dateString) {
 
 function getInitials(name) {
     if (!name) return '?';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
 function getStatusColor(status) {
@@ -464,10 +664,37 @@ function getStatusColor(status) {
     }
 }
 
-// ============ TASK MANAGEMENT ============
+function timeAgo(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    const intervals = {
+        year: 31536000,
+        month: 2592000,
+        week: 604800,
+        day: 86400,
+        hour: 3600,
+        minute: 60
+    };
+    
+    for (const [unit, secondsInUnit] of Object.entries(intervals)) {
+        const interval = Math.floor(seconds / secondsInUnit);
+        if (interval >= 1) {
+            return `${interval} ${unit}${interval === 1 ? '' : 's'} ago`;
+        }
+    }
+    
+    return 'just now';
+}
 
-function addTeacherTask() {
-    showToast('Add task feature coming soon', 'info');
+function getCurrentUser() {
+    try {
+        return JSON.parse(localStorage.getItem('user'));
+    } catch {
+        return null;
+    }
 }
 
 // ============ MARKS MANAGEMENT ============
@@ -545,61 +772,6 @@ function updateGradeDisplay(input, curriculum, level) {
     }
 }
 
-// ============ ATTENDANCE MANAGEMENT ============
-
-async function takeAttendance(attendanceData) {
-    showLoading();
-    try {
-        const response = await api.teacher.takeAttendance(attendanceData);
-        showToast('✅ Attendance recorded', 'success');
-        return response;
-    } catch (error) {
-        showToast(error.message || 'Failed to record attendance', 'error');
-        throw error;
-    } finally {
-        hideLoading();
-    }
-}
-
-async function saveAttendance() {
-    const rows = document.querySelectorAll('[data-student-id]');
-    const attendanceData = [];
-    
-    rows.forEach(row => {
-        const studentId = row.dataset.studentId;
-        const status = row.querySelector('.attendance-status')?.value;
-        const note = row.querySelector('.attendance-note')?.value;
-        
-        if (status) {
-            attendanceData.push({
-                studentId: parseInt(studentId),
-                date: new Date().toISOString().split('T')[0],
-                status,
-                reason: note
-            });
-        }
-    });
-    
-    if (attendanceData.length === 0) {
-        showToast('No attendance data to save', 'error');
-        return;
-    }
-    
-    showLoading();
-    try {
-        for (const data of attendanceData) {
-            await takeAttendance(data);
-        }
-        showToast(`✅ Saved ${attendanceData.length} attendance records`, 'success');
-    } catch (error) {
-        // Error already shown
-    } finally {
-        hideLoading();
-    }
-}
-
-// ============ COMMENT MANAGEMENT ============
-
 async function addComment(studentId, comment) {
     showLoading();
     try {
@@ -612,6 +784,12 @@ async function addComment(studentId, comment) {
     } finally {
         hideLoading();
     }
+}
+
+// ============ TASK MANAGEMENT ============
+
+function addTeacherTask() {
+    showToast('Add task feature coming soon', 'info');
 }
 
 // ============ CSV UPLOAD ============
@@ -630,70 +808,9 @@ async function uploadMarksCSV(file, onProgress) {
     }
 }
 
-// ============ PARENT MESSAGING ============
-
-async function loadTeacherMessages() {
-    try {
-        const response = await api.teacher.getConversations();
-        const conversations = response.data || [];
-        
-        const container = document.getElementById('teacher-messages-list');
-        const badge = document.getElementById('teacher-message-count-badge');
-        
-        if (!container) return;
-        
-        let totalUnread = 0;
-        let html = '';
-        
-        if (conversations.length === 0) {
-            html = `
-                <div class="text-center text-muted-foreground py-8">
-                    <i data-lucide="message-circle" class="h-12 w-12 mx-auto mb-3 opacity-50"></i>
-                    <p>No messages from parents yet</p>
-                </div>
-            `;
-        } else {
-            conversations.forEach(conv => {
-                totalUnread += conv.unreadCount || 0;
-                
-                html += `
-                    <div class="p-3 border rounded-lg hover:bg-accent cursor-pointer transition-all ${conv.unreadCount > 0 ? 'bg-primary/5 border-primary' : ''}"
-                         onclick="openTeacherConversation('${conv.userId}')">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <p class="font-medium">${conv.userName || 'Parent'}</p>
-                                <p class="text-xs text-muted-foreground">${conv.studentName ? `about ${conv.studentName}` : ''}</p>
-                                <p class="text-sm mt-1">${conv.lastMessage?.substring(0, 50) || ''}${conv.lastMessage?.length > 50 ? '...' : ''}</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-xs text-muted-foreground">${timeAgo(conv.lastMessageTime)}</p>
-                                ${conv.unreadCount > 0 ? 
-                                    `<span class="bg-red-500 text-white text-xs rounded-full px-2 py-1 mt-1 inline-block">${conv.unreadCount}</span>` : ''}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-        
-        if (badge) {
-            badge.textContent = totalUnread;
-            if (totalUnread > 0) badge.classList.remove('hidden');
-        }
-        
-        container.innerHTML = html;
-        
-        if (typeof lucide !== 'undefined' && lucide.createIcons) {
-            lucide.createIcons();
-        }
-        
-    } catch (error) {
-        console.error('Load messages error:', error);
-    }
-}
-
 // ============ EXPORT FUNCTIONS ============
 
+window.initTeacherFeatures = initTeacherFeatures;
 window.showAddStudentModal = showAddStudentModal;
 window.closeAddStudentModal = closeAddStudentModal;
 window.handleAddStudentModal = handleAddStudentModal;
@@ -704,16 +821,18 @@ window.renderStudentsTable = renderStudentsTable;
 window.viewStudentDetails = viewStudentDetails;
 window.closeStudentDetailsModal = closeStudentDetailsModal;
 window.copyElimuid = copyElimuid;
-window.addTeacherTask = addTeacherTask;
+window.deleteStudent = deleteStudent;
+window.saveAttendance = saveAttendance;
+window.takeAttendance = takeAttendance;
+window.loadTeacherMessages = loadTeacherMessages;
 window.enterMarks = enterMarks;
 window.saveStudentGrade = saveStudentGrade;
 window.updateGradeDisplay = updateGradeDisplay;
-window.takeAttendance = takeAttendance;
-window.saveAttendance = saveAttendance;
 window.addComment = addComment;
 window.uploadMarksCSV = uploadMarksCSV;
+window.addTeacherTask = addTeacherTask;
 window.formatDate = formatDate;
 window.getInitials = getInitials;
-window.deleteStudent = deleteStudent;
-window.loadTeacherMessages = loadTeacherMessages;
 window.getStatusColor = getStatusColor;
+window.timeAgo = timeAgo;
+window.getCurrentUser = getCurrentUser;
