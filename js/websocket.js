@@ -1,192 +1,255 @@
-// WebSocket connection for real-time features
+// websocket.js - Complete real-time update system
+
 let socket = null;
 let reconnectAttempts = 0;
 const maxReconnectAttempts = 5;
 
+// Connect WebSocket with authentication
 function connectWebSocket() {
-    // Check if Socket.io is loaded
-    if (typeof io === 'undefined') {
-        console.warn('Socket.io not loaded, real-time features disabled');
-        return;
-    }
-    
     const token = localStorage.getItem('authToken');
-    const user = JSON.parse(localStorage.getItem('user'));
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
     
-    if (!token || !user) return;
+    if (!token || !user.id) return;
     
-    try {
-        socket = io('https://shuleaibackend-32h1.onrender.com', {
-            auth: { token },
-            transports: ['websocket', 'polling'],
-            reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000
-        });
+    // Close existing connection
+    if (socket) {
+        socket.close();
+    }
+    
+    // Connect to Socket.io server
+    socket = io('https://shuleaibackend-32h1.onrender.com', {
+        auth: { token },
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000
+    });
+    
+    socket.on('connect', () => {
+        console.log('✅ WebSocket connected');
+        reconnectAttempts = 0;
         
-        socket.on('connect', () => {
-            console.log('✅ WebSocket connected');
-            reconnectAttempts = 0;
-            
-            if (user) {
-                socket.emit('join', user.id);
-            }
-        });
+        // Join user's personal room
+        if (user.id) {
+            socket.emit('join', user.id);
+        }
         
-        socket.on('connect_error', (error) => {
-            console.error('WebSocket connection error:', error);
-        });
-        
-        socket.on('alert', (data) => {
-            handleAlert(data);
-        });
-        
-        socket.on('private-message', (data) => {
-            handlePrivateMessage(data);
-        });
-        
-        socket.on('duty-roster-updated', (data) => {
-            showToast(`Duty roster updated: ${data.message}`, 'info');
-            if (currentSection === 'duty') {
-                showDashboardSection('duty');
-            }
-        });
-        
-        socket.on('attendance-update', (data) => {
-            handleAttendanceUpdate(data);
-        });
-        
-        socket.on('school-updated', (data) => {
-            handleSchoolUpdate(data);
-        });
-        
-        socket.on('disconnect', () => {
-            console.log('WebSocket disconnected');
-            if (reconnectAttempts < maxReconnectAttempts) {
-                reconnectAttempts++;
-                setTimeout(connectWebSocket, 1000 * reconnectAttempts);
-            }
-        });
-        
-        window.globalSocket = socket;
-    } catch (error) {
-        console.error('Failed to connect WebSocket:', error);
+        // Join school room for real-time updates
+        if (user.schoolCode) {
+            socket.emit('join-school', user.schoolCode);
+        }
+    });
+    
+    socket.on('connect_error', (error) => {
+        console.error('WebSocket connection error:', error);
+    });
+    
+    // ============ REAL-TIME UPDATE HANDLERS ============
+    
+    // Student updates
+    socket.on('student-added', (data) => {
+        console.log('🔔 Student added:', data);
+        handleStudentUpdate('added', data);
+    });
+    
+    socket.on('student-updated', (data) => {
+        console.log('🔔 Student updated:', data);
+        handleStudentUpdate('updated', data);
+    });
+    
+    socket.on('student-deleted', (data) => {
+        console.log('🔔 Student deleted:', data);
+        handleStudentUpdate('deleted', data);
+    });
+    
+    socket.on('student-suspended', (data) => {
+        console.log('🔔 Student suspended:', data);
+        handleStudentUpdate('suspended', data);
+    });
+    
+    socket.on('student-reactivated', (data) => {
+        console.log('🔔 Student reactivated:', data);
+        handleStudentUpdate('reactivated', data);
+    });
+    
+    // Teacher updates
+    socket.on('teacher-updated', (data) => {
+        console.log('🔔 Teacher updated:', data);
+        handleTeacherUpdate(data);
+    });
+    
+    // Attendance updates
+    socket.on('attendance-updated', (data) => {
+        console.log('🔔 Attendance updated:', data);
+        handleAttendanceUpdate(data);
+    });
+    
+    // Curriculum updates
+    socket.on('curriculum-updated', (data) => {
+        console.log('🔔 Curriculum updated:', data);
+        handleCurriculumUpdate(data);
+    });
+    
+    // Class assignment updates
+    socket.on('class-assigned', (data) => {
+        console.log('🔔 Class assignment updated:', data);
+        handleClassUpdate(data);
+    });
+    
+    socket.on('disconnect', () => {
+        console.log('WebSocket disconnected');
+        if (reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++;
+            setTimeout(connectWebSocket, 1000 * reconnectAttempts);
+        }
+    });
+}
+
+// ============ UPDATE HANDLERS ============
+
+function handleStudentUpdate(action, data) {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    // Update teacher dashboard if teacher
+    if (user.role === 'teacher') {
+        if (typeof refreshMyStudents === 'function') {
+            refreshMyStudents();
+        }
+        showToast(`📢 Student ${action}: ${data.name}`, 'info');
+    }
+    
+    // Update admin dashboard if admin
+    if (user.role === 'admin') {
+        if (typeof refreshStudentsList === 'function') {
+            refreshStudentsList();
+        }
+        showToast(`📢 Student ${action}: ${data.name}`, 'info');
     }
 }
 
-function handleAlert(data) {
-    if (typeof showToast === 'function') {
-        showToast(data.message, data.severity || 'info');
-    }
+function handleTeacherUpdate(data) {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
     
-    const badge = document.querySelector('.notification-badge');
-    if (badge) {
-        const count = parseInt(badge.textContent) + 1;
-        badge.textContent = count;
-        badge.classList.remove('hidden');
-    }
-}
-
-function handlePrivateMessage(data) {
-    if (typeof showToast === 'function') {
-        showToast(`New message from ${data.from}`, 'info');
-    }
-    
-    const messageCount = document.getElementById('message-count');
-    if (messageCount) {
-        const count = parseInt(messageCount.textContent) + 1;
-        messageCount.textContent = count;
-        messageCount.classList.remove('hidden');
-    }
-    
-    const chatContainer = document.getElementById('chat-messages');
-    if (chatContainer && currentSection === 'chat') {
-        appendMessage(chatContainer, data);
+    if (user.role === 'admin') {
+        if (typeof refreshTeachersList === 'function') {
+            refreshTeachersList();
+        }
+        showToast(`📢 Teacher ${data.action}: ${data.name}`, 'info');
     }
 }
 
 function handleAttendanceUpdate(data) {
-    const attendanceDisplay = document.getElementById('live-attendance');
-    if (attendanceDisplay) {
-        attendanceDisplay.innerHTML = `
-            <p class="text-3xl font-bold">Checked in at ${data.checkInTime}</p>
-            <p class="text-sm text-muted-foreground">Gate: ${data.gate}</p>
-        `;
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    if (user.role === 'teacher' && typeof refreshMyStudents === 'function') {
+        refreshMyStudents();
     }
+    
+    if (user.role === 'admin' && typeof refreshStudentsList === 'function') {
+        refreshStudentsList();
+    }
+    
+    showToast(`📢 Attendance updated for ${data.date}`, 'info');
 }
 
-function handleSchoolUpdate(data) {
-    if (data.action === 'name-change') {
-        const currentSchool = typeof getCurrentSchool === 'function' ? getCurrentSchool() : null;
-        
-        if (currentSchool && currentSchool.schoolId === data.schoolId) {
-            currentSchool.name = data.newName;
-            localStorage.setItem('school', JSON.stringify(currentSchool));
-            
-            if (typeof updateSchoolNameDisplay === 'function') {
-                updateSchoolNameDisplay();
+function handleCurriculumUpdate(data) {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    // Update local storage with new curriculum
+    const schoolSettings = JSON.parse(localStorage.getItem('schoolSettings') || '{}');
+    schoolSettings.curriculum = data.curriculum;
+    localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings));
+    
+    // Refresh current dashboard based on role
+    if (user.role === 'teacher' && typeof refreshMyStudents === 'function') {
+        refreshMyStudents();
+    } else if (user.role === 'admin' && typeof refreshStudentsList === 'function') {
+        refreshStudentsList();
+    } else if (user.role === 'parent' && typeof refreshParentDashboard === 'function') {
+        refreshParentDashboard();
+    } else if (user.role === 'student' && typeof refreshStudentDashboard === 'function') {
+        refreshStudentDashboard();
+    }
+    
+    showToast(`📢 Curriculum updated to ${data.curriculumName}`, 'info');
+}
+
+function handleClassUpdate(data) {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    if (user.role === 'teacher') {
+        // If teacher's class assignment changed, refresh their data
+        if (data.teacherId == user.id) {
+            if (typeof refreshMyStudents === 'function') {
+                refreshMyStudents();
             }
-            
-            if (typeof updateSidebar === 'function') {
-                const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
-                if (user) {
-                    updateSidebar(user.role);
-                }
-            }
-            
-            if (typeof showToast === 'function') {
-                showToast(`School name updated to "${data.newName}"`, 'success');
-            }
+        }
+    }
+    
+    if (user.role === 'admin') {
+        if (typeof refreshClassesList === 'function') {
+            refreshClassesList();
+        }
+        if (typeof refreshTeachersList === 'function') {
+            refreshTeachersList();
+        }
+        if (typeof refreshStudentsList === 'function') {
+            refreshStudentsList();
         }
     }
 }
 
-function sendMessage(recipientId, content) {
+// ============ EMIT FUNCTIONS (Call these when making changes) ============
+
+function emitStudentUpdate(action, studentData) {
     if (socket && socket.connected) {
-        socket.emit('private-message', {
-            to: recipientId,
-            message: content
+        socket.emit('student-update', {
+            action,
+            ...studentData,
+            timestamp: new Date().toISOString()
         });
-    } else {
-        if (typeof showToast === 'function') {
-            showToast('Cannot send message: Not connected', 'error');
-        }
     }
 }
 
-function joinChatRoom(roomId) {
+function emitTeacherUpdate(action, teacherData) {
     if (socket && socket.connected) {
-        socket.emit('join-room', roomId);
+        socket.emit('teacher-update', {
+            action,
+            ...teacherData,
+            timestamp: new Date().toISOString()
+        });
     }
 }
 
-function appendMessage(container, message) {
-    const messageEl = document.createElement('div');
-    messageEl.className = message.sent ? 'flex justify-end' : 'flex justify-start';
-    messageEl.innerHTML = `
-        <div class="${message.sent ? 'chat-bubble-sent' : 'chat-bubble-received'} max-w-[70%]">
-            ${!message.sent ? `<p class="text-sm font-medium">${message.from}</p>` : ''}
-            <p class="text-sm">${message.content}</p>
-            <p class="text-xs text-muted-foreground mt-1">${typeof timeAgo === 'function' ? timeAgo(message.timestamp) : 'just now'}</p>
-        </div>
-    `;
-    container.appendChild(messageEl);
-    container.scrollTop = container.scrollHeight;
+function emitAttendanceUpdate(data) {
+    if (socket && socket.connected) {
+        socket.emit('attendance-update', {
+            ...data,
+            timestamp: new Date().toISOString()
+        });
+    }
 }
 
-// Auto-connect when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    // Delay connection to ensure everything is loaded
-    setTimeout(() => {
-        const token = localStorage.getItem('authToken');
-        if (token) {
-            connectWebSocket();
-        }
-    }, 1000);
-});
+function emitCurriculumUpdate(curriculum) {
+    if (socket && socket.connected) {
+        const curriculumNames = {
+            'cbc': 'CBC',
+            '844': '8-4-4',
+            'british': 'British',
+            'american': 'American'
+        };
+        
+        socket.emit('curriculum-update', {
+            curriculum,
+            curriculumName: curriculumNames[curriculum] || curriculum,
+            timestamp: new Date().toISOString()
+        });
+    }
+}
 
 // Export functions
-window.sendMessage = sendMessage;
-window.joinChatRoom = joinChatRoom;
 window.connectWebSocket = connectWebSocket;
-window.handleSchoolUpdate = handleSchoolUpdate;
+window.emitStudentUpdate = emitStudentUpdate;
+window.emitTeacherUpdate = emitTeacherUpdate;
+window.emitAttendanceUpdate = emitAttendanceUpdate;
+window.emitCurriculumUpdate = emitCurriculumUpdate;
