@@ -593,6 +593,29 @@ async function uploadMarksCSV(file, onProgress) {
     }
 }
 
+// Delete student from class
+async function deleteStudent(studentId, studentName) {
+    if (!confirm(`⚠️ Are you sure you want to remove ${studentName} from your class? This action cannot be undone.`)) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.teacher.deleteStudent(studentId);
+        
+        if (response.success) {
+            showToast(`✅ ${studentName} removed from class`, 'success');
+            
+            // Refresh the students list
+            await refreshMyStudents();
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to delete student', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
 // ============ EXPORT FUNCTIONS ============
 
 window.showAddStudentModal = showAddStudentModal;
@@ -615,3 +638,4 @@ window.addComment = addComment;
 window.uploadMarksCSV = uploadMarksCSV;
 window.formatDate = formatDate;
 window.getInitials = getInitials;
+window.deleteStudent = deleteStudent;
