@@ -613,6 +613,55 @@ function getInitials(name) {
     return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
+// Suspend student
+async function suspendStudent(studentId, studentName) {
+    const reason = prompt(`Enter suspension reason for ${studentName}:`);
+    if (!reason) return;
+    
+    if (!confirm(`⚠️ Are you sure you want to suspend ${studentName}? The student, parents, and teacher will be notified.`)) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.admin.suspendStudent(studentId, { reason });
+        
+        if (response.success) {
+            showToast(`✅ ${studentName} suspended successfully`, 'success');
+            
+            // Refresh the students list
+            await refreshStudentsList();
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to suspend student', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Reactivate student
+async function reactivateStudent(studentId, studentName) {
+    if (!confirm(`Reactivate ${studentName}? The student will be able to log in again.`)) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.admin.reactivateStudent(studentId);
+        
+        if (response.success) {
+            showToast(`✅ ${studentName} reactivated`, 'success');
+            
+            // Refresh the students list
+            await refreshStudentsList();
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to reactivate student', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
 // ================= EXPORT ALL FUNCTIONS =================
 
 Object.assign(window, {
@@ -668,3 +717,6 @@ Object.assign(window, {
 
 // Fallback redirect
 window.viewStudentDetails = (id) => window.viewStudent(id);
+// Export functions
+window.suspendStudent = suspendStudent;
+window.reactivateStudent = reactivateStudent; 
