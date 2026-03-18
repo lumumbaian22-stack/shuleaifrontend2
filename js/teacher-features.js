@@ -1,7 +1,9 @@
-// teacher-features.js - Complete file with all teacher functions including delete, auto-class assignment, and attendance
+// teacher-features.js - Complete file with all teacher functions including delete, auto-class assignment, attendance, and tasks
 
 // ============ GLOBAL VARIABLES ============
 let teacherClass = null;
+let refreshInterval = null;
+let taskList = [];
 
 // ============ INITIALIZATION ============
 async function initTeacherFeatures() {
@@ -22,6 +24,38 @@ async function initTeacherFeatures() {
         } catch (error) {
             console.error('Failed to fetch teacher class:', error);
         }
+    }
+    
+    // Load tasks from localStorage
+    loadTasks();
+    
+    // Start auto-refresh
+    startAutoRefresh();
+}
+
+// ============ AUTO-REFRESH ============
+function startAutoRefresh() {
+    // Clear existing interval
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+    
+    // Set new interval (30 seconds)
+    refreshInterval = setInterval(async () => {
+        if (document.getElementById('my-students-table') && 
+            !document.getElementById('my-students-table').classList.contains('hidden')) {
+            console.log('🔄 Auto-refreshing data...');
+            await refreshMyStudents();
+            await loadTeacherMessages();
+            await loadTasks();
+        }
+    }, 30000);
+}
+
+function stopAutoRefresh() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
     }
 }
 
@@ -240,11 +274,6 @@ function updateStats(students) {
         }).length;
         attendanceElement.textContent = `${presentToday}/${students.length}`;
     }
-    
-    const tasksElement = document.getElementById('pending-tasks');
-    if (tasksElement) {
-        tasksElement.textContent = '0';
-    }
 }
 
 // Render students table with delete button
@@ -346,6 +375,11 @@ async function deleteStudent(studentId, studentName) {
         if (response.success) {
             showToast(`✅ ${studentName} removed from class`, 'success');
             await refreshMyStudents();
+            
+            // Notify other dashboards
+            window.dispatchEvent(new CustomEvent('student-deleted', { 
+                detail: { studentId, studentName }
+            }));
         }
     } catch (error) {
         showToast(error.message || 'Failed to delete student', 'error');
@@ -540,16 +574,14 @@ async function saveAttendance() {
         // Refresh all relevant data
         await refreshMyStudents(); // Refresh student list with updated attendance
         
-        // Update analytics if needed
-        if (typeof loadStudentAnalytics === 'function') {
-            await loadStudentAnalytics();
-        }
-        
         // Dispatch event for other tabs
-        window.dispatchEvent(new CustomEvent('attendance-updated'));
+        window.dispatchEvent(new CustomEvent('attendance-updated', {
+            detail: { date: new Date().toISOString().split('T')[0], count: attendanceData.length }
+        }));
         
     } catch (error) {
         console.error('Attendance save error:', error);
+        showToast('Failed to save attendance', 'error');
     } finally {
         hideLoading();
     }
@@ -557,15 +589,254 @@ async function saveAttendance() {
 
 // Take attendance
 async function takeAttendance(attendanceData) {
-    showLoading();
     try {
         const response = await api.teacher.takeAttendance(attendanceData);
         return response;
     } catch (error) {
-        showToast(error.message || 'Failed to record attendance', 'error');
         throw error;
-    } finally {
-        hideLoading();
+    }
+}
+
+// ============ TASK MANAGEMENT - FULLY FUNCTIONAL ============
+
+// Load tasks from localStorage
+function loadTasks() {
+    try {
+        const savedTasks = localStorage.getItem('teacherTasks');
+        if (savedTasks) {
+            taskList = JSON.parse(savedTasks);
+        } else {
+            taskList = [];
+        }
+        renderTasks();
+    } catch (error) {
+        console.error('Failed to load tasks:', error);
+        taskList = [];
+    }
+}
+
+// Save tasks to localStorage
+function saveTasks() {
+    try {
+        localStorage.setItem('teacherTasks', JSON.stringify(taskList));
+        renderTasks();
+    } catch (error) {
+        console.error('Failed to save tasks:', error);
+        showToast('Failed to save task', 'error');
+    }
+}
+
+// Add new task
+async function addTeacherTask() {
+    // Show task creation modal
+    showAddTaskModal();
+}
+
+// Show add task modal
+function showAddTaskModal() {
+    let modal = document.getElementById('add-task-modal');
+    
+    if (!modal) {
+        createAddTaskModal();
+        modal = document.getElementById('add-task-modal');
+    }
+    
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+// Create add task modal
+function createAddTaskModal() {
+    const modalHTML = `
+        <div id="add-task-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeAddTaskModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                    <h3 class="text-lg font-semibold mb-4">Create New Task</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Task Title *</label>
+                            <input type="text" id="task-title" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Description</label>
+                            <textarea id="task-description" rows="3" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="Enter task details..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Due Date</label>
+                            <input type="date" id="task-due" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Priority</label>
+                            <select id="task-priority" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button onclick="closeAddTaskModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
+                        <button onclick="saveNewTask()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Create Task</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// Close add task modal
+function closeAddTaskModal() {
+    const modal = document.getElementById('add-task-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        document.getElementById('task-title') && (document.getElementById('task-title').value = '');
+        document.getElementById('task-description') && (document.getElementById('task-description').value = '');
+        document.getElementById('task-due') && (document.getElementById('task-due').value = '');
+        document.getElementById('task-priority') && (document.getElementById('task-priority').value = 'medium');
+    }
+}
+
+// Save new task
+function saveNewTask() {
+    const title = document.getElementById('task-title')?.value;
+    const description = document.getElementById('task-description')?.value;
+    const dueDate = document.getElementById('task-due')?.value;
+    const priority = document.getElementById('task-priority')?.value;
+    
+    if (!title) {
+        showToast('Task title is required', 'error');
+        return;
+    }
+    
+    const newTask = {
+        id: Date.now().toString(),
+        title,
+        description,
+        dueDate,
+        priority,
+        completed: false,
+        createdAt: new Date().toISOString()
+    };
+    
+    taskList.unshift(newTask);
+    saveTasks();
+    closeAddTaskModal();
+    showToast('✅ Task created successfully', 'success');
+}
+
+// Toggle task completion
+function toggleTask(taskId) {
+    const task = taskList.find(t => t.id === taskId);
+    if (task) {
+        task.completed = !task.completed;
+        saveTasks();
+        
+        if (task.completed) {
+            showToast(`✅ Task "${task.title}" completed`, 'success');
+        }
+    }
+}
+
+// Delete task
+function deleteTask(taskId) {
+    const task = taskList.find(t => t.id === taskId);
+    if (!task) return;
+    
+    if (!confirm(`Delete task "${task.title}"?`)) return;
+    
+    taskList = taskList.filter(t => t.id !== taskId);
+    saveTasks();
+    showToast('Task deleted', 'info');
+}
+
+// Render tasks in dashboard
+function renderTasks() {
+    const pendingContainer = document.getElementById('pending-tasks-container');
+    const completedContainer = document.getElementById('completed-tasks-container');
+    
+    if (!pendingContainer && !completedContainer) return;
+    
+    const pendingTasks = taskList.filter(t => !t.completed);
+    const completedTasks = taskList.filter(t => t.completed);
+    
+    // Update pending tasks count
+    const tasksElement = document.getElementById('pending-tasks');
+    if (tasksElement) {
+        tasksElement.textContent = pendingTasks.length;
+    }
+    
+    // Render pending tasks
+    if (pendingContainer) {
+        if (pendingTasks.length === 0) {
+            pendingContainer.innerHTML = '<div class="text-center py-4 text-muted-foreground">No pending tasks</div>';
+        } else {
+            pendingContainer.innerHTML = pendingTasks.map(task => `
+                <div class="flex items-center gap-3 p-3 hover:bg-accent/50 rounded-lg border ${getPriorityBorder(task.priority)}" data-task-id="${task.id}">
+                    <input type="checkbox" class="rounded" onchange="toggleTask('${task.id}')" ${task.completed ? 'checked' : ''}>
+                    <div class="flex-1">
+                        <p class="font-medium">${task.title}</p>
+                        ${task.description ? `<p class="text-xs text-muted-foreground">${task.description}</p>` : ''}
+                        <div class="flex items-center gap-2 mt-1">
+                            ${task.dueDate ? `<span class="text-xs text-muted-foreground flex items-center gap-1"><i data-lucide="calendar" class="h-3 w-3"></i> ${formatDate(task.dueDate)}</span>` : ''}
+                            <span class="text-xs px-2 py-0.5 rounded-full ${getPriorityColor(task.priority)}">${task.priority}</span>
+                        </div>
+                    </div>
+                    <button onclick="deleteTask('${task.id}')" class="p-1 hover:bg-red-100 rounded-lg text-red-600">
+                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+    }
+    
+    // Render completed tasks
+    if (completedContainer) {
+        if (completedTasks.length === 0) {
+            completedContainer.innerHTML = '<div class="text-center py-4 text-muted-foreground">No completed tasks</div>';
+        } else {
+            completedContainer.innerHTML = completedTasks.map(task => `
+                <div class="flex items-center gap-3 p-3 hover:bg-accent/50 rounded-lg opacity-75">
+                    <input type="checkbox" class="rounded" checked disabled>
+                    <div class="flex-1">
+                        <p class="font-medium line-through text-muted-foreground">${task.title}</p>
+                        <p class="text-xs text-muted-foreground">Completed</p>
+                    </div>
+                    <button onclick="deleteTask('${task.id}')" class="p-1 hover:bg-red-100 rounded-lg text-red-600">
+                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+    }
+    
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+// Get priority color
+function getPriorityColor(priority) {
+    switch(priority) {
+        case 'urgent': return 'bg-red-100 text-red-700';
+        case 'high': return 'bg-orange-100 text-orange-700';
+        case 'medium': return 'bg-yellow-100 text-yellow-700';
+        case 'low': return 'bg-green-100 text-green-700';
+        default: return 'bg-gray-100 text-gray-700';
+    }
+}
+
+// Get priority border
+function getPriorityBorder(priority) {
+    switch(priority) {
+        case 'urgent': return 'border-red-200';
+        case 'high': return 'border-orange-200';
+        case 'medium': return 'border-yellow-200';
+        case 'low': return 'border-green-200';
+        default: return 'border-gray-200';
     }
 }
 
@@ -628,72 +899,6 @@ async function loadTeacherMessages() {
         
     } catch (error) {
         console.error('Load messages error:', error);
-    }
-}
-
-// ============ UTILITY FUNCTIONS ============
-
-function copyElimuid(elimuid) {
-    if (!elimuid) return showToast('No ELIMUID', 'error');
-    navigator.clipboard.writeText(elimuid)
-        .then(() => showToast('✅ Copied', 'success'))
-        .catch(() => showToast('Failed to copy', 'error'));
-}
-
-function formatDate(dateString) {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-    });
-}
-
-function getInitials(name) {
-    if (!name) return '?';
-    return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-}
-
-function getStatusColor(status) {
-    switch(status?.toLowerCase()) {
-        case 'active': return 'bg-green-100 text-green-700';
-        case 'suspended': return 'bg-red-100 text-red-700';
-        case 'graduated': return 'bg-blue-100 text-blue-700';
-        case 'transferred': return 'bg-purple-100 text-purple-700';
-        default: return 'bg-gray-100 text-gray-700';
-    }
-}
-
-function timeAgo(dateString) {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    const now = new Date();
-    const seconds = Math.floor((now - date) / 1000);
-    
-    const intervals = {
-        year: 31536000,
-        month: 2592000,
-        week: 604800,
-        day: 86400,
-        hour: 3600,
-        minute: 60
-    };
-    
-    for (const [unit, secondsInUnit] of Object.entries(intervals)) {
-        const interval = Math.floor(seconds / secondsInUnit);
-        if (interval >= 1) {
-            return `${interval} ${unit}${interval === 1 ? '' : 's'} ago`;
-        }
-    }
-    
-    return 'just now';
-}
-
-function getCurrentUser() {
-    try {
-        return JSON.parse(localStorage.getItem('user'));
-    } catch {
-        return null;
     }
 }
 
@@ -786,12 +991,6 @@ async function addComment(studentId, comment) {
     }
 }
 
-// ============ TASK MANAGEMENT ============
-
-function addTeacherTask() {
-    showToast('Add task feature coming soon', 'info');
-}
-
 // ============ CSV UPLOAD ============
 
 async function uploadMarksCSV(file, onProgress) {
@@ -808,9 +1007,81 @@ async function uploadMarksCSV(file, onProgress) {
     }
 }
 
+// ============ UTILITY FUNCTIONS ============
+
+function copyElimuid(elimuid) {
+    if (!elimuid) return showToast('No ELIMUID', 'error');
+    navigator.clipboard.writeText(elimuid)
+        .then(() => showToast('✅ Copied', 'success'))
+        .catch(() => showToast('Failed to copy', 'error'));
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+function getInitials(name) {
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+}
+
+function getStatusColor(status) {
+    switch(status?.toLowerCase()) {
+        case 'active': return 'bg-green-100 text-green-700';
+        case 'suspended': return 'bg-red-100 text-red-700';
+        case 'graduated': return 'bg-blue-100 text-blue-700';
+        case 'transferred': return 'bg-purple-100 text-purple-700';
+        default: return 'bg-gray-100 text-gray-700';
+    }
+}
+
+function timeAgo(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    const intervals = {
+        year: 31536000,
+        month: 2592000,
+        week: 604800,
+        day: 86400,
+        hour: 3600,
+        minute: 60
+    };
+    
+    for (const [unit, secondsInUnit] of Object.entries(intervals)) {
+        const interval = Math.floor(seconds / secondsInUnit);
+        if (interval >= 1) {
+            return `${interval} ${unit}${interval === 1 ? '' : 's'} ago`;
+        }
+    }
+    
+    return 'just now';
+}
+
+function getCurrentUser() {
+    try {
+        return JSON.parse(localStorage.getItem('user'));
+    } catch {
+        return null;
+    }
+}
+
+// ============ CLEANUP ============
+function cleanupTeacherFeatures() {
+    stopAutoRefresh();
+}
+
 // ============ EXPORT FUNCTIONS ============
 
 window.initTeacherFeatures = initTeacherFeatures;
+window.cleanupTeacherFeatures = cleanupTeacherFeatures;
 window.showAddStudentModal = showAddStudentModal;
 window.closeAddStudentModal = closeAddStudentModal;
 window.handleAddStudentModal = handleAddStudentModal;
@@ -831,8 +1102,23 @@ window.updateGradeDisplay = updateGradeDisplay;
 window.addComment = addComment;
 window.uploadMarksCSV = uploadMarksCSV;
 window.addTeacherTask = addTeacherTask;
+window.toggleTask = toggleTask;
+window.deleteTask = deleteTask;
+window.renderTasks = renderTasks;
+window.closeAddTaskModal = closeAddTaskModal;
+window.saveNewTask = saveNewTask;
 window.formatDate = formatDate;
 window.getInitials = getInitials;
 window.getStatusColor = getStatusColor;
 window.timeAgo = timeAgo;
 window.getCurrentUser = getCurrentUser;
+
+// Auto-refresh on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initTeacherFeatures();
+    setTimeout(() => {
+        refreshMyStudents();
+        loadTeacherMessages();
+        renderTasks();
+    }, 500);
+});
