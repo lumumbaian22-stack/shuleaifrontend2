@@ -567,18 +567,38 @@
         </footer>
     </div>
 
-    <!-- Auth Modal -->
+    <!-- Auth Modal - FIXED with buttons -->
     <div id="auth-modal" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/50" onclick="closeAuthModal()"></div>
         <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
-            <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
-                <div class="flex items-center justify-between mb-4">
+            <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-4 sticky top-0 bg-card pt-2 z-10">
                     <h3 id="auth-modal-title" class="text-lg font-semibold"></h3>
                     <button onclick="closeAuthModal()" class="p-2 hover:bg-accent rounded-lg">
                         <i data-lucide="x" class="h-5 w-5"></i>
                     </button>
                 </div>
                 <div id="auth-modal-content" class="space-y-4"></div>
+                <div class="flex justify-end gap-2 mt-6 sticky bottom-0 bg-card pb-2 pt-4 border-t">
+                    <button onclick="closeAuthModal()" class="px-4 py-2 text-sm font-medium rounded-lg border hover:bg-accent transition-colors">Cancel</button>
+                    <button onclick="handleAuthSubmit()" class="px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">Continue</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- First Time Password Change Modal -->
+    <div id="password-change-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50" onclick="closePasswordChangeModal()"></div>
+        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+            <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold">Set Your Password</h3>
+                    <button onclick="closePasswordChangeModal()" class="p-2 hover:bg-accent rounded-lg">
+                        <i data-lucide="x" class="h-5 w-5"></i>
+                    </button>
+                </div>
+                <div id="password-change-content" class="space-y-4"></div>
             </div>
         </div>
     </div>
