@@ -276,6 +276,17 @@ const adminAPI = {
     // Student details
     getStudentDetails: (studentId) => 
         apiRequest(`/api/admin/students/${studentId}`),
+
+    // In adminAPI section, add:
+    suspendStudent: (studentId, data) => 
+    apiRequest(`/api/admin/students/${studentId}/suspend`, {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
+reactivateStudent: (studentId) => 
+    apiRequest(`/api/admin/students/${studentId}/reactivate`, {
+        method: 'POST'
+    }),
     
     // Duty management
     generateDutyRoster: (startDate, endDate) => 
@@ -332,7 +343,12 @@ const teacherAPI = {
         apiRequest('/api/teacher/reply', {
             method: 'POST',
             body: JSON.stringify(data)
-        })
+        }),
+    // In teacherAPI section, add:
+deleteStudent: (studentId) => 
+    apiRequest(`/api/teacher/students/${studentId}`, {
+        method: 'DELETE'
+    }),
 };
 
 // ============ PARENT ENDPOINTS ============
