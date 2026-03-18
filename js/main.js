@@ -803,6 +803,8 @@ async function processNameChange() {
     }
 }
 
+// ============ STUDENT AUTHENTICATION FUNCTIONS ============
+
 // Dedicated student login function
 function openStudentLoginModal() {
     currentRole = 'student';
@@ -812,19 +814,156 @@ function openStudentLoginModal() {
     
     if (!modal || !titleEl || !contentEl) return;
     
-    titleEl.textContent = 'Student Sign In';
+    titleEl.textContent = 'Student Login';
     contentEl.innerHTML = `
-        <div>
-            <label class="block text-sm font-medium mb-1">ELIMUID</label>
-            <input type="text" id="auth-elimuid" placeholder="e.g., ELI-2024-001" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
-        </div>
-        <div>
-            <label class="block text-sm font-medium mb-1">Password</label>
-            <input type="password" id="auth-password" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
+        <div class="space-y-4">
+            <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-4">
+                <p class="text-xs text-blue-600 dark:text-blue-400 flex items-start gap-2">
+                    <i data-lucide="info" class="h-4 w-4 flex-shrink-0 mt-0.5"></i>
+                    <span>Welcome! Please login with your ELIMUID and password.</span>
+                </p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">ELIMUID</label>
+                <input type="text" id="auth-elimuid" placeholder="e.g., ELI-2024-001" 
+                       class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Password</label>
+                <input type="password" id="auth-password" 
+                       class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
+            </div>
+            <div class="flex justify-end gap-2 mt-6">
+                <button onclick="closeAuthModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
+                <button onclick="handleStudentLogin()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Login</button>
+            </div>
+            <div class="text-center mt-4 pt-4 border-t">
+                <p class="text-xs text-muted-foreground">
+                    First time? Use the temporary password provided by your teacher.<br>
+                    You'll be asked to change it after logging in.
+                </p>
+            </div>
         </div>
     `;
     modal.classList.remove('hidden');
     lucide.createIcons();
+}
+
+// Handle student login separately
+async function handleStudentLogin() {
+    const elimuid = document.getElementById('auth-elimuid')?.value;
+    const password = document.getElementById('auth-password')?.value;
+    
+    if (!elimuid || !password) {
+        showToast('ELIMUID and password required', 'error');
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.auth.studentLogin(elimuid, password);
+        
+        if (response.success) {
+            // Save auth data
+            localStorage.setItem('authToken', response.data.token);
+            localStorage.setItem('user', JSON.stringify(response.data.user));
+            localStorage.setItem('student', JSON.stringify(response.data.student));
+            localStorage.setItem('userRole', 'student');
+            
+            // Check if this is first login (you'd need to add this field to your User model)
+            // For now, we'll assume all logins are normal
+            showToast('Login successful!', 'success');
+            await showDashboard('student');
+            closeAuthModal();
+        }
+    } catch (error) {
+        showToast(error.message || 'Invalid ELIMUID or password', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Show password change modal for first-time login (optional)
+function showPasswordChangeModal(elimuid) {
+    const modal = document.getElementById('auth-modal');
+    const titleEl = document.getElementById('auth-modal-title');
+    const contentEl = document.getElementById('auth-modal-content');
+    
+    if (!modal || !titleEl || !contentEl) return;
+    
+    titleEl.textContent = 'Set Your Password';
+    contentEl.innerHTML = `
+        <div class="space-y-4">
+            <div class="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg mb-4">
+                <p class="text-xs text-yellow-600 dark:text-yellow-400 flex items-start gap-2">
+                    <i data-lucide="alert-triangle" class="h-4 w-4 flex-shrink-0 mt-0.5"></i>
+                    <span>This is your first login. Please set a new password to continue.</span>
+                </p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">New Password</label>
+                <input type="password" id="new-password" 
+                       class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
+                <p class="text-xs text-muted-foreground mt-1">Minimum 8 characters</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Confirm New Password</label>
+                <input type="password" id="confirm-password" 
+                       class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
+            </div>
+            <div class="flex justify-end gap-2 mt-6">
+                <button onclick="closeAuthModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
+                <button onclick="handleFirstPasswordChange('${elimuid}')" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Set Password</button>
+            </div>
+        </div>
+    `;
+    lucide.createIcons();
+}
+
+// Handle first-time password change
+async function handleFirstPasswordChange(elimuid) {
+    const newPassword = document.getElementById('new-password')?.value;
+    const confirmPassword = document.getElementById('confirm-password')?.value;
+    
+    if (!newPassword || !confirmPassword) {
+        showToast('Please enter and confirm your new password', 'error');
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        showToast('Passwords do not match', 'error');
+        return;
+    }
+    
+    if (newPassword.length < 8) {
+        showToast('Password must be at least 8 characters', 'error');
+        return;
+    }
+    
+    showLoading();
+    try {
+        // You'll need to add this endpoint to your backend
+        const response = await api.student.setFirstPassword({
+            elimuid: elimuid,
+            newPassword: newPassword
+        });
+        
+        if (response.success) {
+            showToast('Password set successfully! Please login with your new password.', 'success');
+            
+            // Show login form again
+            openStudentLoginModal();
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to set password', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Show help for students
+function showStudentHelp() {
+    showToast('Contact your teacher to reset your password or get your ELIMUID', 'info', 5000);
 }
 
 // ============ DASHBOARD FUNCTIONS ============
