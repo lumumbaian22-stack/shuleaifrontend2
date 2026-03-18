@@ -6793,7 +6793,43 @@ async function handleChangePassword() {
     } finally {
         hideLoading();
     }
+
 }
+
+// ============ CROSS-TAB EVENT LISTENERS ============
+
+// Listen for student added events from other tabs
+window.addEventListener('student-added', function(e) {
+    console.log('Student added in another tab, refreshing...', e.detail);
+    
+    const user = getCurrentUser();
+    if (user?.role === 'teacher' && typeof refreshMyStudents === 'function') {
+        refreshMyStudents();
+    } else if (user?.role === 'admin' && typeof refreshStudentsList === 'function') {
+        refreshStudentsList();
+    }
+});
+
+// Listen for attendance updates
+window.addEventListener('attendance-updated', function() {
+    console.log('Attendance updated, refreshing...');
+    
+    if (typeof refreshMyStudents === 'function') {
+        refreshMyStudents();
+    }
+    if (typeof loadStudentAnalytics === 'function') {
+        loadStudentAnalytics();
+    }
+});
+
+// Listen for class updates
+window.addEventListener('class-updated', function() {
+    console.log('Class updated, refreshing...');
+    
+    if (typeof refreshClassesList === 'function') {
+        refreshClassesList();
+    }
+});
 
 // ============ EXPORT GLOBAL FUNCTIONS ============
 window.openAuthModal = openAuthModal;
