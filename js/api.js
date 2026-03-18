@@ -216,6 +216,17 @@ const adminAPI = {
             method: 'POST'
         }),
     
+    deactivateTeacher: (teacherId, data) => 
+        apiRequest(`/api/admin/teachers/${teacherId}/deactivate`, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        }),
+
+    activateTeacher: (teacherId) => 
+        apiRequest(`/api/admin/teachers/${teacherId}/activate`, {
+            method: 'POST'
+        }),
+    
     deleteTeacher: (teacherId) => 
         apiRequest(`/api/admin/teachers/${teacherId}`, {
             method: 'DELETE'
@@ -277,16 +288,30 @@ const adminAPI = {
     getStudentDetails: (studentId) => 
         apiRequest(`/api/admin/students/${studentId}`),
 
-    // In adminAPI section, add:
+    // Student suspension/reactivation
     suspendStudent: (studentId, data) => 
-    apiRequest(`/api/admin/students/${studentId}/suspend`, {
-        method: 'POST',
-        body: JSON.stringify(data)
-    }),
-reactivateStudent: (studentId) => 
-    apiRequest(`/api/admin/students/${studentId}/reactivate`, {
-        method: 'POST'
-    }),
+        apiRequest(`/api/admin/students/${studentId}/suspend`, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        }),
+    
+    reactivateStudent: (studentId) => 
+        apiRequest(`/api/admin/students/${studentId}/reactivate`, {
+            method: 'POST'
+        }),
+    
+    // Student expulsion (permanent removal)
+    expelStudent: (studentId, data) => 
+        apiRequest(`/api/admin/students/${studentId}/expel`, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        }),
+    
+    // Delete student permanently
+    deleteStudent: (studentId) => 
+        apiRequest(`/api/admin/students/${studentId}`, {
+            method: 'DELETE'
+        }),
     
     // Duty management
     generateDutyRoster: (startDate, endDate) => 
@@ -344,11 +369,12 @@ const teacherAPI = {
             method: 'POST',
             body: JSON.stringify(data)
         }),
-    // In teacherAPI section, add:
-deleteStudent: (studentId) => 
-    apiRequest(`/api/teacher/students/${studentId}`, {
-        method: 'DELETE'
-    }),
+    
+    // Delete student from teacher's class
+    deleteStudent: (studentId) => 
+        apiRequest(`/api/teacher/students/${studentId}`, {
+            method: 'DELETE'
+        }),
 };
 
 // ============ PARENT ENDPOINTS ============
@@ -421,7 +447,7 @@ const studentAPI = {
         }),
     getMessages: (otherUserId) => 
         apiRequest(`/api/student/messages/${otherUserId}`),
-    // NEW: Set first password for students
+    // Set first password for students
     setFirstPassword: (data) => 
         apiRequest('/api/student/set-first-password', {
             method: 'POST',
@@ -552,5 +578,6 @@ window.api = {
 window.apiRequest = apiRequest;
 window.uploadFile = uploadFile;
 
-// Log to verify schoolAPI is loaded
-console.log('✅ API loaded. schoolAPI available:', !!window.api.school);
+// Log to verify all APIs are loaded
+console.log('✅ API loaded successfully!');
+console.log('📊 Available APIs:', Object.keys(window.api).join(', '));
