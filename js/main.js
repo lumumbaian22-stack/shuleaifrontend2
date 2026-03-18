@@ -216,6 +216,81 @@ function formatDate(dateString) {
     });
 }
 
+// ============ CURRICULUM MANAGEMENT ============
+
+// Handle curriculum change - updates EVERYTHING in real-time
+async function handleCurriculumChange(newCurriculum) {
+    if (!newCurriculum) return;
+    
+    showLoading();
+    try {
+        const school = getCurrentSchool();
+        if (!school) {
+            showToast('School not found', 'error');
+            return;
+        }
+        
+        // Update school settings
+        const response = await api.admin.updateSchoolSettings({
+            ...school.settings,
+            curriculum: newCurriculum
+        });
+        
+        if (response.success) {
+            // Update local storage
+            schoolSettings.curriculum = newCurriculum;
+            localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings));
+            
+            // Emit real-time update to all connected clients
+            if (typeof emitCurriculumUpdate === 'function') {
+                emitCurriculumUpdate(newCurriculum);
+            }
+            
+            // Update grading system in memory
+            updateGradingSystem(newCurriculum);
+            
+            // Refresh current dashboard based on role
+            const user = getCurrentUser();
+            if (user?.role === 'teacher' && typeof refreshMyStudents === 'function') {
+                await refreshMyStudents();
+            } else if (user?.role === 'admin' && typeof refreshStudentsList === 'function') {
+                await refreshStudentsList();
+                await refreshTeachersList();
+                await refreshClassesList();
+            } else if (user?.role === 'parent' && typeof refreshParentDashboard === 'function') {
+                await refreshParentDashboard();
+            } else if (user?.role === 'student' && typeof refreshStudentDashboard === 'function') {
+                await refreshStudentDashboard();
+            }
+            
+            showToast(`✅ Curriculum changed to ${CURRICULUMS[newCurriculum]?.name}`, 'success');
+        }
+    } catch (error) {
+        showToast('Failed to update curriculum', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Update grading system based on curriculum
+function updateGradingSystem(curriculum) {
+    // Update global grading constants
+    window.currentCurriculum = curriculum;
+    
+    // Re-render any open modals or tables that use grading
+    const activeModals = document.querySelectorAll('.modal:not(.hidden)');
+    activeModals.forEach(modal => {
+        const content = modal.querySelector('.modal-content');
+        if (content && content.innerHTML.includes('grade')) {
+            // Modal contains grade data, refresh it
+            const studentId = modal.dataset.studentId;
+            if (studentId && typeof loadStudentDetails === 'function') {
+                loadStudentDetails(studentId);
+            }
+        }
+    });
+}
+
 // Listen for school name changes
 window.addEventListener('school-name-changed', (event) => {
     const { newName, schoolCode } = event.detail;
