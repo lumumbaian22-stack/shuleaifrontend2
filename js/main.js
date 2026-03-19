@@ -1739,6 +1739,99 @@ function renderSuperAdminSettings() {
     `;
 }
 
+// Add this function to main.js to render the schools table
+async function refreshSchoolsList() {
+    const container = document.getElementById('schools-table-body');
+    if (!container) return;
+    
+    try {
+        const response = await api.superAdmin.getSchools();
+        const schools = response.data || [];
+        
+        // Update total count
+        const totalEl = document.getElementById('total-schools');
+        const schoolCountEl = document.getElementById('school-count');
+        if (totalEl) totalEl.textContent = schools.length;
+        if (schoolCountEl) schoolCountEl.textContent = schools.length + ' total';
+        
+        // Calculate stats
+        const activeSchools = schools.filter(s => s.status === 'active').length;
+        const pendingSchools = schools.filter(s => s.status === 'pending').length;
+        
+        const activeAdminsEl = document.getElementById('active-admins');
+        const pendingApprovalsEl = document.getElementById('pending-approvals');
+        
+        if (activeAdminsEl) activeAdminsEl.textContent = activeSchools;
+        if (pendingApprovalsEl) pendingApprovalsEl.textContent = pendingSchools;
+        
+        // Render table
+        let html = '';
+        schools.forEach(school => {
+            const admin = school.admins && school.admins.length > 0 ? school.admins[0] : null;
+            const adminName = admin ? admin.name : 'No admin';
+            const adminEmail = admin ? admin.email : '-';
+            
+            const statusColor = {
+                'active': 'bg-green-100 text-green-700',
+                'pending': 'bg-yellow-100 text-yellow-700',
+                'suspended': 'bg-red-100 text-red-700',
+                'rejected': 'bg-gray-100 text-gray-700'
+            }[school.status] || 'bg-gray-100 text-gray-700';
+            
+            html += `
+                <tr class="hover:bg-accent/50 transition-colors">
+                    <td class="px-4 py-3 font-medium">${school.name || 'Unknown'}</td>
+                    <td class="px-4 py-3">
+                        <div>${adminName}</div>
+                        <div class="text-xs text-muted-foreground">${adminEmail}</div>
+                    </td>
+                    <td class="px-4 py-3">${school.settings?.schoolLevel || 'N/A'}</td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${statusColor}">
+                            ${school.status}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <button onclick="viewSchoolDetails('${school.id}')" class="p-2 hover:bg-accent rounded-lg" title="View">
+                            <i data-lucide="eye" class="h-4 w-4"></i>
+                        </button>
+                        <button onclick="editSchool('${school.id}')" class="p-2 hover:bg-accent rounded-lg" title="Edit">
+                            <i data-lucide="edit" class="h-4 w-4"></i>
+                        </button>
+                        ${school.status === 'active' ? 
+                            `<button onclick="suspendSchool('${school.id}')" class="p-2 hover:bg-yellow-100 rounded-lg text-yellow-600" title="Suspend">
+                                <i data-lucide="pause-circle" class="h-4 w-4"></i>
+                            </button>` : 
+                            school.status === 'suspended' ?
+                            `<button onclick="reactivateSchool('${school.id}')" class="p-2 hover:bg-green-100 rounded-lg text-green-600" title="Reactivate">
+                                <i data-lucide="play-circle" class="h-4 w-4"></i>
+                            </button>` : ''
+                        }
+                        <button onclick="deleteSchool('${school.id}')" class="p-2 hover:bg-red-100 rounded-lg text-red-600" title="Delete">
+                            <i data-lucide="trash-2" class="h-4 w-4"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        if (schools.length === 0) {
+            html = '<tr><td colspan="5" class="px-4 py-8 text-center text-muted-foreground">No schools found</td></tr>';
+        }
+        
+        container.innerHTML = html;
+        
+        // Refresh icons
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+        
+    } catch (error) {
+        console.error('Error refreshing schools list:', error);
+        container.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-red-500">Error loading schools</td></tr>';
+    }
+}
+
 // Add to main.js
 async function refreshNameChangeRequests() {
     const container = document.getElementById('name-change-requests');
