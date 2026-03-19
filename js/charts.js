@@ -1,13 +1,17 @@
-// Chart initialization and management
-let charts = {};
+// charts.js - Chart initialization and management
+
+// Check if charts object already exists to prevent duplicate declaration
+if (typeof window.charts === 'undefined') {
+    window.charts = {};
+}
 
 function initSuperAdminCharts(data) {
     const ctx1 = document.getElementById('superadmin-enrollmentChart');
     const ctx2 = document.getElementById('superadmin-gradeChart');
     
     if (ctx1) {
-        if (charts.superEnrollment) charts.superEnrollment.destroy();
-        charts.superEnrollment = new Chart(ctx1, {
+        if (window.charts.superEnrollment) window.charts.superEnrollment.destroy();
+        window.charts.superEnrollment = new Chart(ctx1, {
             type: 'line',
             data: {
                 labels: data?.growthLabels || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
@@ -31,8 +35,8 @@ function initSuperAdminCharts(data) {
     }
     
     if (ctx2) {
-        if (charts.superGrade) charts.superGrade.destroy();
-        charts.superGrade = new Chart(ctx2, {
+        if (window.charts.superGrade) window.charts.superGrade.destroy();
+        window.charts.superGrade = new Chart(ctx2, {
             type: 'doughnut',
             data: {
                 labels: data?.distributionLabels || ['Primary', 'Secondary', 'Mixed'],
@@ -62,8 +66,8 @@ function initAdminCharts(data) {
     const ctx2 = document.getElementById('admin-gradeChart');
     
     if (ctx1) {
-        if (charts.adminEnrollment) charts.adminEnrollment.destroy();
-        charts.adminEnrollment = new Chart(ctx1, {
+        if (window.charts.adminEnrollment) window.charts.adminEnrollment.destroy();
+        window.charts.adminEnrollment = new Chart(ctx1, {
             type: 'line',
             data: {
                 labels: data?.enrollmentLabels || ['Term 1', 'Term 2', 'Term 3'],
@@ -87,8 +91,8 @@ function initAdminCharts(data) {
     }
     
     if (ctx2) {
-        if (charts.adminGrade) charts.adminGrade.destroy();
-        charts.adminGrade = new Chart(ctx2, {
+        if (window.charts.adminGrade) window.charts.adminGrade.destroy();
+        window.charts.adminGrade = new Chart(ctx2, {
             type: 'doughnut',
             data: {
                 labels: data?.gradeLabels || ['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
@@ -118,8 +122,8 @@ function initTeacherCharts(data) {
     const ctx2 = document.getElementById('teacher-gradeChart');
     
     if (ctx1) {
-        if (charts.teacherPerf) charts.teacherPerf.destroy();
-        charts.teacherPerf = new Chart(ctx1, {
+        if (window.charts.teacherPerf) window.charts.teacherPerf.destroy();
+        window.charts.teacherPerf = new Chart(ctx1, {
             type: 'line',
             data: {
                 labels: data?.performanceLabels || ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
@@ -143,8 +147,8 @@ function initTeacherCharts(data) {
     }
     
     if (ctx2) {
-        if (charts.teacherGrade) charts.teacherGrade.destroy();
-        charts.teacherGrade = new Chart(ctx2, {
+        if (window.charts.teacherGrade) window.charts.teacherGrade.destroy();
+        window.charts.teacherGrade = new Chart(ctx2, {
             type: 'bar',
             data: {
                 labels: data?.gradeLabels || ['A', 'B', 'C', 'D', 'E'],
@@ -179,8 +183,8 @@ function initParentCharts(data) {
     const ctx = document.getElementById('parent-gradeChart');
     
     if (ctx) {
-        if (charts.parentGrade) charts.parentGrade.destroy();
-        charts.parentGrade = new Chart(ctx, {
+        if (window.charts.parentGrade) window.charts.parentGrade.destroy();
+        window.charts.parentGrade = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: data?.labels || ['Test 1', 'Test 2', 'Test 3', 'Exam'],
@@ -224,7 +228,7 @@ function initRoleCharts(role, data) {
 
 function updateChartTheme() {
     // Update all charts with new theme colors
-    Object.values(charts).forEach(chart => {
+    Object.values(window.charts).forEach(chart => {
         if (chart && chart.options) {
             const isDark = document.documentElement.classList.contains('dark');
             const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
@@ -252,4 +256,3 @@ function updateChartTheme() {
 // Export functions
 window.initRoleCharts = initRoleCharts;
 window.updateChartTheme = updateChartTheme;
-window.charts = charts;
