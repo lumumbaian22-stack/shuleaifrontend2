@@ -2022,6 +2022,8 @@ async function refreshNameChangeRequests() {
 
 // In main.js - REPLACE your renderAdminSection function with this:
 
+// ============ ADMIN SECTIONS - COMPLETE FIXED VERSION ============
+
 async function renderAdminSection(section) {
     try {
         // For dashboard section, return the HTML directly instead of fetching
@@ -2206,7 +2208,7 @@ async function renderAdminSection(section) {
             `;
         }
         
-        // Handle other sections (students, teachers, settings, etc.)
+        // Handle other sections - ADDED 'classes' case here
         switch(section) {
             case 'students':
                 return await renderAdminStudents();
@@ -2214,6 +2216,14 @@ async function renderAdminSection(section) {
                 return await renderAdminTeachers();
             case 'teacher-approvals':
                 return await renderAdminPendingTeachers();
+            case 'classes':
+                return await renderAdminClasses();
+            case 'duty':
+                return await renderAdminDuty();
+            case 'fairness-report':
+                return await renderAdminFairnessReport();
+            case 'teacher-workload':
+                return await renderAdminTeacherWorkload();
             case 'settings':
                 return renderAdminSettings();
             default:
@@ -2224,6 +2234,89 @@ async function renderAdminSection(section) {
         return '<div class="text-center py-12 text-red-500">Error loading section</div>';
     }
 }
+
+// ============================================
+// ADMIN CLASSES SECTION - ADD THIS NEW FUNCTION
+// ============================================
+
+async function renderAdminClasses() {
+    try {
+        const classes = await loadAllClasses();
+        const teachers = await loadAvailableTeachers();
+        
+        return `
+            <div class="space-y-6 animate-fade-in">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold">Class Management</h2>
+                    <button onclick="showAddClassModal()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
+                        <i data-lucide="plus" class="h-4 w-4"></i>
+                        Add Class
+                    </button>
+                </div>
+
+                <!-- Classes Grid -->
+                <div class="grid gap-4">
+                    ${classes.map(cls => {
+                        const currentTeacher = cls.Teacher?.User?.name || 'Not assigned';
+                        const teacherOptions = teachers.map(t => `
+                            <option value="${t.id}" ${t.id === cls.teacherId ? 'selected' : ''}>
+                                ${t.User?.name || 'Unknown'} (${t.subjects?.join(', ') || 'No subjects'})
+                            </option>
+                        `).join('');
+                        
+                        return `
+                            <div class="border rounded-lg p-4 bg-card hover:shadow-md transition-shadow" data-class-id="${cls.id}">
+                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                    <div class="flex-1">
+                                        <h3 class="font-semibold text-lg">${cls.name}</h3>
+                                        <p class="text-sm text-muted-foreground">Grade: ${cls.grade} | Stream: ${cls.stream || 'N/A'}</p>
+                                        <p class="text-sm mt-2">
+                                            <span class="font-medium">Current Teacher:</span> 
+                                            <span class="${cls.Teacher ? 'text-green-600' : 'text-yellow-600'}">${currentTeacher}</span>
+                                        </p>
+                                        <p class="text-xs text-muted-foreground mt-1">${cls.studentCount || 0} students enrolled</p>
+                                    </div>
+                                    
+                                    <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                                        <select id="teacher-${cls.id}" class="rounded-lg border border-input bg-background px-3 py-2 text-sm min-w-[200px]">
+                                            <option value="">-- Select Teacher --</option>
+                                            ${teacherOptions}
+                                        </select>
+                                        <button onclick="assignClassTeacher('${cls.id}')" 
+                                                class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm whitespace-nowrap">
+                                            Assign
+                                        </button>
+                                        <button onclick="editClass('${cls.id}')" 
+                                                class="p-2 border rounded-lg hover:bg-accent">
+                                            <i data-lucide="edit" class="h-4 w-4"></i>
+                                        </button>
+                                        <button onclick="deleteClass('${cls.id}')" 
+                                                class="p-2 border rounded-lg hover:bg-red-100 text-red-600">
+                                            <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                    ${classes.length === 0 ? `
+                        <div class="text-center py-12 border rounded-lg bg-card">
+                            <i data-lucide="users" class="h-12 w-12 mx-auto text-muted-foreground mb-4"></i>
+                            <p class="text-muted-foreground">No classes found. Click "Add Class" to create one.</p>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error rendering classes:', error);
+        return `<div class="text-center py-12 text-red-500">Error loading classes: ${error.message}</div>`;
+    }
+}
+
+// ============================================
+// EXISTING FUNCTIONS (keep these as they are)
+// ============================================
 
 function renderAdminDashboard() {
     const school = getCurrentSchool();
@@ -2684,6 +2777,57 @@ async function renderAdminTeacherWorkload() {
     }
 }
 
+function renderAdminSettings() {
+    const curriculum = schoolSettings.curriculum || 'cbc';
+    const schoolLevel = schoolSettings.schoolLevel || 'secondary';
+    
+    return `
+        <div class="space-y-6 animate-fade-in">
+            <h2 class="text-2xl font-bold">School Settings</h2>
+            
+            <div class="grid gap-6">
+                <div class="rounded-xl border bg-card p-6">
+                    <h3 class="font-semibold mb-4">School Information</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">School Name</label>
+                            <input type="text" id="settings-school-name" value="${schoolSettings.schoolName || ''}" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">School Level</label>
+                            <select id="settings-school-level" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                                <option value="primary" ${schoolLevel === 'primary' ? 'selected' : ''}>Primary</option>
+                                <option value="secondary" ${schoolLevel === 'secondary' ? 'selected' : ''}>Secondary</option>
+                                <option value="both" ${schoolLevel === 'both' ? 'selected' : ''}>Both</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="rounded-xl border bg-card p-6">
+                    <h3 class="font-semibold mb-4">Curriculum Settings</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Select Curriculum</label>
+                            <select id="settings-curriculum" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                                <option value="cbc" ${curriculum === 'cbc' ? 'selected' : ''}>CBC</option>
+                                <option value="844" ${curriculum === '844' ? 'selected' : ''}>8-4-4</option>
+                                <option value="british" ${curriculum === 'british' ? 'selected' : ''}>British</option>
+                                <option value="american" ${curriculum === 'american' ? 'selected' : ''}>American</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end">
+                    <button onclick="saveAllSettings()" class="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">
+                        Save Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
 // ============ MISSING ADMIN FUNCTIONS ============
 
 // Render admin custom subjects - WITH PROPER SELECTORS
