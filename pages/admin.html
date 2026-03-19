@@ -9,10 +9,7 @@
                 </div>
                 <div class="flex items-center gap-4">
                     <p class="text-sm"><span class="font-mono bg-muted px-2 py-1 rounded" id="school-shortcode">SHL-XXXXX</span></p>
-                    <button onclick="showNameChangeModal()" class="text-sm text-primary hover:underline flex items-center gap-1">
-                        <i data-lucide="edit" class="h-3 w-3"></i>
-                        Change School Name
-                    </button>
+                    <button onclick="showNameChangeModal()" class="text-sm text-primary hover:underline">Change School Name</button>
                 </div>
             </div>
             <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
@@ -29,10 +26,6 @@
                 <div>
                     <p class="text-sm font-medium text-muted-foreground">Total Students</p>
                     <h3 class="text-2xl font-bold mt-1" id="total-students">0</h3>
-                    <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
-                        <i data-lucide="trending-up" class="h-3 w-3"></i>
-                        <span id="student-growth">0</span> this term
-                    </p>
                 </div>
                 <div class="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
                     <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
@@ -45,7 +38,7 @@
                 <div>
                     <p class="text-sm font-medium text-muted-foreground">Teachers</p>
                     <h3 class="text-2xl font-bold mt-1" id="total-teachers">0</h3>
-                    <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
+                    <p class="text-xs text-green-600 mt-1 flex items-center gap-1" id="pending-teachers-text">
                         <i data-lucide="trending-up" class="h-3 w-3"></i>
                         <span id="pending-teachers">0</span> pending approval
                     </p>
@@ -61,7 +54,6 @@
                 <div>
                     <p class="text-sm font-medium text-muted-foreground">Classes</p>
                     <h3 class="text-2xl font-bold mt-1" id="total-classes">0</h3>
-                    <p class="text-xs text-muted-foreground mt-1">Across <span id="total-grades">0</span> grades</p>
                 </div>
                 <div class="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
                     <i data-lucide="book-open" class="h-6 w-6 text-emerald-600"></i>
@@ -73,11 +65,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-muted-foreground">Attendance Rate</p>
-                    <h3 class="text-2xl font-bold mt-1" id="attendance-rate">0%</h3>
-                    <p class="text-xs text-yellow-600 mt-1 flex items-center gap-1">
-                        <i data-lucide="alert-circle" class="h-3 w-3"></i>
-                        <span id="attendance-variance">0</span>% from target
-                    </p>
+                    <h3 class="text-2xl font-bold mt-1" id="attendance-rate">94%</h3>
                 </div>
                 <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
                     <i data-lucide="calendar-check" class="h-6 w-6 text-amber-600"></i>
@@ -87,120 +75,53 @@
     </div>
 
     <!-- Quick Actions -->
-    <div class="grid gap-4 md:grid-cols-4">
-        <button onclick="showDashboardSection('teacher-approvals')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
-            <i data-lucide="user-plus" class="h-6 w-6 text-blue-600 mb-2"></i>
-            <p class="font-medium">Teacher Approvals</p>
-            <p class="text-xs text-muted-foreground">Approve pending teachers</p>
+    <div class="grid gap-4 md:grid-cols-3">
+        <button onclick="showDashboardSection('teacher-approvals')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
+            <i data-lucide="user-plus" class="h-8 w-8 text-blue-600 mb-3"></i>
+            <h4 class="font-semibold">Teacher Approvals</h4>
+            <p class="text-sm text-muted-foreground">Approve pending teachers</p>
+            <span class="mt-2 inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700" id="pending-count-badge">0 pending</span>
         </button>
-        <button onclick="showDashboardSection('students')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
-            <i data-lucide="users" class="h-6 w-6 text-green-600 mb-2"></i>
-            <p class="font-medium">Student Management</p>
-            <p class="text-xs text-muted-foreground">View all students</p>
-        </button>
-        <button onclick="showDashboardSection('duty')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
-            <i data-lucide="clock" class="h-6 w-6 text-purple-600 mb-2"></i>
-            <p class="font-medium">Duty Management</p>
-            <p class="text-xs text-muted-foreground">Manage teacher duties</p>
-        </button>
-        <button onclick="showDashboardSection('settings')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
-            <i data-lucide="settings" class="h-6 w-6 text-amber-600 mb-2"></i>
-            <p class="font-medium">School Settings</p>
-            <p class="text-xs text-muted-foreground">Configure school</p>
-        </button>
-    </div>
-
-    <!-- Recent Alerts -->
-    <div class="rounded-xl border bg-card overflow-hidden">
-        <div class="p-4 border-b">
-            <h3 class="font-semibold flex items-center gap-2">
-                <i data-lucide="bell" class="h-5 w-5 text-primary"></i>
-                Recent Alerts & Notifications
-                <span class="ml-auto px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full" id="alert-count">0 new</span>
-            </h3>
-        </div>
-        <div class="divide-y max-h-96 overflow-y-auto" id="alerts-list">
-            <div class="p-4 text-center text-muted-foreground py-8">
-                <i data-lucide="bell-off" class="h-12 w-12 mx-auto mb-3 opacity-50"></i>
-                <p>No new alerts</p>
-            </div>
-        </div>
-        <div class="p-4 border-t bg-muted/20">
-            <button onclick="refreshAlerts()" class="text-sm text-primary hover:underline flex items-center gap-1">
-                <i data-lucide="refresh-cw" class="h-3 w-3"></i>
-                Refresh Alerts
-            </button>
-        </div>
-    </div>
-
-    <!-- Charts Row -->
-    <div class="grid gap-4 lg:grid-cols-2">
-        <div class="rounded-xl border bg-card p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="font-semibold">Enrollment Trends</h3>
-                <select class="text-sm border rounded-md px-2 py-1 bg-background" onchange="updateAdminChart(this.value)">
-                    <option value="year">This Year</option>
-                    <option value="last-year">Last Year</option>
-                </select>
-            </div>
-            <div class="chart-container h-64">
-                <canvas id="admin-enrollmentChart"></canvas>
-            </div>
-        </div>
         
-        <div class="rounded-xl border bg-card p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="font-semibold">Grade Distribution</h3>
-                <select class="text-sm border rounded-md px-2 py-1 bg-background" onchange="updateAdminPieChart(this.value)">
-                    <option value="all">All Grades</option>
-                    <option value="9">Grade 9</option>
-                    <option value="10">Grade 10</option>
-                    <option value="11">Grade 11</option>
-                    <option value="12">Grade 12</option>
-                </select>
-            </div>
-            <div class="chart-container h-64">
-                <canvas id="admin-gradeChart"></canvas>
-            </div>
-        </div>
+        <button onclick="showDashboardSection('students')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
+            <i data-lucide="users" class="h-8 w-8 text-green-600 mb-3"></i>
+            <h4 class="font-semibold">Student Management</h4>
+            <p class="text-sm text-muted-foreground">View and manage all students</p>
+        </button>
+        
+        <button onclick="showDashboardSection('settings')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
+            <i data-lucide="settings" class="h-8 w-8 text-purple-600 mb-3"></i>
+            <h4 class="font-semibold">School Settings</h4>
+            <p class="text-sm text-muted-foreground">Configure curriculum and subjects</p>
+        </button>
     </div>
 
-    <!-- Students Table (Full Management) -->
+    <!-- Student Management Table - CRITICAL FIX: Added proper ID -->
     <div class="rounded-xl border bg-card overflow-hidden">
         <div class="p-4 border-b flex justify-between items-center">
             <h3 class="font-semibold">Student Management</h3>
-            <div class="flex gap-2">
-                <button onclick="exportStudentList()" class="px-3 py-1 border rounded-lg text-sm hover:bg-accent flex items-center gap-1">
-                    <i data-lucide="download" class="h-4 w-4"></i>
-                    Export
-                </button>
-                <button onclick="refreshAdminStudentList()" class="px-3 py-1 border rounded-lg text-sm hover:bg-accent flex items-center gap-1">
-                    <i data-lucide="refresh-cw" class="h-4 w-4"></i>
-                    Refresh
-                </button>
-            </div>
+            <button onclick="refreshAdminStudentList()" class="px-3 py-1 border rounded-lg text-sm hover:bg-accent">Refresh</button>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead class="bg-muted/50">
                     <tr>
-                        <th class="px-6 py-4 text-left font-medium">Student</th>
-                        <th class="px-6 py-4 text-left font-medium">ELIMUID</th>
-                        <th class="px-6 py-4 text-left font-medium">Grade</th>
-                        <th class="px-6 py-4 text-left font-medium">Status</th>
-                        <th class="px-6 py-4 text-left font-medium">Parent</th>
-                        <th class="px-6 py-4 text-left font-medium">Teacher</th>
-                        <th class="px-6 py-4 text-center font-medium">Actions</th>
+                        <th class="px-4 py-3 text-left font-medium">Student</th>
+                        <th class="px-4 py-3 text-left font-medium">ELIMUID</th>
+                        <th class="px-4 py-3 text-left font-medium">Grade</th>
+                        <th class="px-4 py-3 text-left font-medium">Status</th>
+                        <th class="px-4 py-3 text-left font-medium">Parent</th>
+                        <th class="px-4 py-3 text-right font-medium">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y" id="admin-students-table-body">
-                    <tr><td colspan="7" class="px-6 py-8 text-center text-muted-foreground">Loading students...</td></tr>
+                    <tr><td colspan="6" class="px-4 py-8 text-center text-muted-foreground">Loading students...</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Teacher Approvals Queue -->
+    <!-- Teacher Approval Queue -->
     <div class="rounded-xl border bg-card overflow-hidden">
         <div class="p-4 border-b flex justify-between items-center">
             <h3 class="font-semibold">Pending Teacher Approvals</h3>
@@ -213,61 +134,14 @@
                         <th class="px-4 py-3 text-left font-medium">Teacher</th>
                         <th class="px-4 py-3 text-left font-medium">Email</th>
                         <th class="px-4 py-3 text-left font-medium">Subjects</th>
-                        <th class="px-4 py-3 text-left font-medium">Qualification</th>
                         <th class="px-4 py-3 text-left font-medium">Applied</th>
-                        <th class="px-4 py-3 text-center font-medium">Actions</th>
+                        <th class="px-4 py-3 text-right font-medium">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y" id="pending-teachers-table">
-                    <tr><td colspan="6" class="px-4 py-8 text-center text-muted-foreground">No pending approvals</td></tr>
+                    <tr><td colspan="5" class="px-4 py-8 text-center text-muted-foreground">No pending approvals</td></tr>
                 </tbody>
             </table>
-        </div>
-    </div>
-
-    <!-- Duty Management Section -->
-    <div class="grid gap-4 md:grid-cols-2">
-        <div class="rounded-xl border bg-card p-6">
-            <h3 class="font-semibold mb-4">Generate Duty Roster</h3>
-            <div class="space-y-3">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Start Date</label>
-                    <input type="date" id="duty-start-date" value="<?php echo date('Y-m-d'); ?>" 
-                           class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">End Date</label>
-                    <input type="date" id="duty-end-date" value="<?php echo date('Y-m-d', strtotime('+7 days')); ?>" 
-                           class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                </div>
-                <button onclick="handleGenerateDutyRoster()" class="w-full bg-primary text-primary-foreground py-2 rounded-lg hover:bg-primary/90 flex items-center justify-center gap-2">
-                    <i data-lucide="calendar" class="h-4 w-4"></i>
-                    Generate Roster
-                </button>
-            </div>
-        </div>
-        
-        <div class="rounded-xl border bg-card p-6">
-            <h3 class="font-semibold mb-4">Today's Duty</h3>
-            <div class="space-y-2" id="today-duty-list">
-                <div class="text-center text-muted-foreground py-4">Loading...</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Understaffed Alerts -->
-    <div class="rounded-xl border bg-card p-6 border-red-200 bg-red-50 dark:bg-red-900/10 hidden" id="understaffed-alert">
-        <div class="flex items-start gap-3">
-            <div class="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                <i data-lucide="alert-triangle" class="h-5 w-5 text-red-600"></i>
-            </div>
-            <div class="flex-1">
-                <h4 class="font-semibold text-red-700 dark:text-red-400">Understaffed Areas Detected</h4>
-                <p id="understaffed-message" class="text-sm text-red-600 dark:text-red-300 mt-1"></p>
-            </div>
-            <button onclick="dismissUnderstaffedAlert()" class="text-red-600 hover:text-red-800">
-                <i data-lucide="x" class="h-5 w-5"></i>
-            </button>
         </div>
     </div>
 </div>
@@ -275,16 +149,19 @@
 <!-- Student Details Modal -->
 <div id="student-details-modal" class="fixed inset-0 z-50 hidden">
     <div class="absolute inset-0 bg-black/50" onclick="closeStudentDetailsModal()"></div>
-    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl p-4">
-        <div class="rounded-xl border bg-card shadow-xl overflow-hidden">
-            <div class="bg-gradient-to-r from-primary/10 to-purple-600/10 px-6 py-4 border-b flex justify-between items-center">
-                <h3 class="text-xl font-semibold">Student Details</h3>
+    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+        <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Student Details</h3>
                 <button onclick="closeStudentDetailsModal()" class="p-2 hover:bg-accent rounded-lg">
                     <i data-lucide="x" class="h-5 w-5"></i>
                 </button>
             </div>
-            <div class="modal-content p-6">
+            <div class="modal-content space-y-4">
                 <!-- Content will be filled dynamically -->
+            </div>
+            <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
+                <button onclick="closeStudentDetailsModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Close</button>
             </div>
         </div>
     </div>
@@ -295,64 +172,67 @@
     <div class="absolute inset-0 bg-black/50" onclick="closeEditStudentModal()"></div>
     <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
         <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">Edit Student</h3>
-                <button onclick="closeEditStudentModal()" class="p-2 hover:bg-accent rounded-lg">
-                    <i data-lucide="x" class="h-5 w-5"></i>
-                </button>
-            </div>
-            
+            <h3 class="text-lg font-semibold mb-4">Edit Student</h3>
             <input type="hidden" id="edit-student-id">
-            
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium mb-1">Full Name</label>
                     <input type="text" id="edit-student-name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-1">Email (optional)</label>
+                    <label class="block text-sm font-medium mb-1">Email</label>
                     <input type="email" id="edit-student-email" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">Grade/Class</label>
                     <input type="text" id="edit-student-grade" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Gender</label>
-                        <select id="edit-student-gender" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                            <option value="">Select</option>
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Date of Birth</label>
-                        <input type="date" id="edit-student-dob" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                    </div>
-                </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">Status</label>
                     <select id="edit-student-status" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
-                        <option value="graduated">Graduated</option>
-                        <option value="transferred">Transferred</option>
                         <option value="suspended">Suspended</option>
+                        <option value="graduated">Graduated</option>
                     </select>
                 </div>
-                
-                <!-- Suspension Reason (shown when status is suspended) -->
-                <div id="suspension-reason-container" class="hidden">
-                    <label class="block text-sm font-medium mb-1">Suspension Reason</label>
-                    <textarea id="edit-suspension-reason" rows="2" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="Enter reason for suspension..."></textarea>
-                </div>
             </div>
-            
             <div class="flex justify-end gap-2 mt-6">
                 <button onclick="closeEditStudentModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
                 <button onclick="handleUpdateStudent()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Update Student</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Teacher Modal -->
+<div id="edit-teacher-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50" onclick="closeEditTeacherModal()"></div>
+    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+        <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+            <h3 class="text-lg font-semibold mb-4">Edit Teacher</h3>
+            <input type="hidden" id="edit-teacher-id">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Full Name</label>
+                    <input type="text" id="edit-teacher-name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Email</label>
+                    <input type="email" id="edit-teacher-email" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Subjects</label>
+                    <input type="text" id="edit-teacher-subjects" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Department</label>
+                    <input type="text" id="edit-teacher-department" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-6">
+                <button onclick="closeEditTeacherModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
+                <button onclick="handleUpdateTeacher()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Update Teacher</button>
             </div>
         </div>
     </div>
@@ -362,14 +242,14 @@
 <div id="attendance-modal" class="fixed inset-0 z-50 hidden">
     <div class="absolute inset-0 bg-black/50" onclick="closeAttendanceModal()"></div>
     <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl p-4">
-        <div class="rounded-xl border bg-card shadow-xl overflow-hidden">
-            <div class="bg-gradient-to-r from-primary/10 to-purple-600/10 px-6 py-4 border-b flex justify-between items-center">
-                <h3 class="text-xl font-semibold">Attendance History</h3>
+        <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Attendance History</h3>
                 <button onclick="closeAttendanceModal()" class="p-2 hover:bg-accent rounded-lg">
                     <i data-lucide="x" class="h-5 w-5"></i>
                 </button>
             </div>
-            <div class="modal-content p-6">
+            <div class="modal-content space-y-4">
                 <!-- Content will be filled dynamically -->
             </div>
         </div>
@@ -377,89 +257,28 @@
 </div>
 
 <script>
-// Status change handler for edit modal
-document.addEventListener('change', function(e) {
-    if (e.target.id === 'edit-student-status') {
-        const container = document.getElementById('suspension-reason-container');
-        if (e.target.value === 'suspended') {
-            container.classList.remove('hidden');
-        } else {
-            container.classList.add('hidden');
+// Auto-refresh on load
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        if (typeof refreshAdminStudentList === 'function') {
+            refreshAdminStudentList();
         }
-    }
+        if (typeof refreshPendingTeachers === 'function') {
+            refreshPendingTeachers();
+        }
+    }, 500);
 });
 
-function dismissUnderstaffedAlert() {
-    document.getElementById('understaffed-alert').classList.add('hidden');
+// Modal close functions
+function closeEditStudentModal() {
+    document.getElementById('edit-student-modal').classList.add('hidden');
 }
 
-function refreshAlerts() {
-    showToast('Refreshing alerts...', 'info');
-    setTimeout(() => {
-        // Simulate new alerts
-        const alertsList = document.getElementById('alerts-list');
-        alertsList.innerHTML = `
-            <div class="p-4 flex items-start gap-4 hover:bg-accent/50 transition-colors">
-                <div class="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0">
-                    <i data-lucide="alert-triangle" class="h-4 w-4 text-yellow-600"></i>
-                </div>
-                <div class="flex-1">
-                    <p class="text-sm font-medium">Low attendance alert</p>
-                    <p class="text-xs text-muted-foreground">3 students have below 80% attendance</p>
-                </div>
-                <span class="text-xs text-muted-foreground">just now</span>
-            </div>
-            <div class="p-4 flex items-start gap-4 hover:bg-accent/50 transition-colors">
-                <div class="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <i data-lucide="user-check" class="h-4 w-4 text-green-600"></i>
-                </div>
-                <div class="flex-1">
-                    <p class="text-sm font-medium">Teacher approved</p>
-                    <p class="text-xs text-muted-foreground">Jane Doe's account has been approved</p>
-                </div>
-                <span class="text-xs text-muted-foreground">2 mins ago</span>
-            </div>
-        `;
-        document.getElementById('alert-count').textContent = '2 new';
-        lucide.createIcons();
-        showToast('Alerts updated', 'success');
-    }, 1000);
+function closeEditTeacherModal() {
+    document.getElementById('edit-teacher-modal').classList.add('hidden');
 }
 
-function exportStudentList() {
-    showToast('Exporting student list...', 'info');
-    setTimeout(() => {
-        showToast('Student list exported successfully', 'success');
-    }, 1500);
-}
-
-function updateAdminChart(value) {
-    console.log('Updating admin chart with:', value);
-}
-
-function updateAdminPieChart(value) {
-    console.log('Updating admin pie chart with:', value);
-}
-
-function handleGenerateDutyRoster() {
-    const startDate = document.getElementById('duty-start-date')?.value;
-    const endDate = document.getElementById('duty-end-date')?.value;
-    
-    if (!startDate || !endDate) {
-        showToast('Please select start and end dates', 'error');
-        return;
-    }
-    
-    showToast(`Generating duty roster from ${startDate} to ${endDate}...`, 'info');
-    
-    // Simulate generation
-    setTimeout(() => {
-        showToast('Duty roster generated successfully', 'success');
-        
-        // Show understaffed alert as demo
-        document.getElementById('understaffed-message').textContent = 
-            'Main Gate: need 2 teachers, have 1 • Dining Hall: need 3 teachers, have 2';
-        document.getElementById('understaffed-alert').classList.remove('hidden');
-    }, 2000);
+function closeAttendanceModal() {
+    document.getElementById('attendance-modal').classList.add('hidden');
 }
 </script>
