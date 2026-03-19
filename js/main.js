@@ -2020,60 +2020,208 @@ async function refreshNameChangeRequests() {
 
 // ============ ADMIN SECTIONS ============
 
+// In main.js - REPLACE your renderAdminSection function with this:
+
 async function renderAdminSection(section) {
-    switch(section) {
-        case 'dashboard':
-            // Load the admin.html content
-            const response = await fetch('/path/to/admin.html'); // Adjust path
-             const html = await response.text();
+    try {
+        // For dashboard section, return the HTML directly instead of fetching
+        if (section === 'dashboard') {
+            return `
+                <div class="space-y-6 animate-fade-in" id="admin-dashboard-content">
+                    <!-- School Profile Card -->
+                    <div class="rounded-xl border bg-card p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 card-hover">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                                <div class="flex items-center gap-3 mb-2">
+                                    <h2 class="text-2xl font-bold" id="school-name">Your School</h2>
+                                    <span class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full" id="school-status">Active</span>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <p class="text-sm"><span class="font-mono bg-muted px-2 py-1 rounded" id="school-shortcode">SHL-7LCQL</span></p>
+                                    <button onclick="showNameChangeModal()" class="text-sm text-primary hover:underline">Change School Name ($50)</button>
+                                </div>
+                            </div>
+                            <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
+                                <p class="text-xs text-muted-foreground">Share this code with teachers</p>
+                                <p class="text-lg font-mono font-bold" id="display-shortcode">SHL-7LCQL</p>
+                            </div>
+                        </div>
+                    </div>
 
-            // After rendering, update stats
-            setTimeout(() => {
-                if (typeof refreshAdminStudentList === 'function') {
-                    refreshAdminStudentList();
+                    <!-- Stats Grid -->
+                    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <div class="rounded-xl border bg-card p-6 card-hover">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-muted-foreground">Total Students</p>
+                                    <h3 class="text-2xl font-bold mt-1" id="total-students">0</h3>
+                                </div>
+                                <div class="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                                    <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="rounded-xl border bg-card p-6 card-hover">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-muted-foreground">Teachers</p>
+                                    <h3 class="text-2xl font-bold mt-1" id="total-teachers">0</h3>
+                                    <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
+                                        <i data-lucide="trending-up" class="h-3 w-3"></i>
+                                        <span id="pending-teachers">0</span> pending approval
+                                    </p>
+                                </div>
+                                <div class="h-12 w-12 rounded-lg bg-violet-100 flex items-center justify-center">
+                                    <i data-lucide="user-plus" class="h-6 w-6 text-violet-600"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="rounded-xl border bg-card p-6 card-hover">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-muted-foreground">Classes</p>
+                                    <h3 class="text-2xl font-bold mt-1" id="total-classes">0</h3>
+                                </div>
+                                <div class="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
+                                    <i data-lucide="book-open" class="h-6 w-6 text-emerald-600"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="rounded-xl border bg-card p-6 card-hover">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-muted-foreground">Attendance Rate</p>
+                                    <h3 class="text-2xl font-bold mt-1" id="attendance-rate">94%</h3>
+                                </div>
+                                <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
+                                    <i data-lucide="calendar-check" class="h-6 w-6 text-amber-600"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
+                    <!-- Quick Actions -->
+                    <div class="grid gap-4 md:grid-cols-3">
+                        <button onclick="showDashboardSection('teacher-approvals')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
+                            <i data-lucide="user-plus" class="h-8 w-8 text-blue-600 mb-3"></i>
+                            <h4 class="font-semibold">Teacher Approvals</h4>
+                            <p class="text-sm text-muted-foreground">Approve pending teachers</p>
+                            <span class="mt-2 inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700" id="pending-count-badge">0 pending</span>
+                        </button>
+                        
+                        <button onclick="showDashboardSection('students')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
+                            <i data-lucide="users" class="h-8 w-8 text-green-600 mb-3"></i>
+                            <h4 class="font-semibold">Student Management</h4>
+                            <p class="text-sm text-muted-foreground">View and manage all students</p>
+                        </button>
+                        
+                        <button onclick="showDashboardSection('settings')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
+                            <i data-lucide="settings" class="h-8 w-8 text-purple-600 mb-3"></i>
+                            <h4 class="font-semibold">School Settings</h4>
+                            <p class="text-sm text-muted-foreground">Configure curriculum and subjects</p>
+                        </button>
+                    </div>
+
+                    <!-- Student Management Table -->
+                    <div class="rounded-xl border bg-card overflow-hidden">
+                        <div class="p-4 border-b flex justify-between items-center">
+                            <h3 class="font-semibold">Student Management</h3>
+                            <button onclick="refreshAdminStudentList()" class="px-3 py-1 border rounded-lg text-sm hover:bg-accent">Refresh</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-muted/50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left font-medium">Student</th>
+                                        <th class="px-4 py-3 text-left font-medium">ELIMUID</th>
+                                        <th class="px-4 py-3 text-left font-medium">Grade</th>
+                                        <th class="px-4 py-3 text-left font-medium">Status</th>
+                                        <th class="px-4 py-3 text-left font-medium">Parent(s)</th>
+                                        <th class="px-4 py-3 text-right font-medium">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-students-table-body">
+                                    <tr><td colspan="6" class="px-4 py-8 text-center text-muted-foreground">Loading students...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Pending Teachers Table -->
+                    <div class="rounded-xl border bg-card overflow-hidden">
+                        <div class="p-4 border-b flex justify-between items-center">
+                            <h3 class="font-semibold">Pending Teacher Approvals</h3>
+                            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full" id="pending-count">0</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-muted/50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left font-medium">Teacher</th>
+                                        <th class="px-4 py-3 text-left font-medium">Email</th>
+                                        <th class="px-4 py-3 text-left font-medium">Subjects</th>
+                                        <th class="px-4 py-3 text-left font-medium">Applied</th>
+                                        <th class="px-4 py-3 text-right font-medium">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pending-teachers-table">
+                                    <tr><td colspan="5" class="px-4 py-8 text-center text-muted-foreground">No pending approvals</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Student Details Modal -->
+                <div id="student-details-modal" class="fixed inset-0 z-50 hidden">
+                    <div class="absolute inset-0 bg-black/50" onclick="closeStudentDetailsModal()"></div>
+                    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+                        <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-semibold">Student Details</h3>
+                                <button onclick="closeStudentDetailsModal()" class="p-2 hover:bg-accent rounded-lg">
+                                    <i data-lucide="x" class="h-5 w-5"></i>
+                                </button>
+                            </div>
+                            <div class="modal-content space-y-4">
+                                <!-- Content will be filled dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                function closeStudentDetailsModal() {
+                    document.getElementById('student-details-modal').classList.add('hidden');
                 }
-
-                if (typeof refreshPendingTeachers === 'function') {
-                    refreshPendingTeachers();
-                }
-
-                if (typeof updateAdminStats === 'function') {
-                    updateAdminStats();
-
-                }
-
-            }, 500);
-
-            return html;
-               
-            return renderAdminDashboard();
-        case 'teachers':
-            return await renderAdminTeachers();
-        case 'teacher-approvals':
-            return await renderAdminPendingTeachers();
-        case 'students':
-            return await renderAdminStudents();
-        case 'calendar':
-            return renderAdminCalendar();
-        case 'duty':
-            return await renderAdminDuty();
-        case 'fairness-report':
-            return await renderAdminFairnessReport();
-        case 'teacher-workload':
-            return await renderAdminTeacherWorkload();
-        case 'tasks':
-            return renderAdminTasks();
-        case 'timetable':
-            return renderAdminTimetable();
-        case 'settings':
-            return renderAdminSettings();
-        case 'custom-subjects':
-            return renderAdminCustomSubjects();
-        case 'class-management':  // ← ADD THIS LINE
-            return await renderClassManagement();
-        default:
-            return renderAdminDashboard();
+                window.viewStudent = function(id) {
+                    if (typeof showToast === 'function') {
+                        showToast('Viewing student: ' + id, 'info');
+                    }
+                };
+                </script>
+            `;
+        }
+        
+        // Handle other sections (students, teachers, settings, etc.)
+        switch(section) {
+            case 'students':
+                return await renderAdminStudents();
+            case 'teachers':
+                return await renderAdminTeachers();
+            case 'teacher-approvals':
+                return await renderAdminPendingTeachers();
+            case 'settings':
+                return renderAdminSettings();
+            default:
+                return '<div class="text-center py-12">Section not found</div>';
+        }
+    } catch (error) {
+        console.error('Error rendering admin section:', error);
+        return '<div class="text-center py-12 text-red-500">Error loading section</div>';
     }
 }
 
