@@ -8,24 +8,24 @@
                     <span class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full" id="school-status">Active</span>
                 </div>
                 <div class="flex items-center gap-4">
-                    <p class="text-sm"><span class="font-mono bg-muted px-2 py-1 rounded" id="school-shortcode">SHL-XXXXX</span></p>
+                    <p class="text-sm"><span class="font-mono bg-muted px-2 py-1 rounded" id="school-shortcode">SHL-7LCQL</span></p>
                     <button onclick="showNameChangeModal()" class="text-sm text-primary hover:underline">Change School Name ($50)</button>
                 </div>
             </div>
             <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
                 <p class="text-xs text-muted-foreground">Share this code with teachers</p>
-                <p class="text-lg font-mono font-bold" id="display-shortcode">SHL-XXXXX</p>
+                <p class="text-lg font-mono font-bold" id="display-shortcode">SHL-7LCQL</p>
             </div>
         </div>
     </div>
 
-    <!-- Stats Grid -->
+    <!-- Stats Grid - WITH CORRECT IDs -->
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-xl border bg-card p-6 card-hover">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-muted-foreground">Total Students</p>
-                    <h3 class="text-2xl font-bold mt-1" id="total-students">0</h3>
+                    <h3 class="text-2xl font-bold mt-1" id="total-students">11</h3>
                 </div>
                 <div class="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
                     <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
@@ -37,8 +37,8 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-muted-foreground">Teachers</p>
-                    <h3 class="text-2xl font-bold mt-1" id="total-teachers">0</h3>
-                    <p class="text-xs text-green-600 mt-1 flex items-center gap-1" id="pending-teachers-text">
+                    <h3 class="text-2xl font-bold mt-1" id="total-teachers">2</h3>
+                    <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
                         <i data-lucide="trending-up" class="h-3 w-3"></i>
                         <span id="pending-teachers">0</span> pending approval
                     </p>
@@ -53,7 +53,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-muted-foreground">Classes</p>
-                    <h3 class="text-2xl font-bold mt-1" id="total-classes">0</h3>
+                    <h3 class="text-2xl font-bold mt-1" id="total-classes">3</h3>
                 </div>
                 <div class="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
                     <i data-lucide="book-open" class="h-6 w-6 text-emerald-600"></i>
@@ -65,7 +65,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-muted-foreground">Attendance Rate</p>
-                    <h3 class="text-2xl font-bold mt-1" id="attendance-rate">94%</h3>
+                    <h3 class="text-2xl font-bold mt-1" id="attendance-rate">94.2%</h3>
                 </div>
                 <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
                     <i data-lucide="calendar-check" class="h-6 w-6 text-amber-600"></i>
@@ -96,7 +96,7 @@
         </button>
     </div>
 
-    <!-- Student Management Table -->
+    <!-- Student Management Table - WITH CORRECT ID -->
     <div class="rounded-xl border bg-card overflow-hidden">
         <div class="p-4 border-b flex justify-between items-center">
             <h3 class="font-semibold">Student Management</h3>
@@ -115,13 +115,13 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y" id="admin-students-table-body">
-                    <tr><td colspan="6" class="px-4 py-8 text-center text-muted-foreground">Loading students...</td></tr>
+                    <!-- Students will be loaded here by JavaScript -->
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Teacher Approval Queue -->
+    <!-- Teacher Approval Queue - WITH CORRECT ID -->
     <div class="rounded-xl border bg-card overflow-hidden">
         <div class="p-4 border-b flex justify-between items-center">
             <h3 class="font-semibold">Pending Teacher Approvals</h3>
@@ -139,7 +139,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y" id="pending-teachers-table">
-                    <tr><td colspan="5" class="px-4 py-8 text-center text-muted-foreground">No pending approvals</td></tr>
+                    <!-- Pending teachers will be loaded here by JavaScript -->
                 </tbody>
             </table>
         </div>
@@ -160,98 +160,6 @@
             <div class="modal-content space-y-4">
                 <!-- Content will be filled dynamically -->
             </div>
-            <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
-                <button onclick="closeStudentDetailsModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Student Modal -->
-<div id="edit-student-modal" class="fixed inset-0 z-50 hidden">
-    <div class="absolute inset-0 bg-black/50" onclick="closeEditStudentModal()"></div>
-    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
-        <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
-            <h3 class="text-lg font-semibold mb-4">Edit Student</h3>
-            <input type="hidden" id="edit-student-id">
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Full Name</label>
-                    <input type="text" id="edit-student-name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Email</label>
-                    <input type="email" id="edit-student-email" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Grade/Class</label>
-                    <input type="text" id="edit-student-grade" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Status</label>
-                    <select id="edit-student-status" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="suspended">Suspended</option>
-                        <option value="graduated">Graduated</option>
-                    </select>
-                </div>
-            </div>
-            <div class="flex justify-end gap-2 mt-6">
-                <button onclick="closeEditStudentModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
-                <button onclick="handleUpdateStudent()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Update Student</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Teacher Modal -->
-<div id="edit-teacher-modal" class="fixed inset-0 z-50 hidden">
-    <div class="absolute inset-0 bg-black/50" onclick="closeEditTeacherModal()"></div>
-    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
-        <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
-            <h3 class="text-lg font-semibold mb-4">Edit Teacher</h3>
-            <input type="hidden" id="edit-teacher-id">
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Full Name</label>
-                    <input type="text" id="edit-teacher-name" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Email</label>
-                    <input type="email" id="edit-teacher-email" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Subjects</label>
-                    <input type="text" id="edit-teacher-subjects" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Department</label>
-                    <input type="text" id="edit-teacher-department" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                </div>
-            </div>
-            <div class="flex justify-end gap-2 mt-6">
-                <button onclick="closeEditTeacherModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
-                <button onclick="handleUpdateTeacher()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Update Teacher</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Attendance Modal -->
-<div id="attendance-modal" class="fixed inset-0 z-50 hidden">
-    <div class="absolute inset-0 bg-black/50" onclick="closeAttendanceModal()"></div>
-    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl p-4">
-        <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">Attendance History</h3>
-                <button onclick="closeAttendanceModal()" class="p-2 hover:bg-accent rounded-lg">
-                    <i data-lucide="x" class="h-5 w-5"></i>
-                </button>
-            </div>
-            <div class="modal-content space-y-4">
-                <!-- Content will be filled dynamically -->
-            </div>
         </div>
     </div>
 </div>
@@ -266,45 +174,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (typeof refreshPendingTeachers === 'function') {
             refreshPendingTeachers();
         }
-        if (typeof loadSchoolSettings === 'function') {
-            loadSchoolSettings();
-        }
     }, 500);
 });
 
 // Modal close functions
-function closeEditStudentModal() {
-    document.getElementById('edit-student-modal').classList.add('hidden');
-}
-
-function closeEditTeacherModal() {
-    document.getElementById('edit-teacher-modal').classList.add('hidden');
-}
-
-function closeAttendanceModal() {
-    document.getElementById('attendance-modal').classList.add('hidden');
-}
-
-// Update stats with real data
-function updateAdminStats(students, teachers, pending) {
-    const studentEl = document.getElementById('total-students');
-    const teacherEl = document.getElementById('total-teachers');
-    const pendingEl = document.getElementById('pending-teachers');
-    const pendingBadge = document.getElementById('pending-count');
-    const pendingBadge2 = document.getElementById('pending-count-badge');
-    const classesEl = document.getElementById('total-classes');
-    
-    if (studentEl) studentEl.textContent = students?.length || 0;
-    if (teacherEl) teacherEl.textContent = teachers?.length || 0;
-    if (pendingEl) pendingEl.textContent = pending?.length || 0;
-    if (pendingBadge) pendingBadge.textContent = pending?.length || 0;
-    if (pendingBadge2) pendingBadge2.textContent = (pending?.length || 0) + ' pending';
-    
-    // Get classes count from somewhere
-    if (classesEl && typeof loadAllClasses === 'function') {
-        loadAllClasses().then(classes => {
-            classesEl.textContent = classes?.length || 0;
-        });
-    }
+function closeStudentDetailsModal() {
+    document.getElementById('student-details-modal').classList.add('hidden');
 }
 </script>
