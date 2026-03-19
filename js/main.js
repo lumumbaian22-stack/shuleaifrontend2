@@ -1835,6 +1835,54 @@ function renderSuperAdminSettings() {
     `;
 }
 
+// Add this to main.js
+
+// Update admin stats
+async function updateAdminStats() {
+    try {
+        const [students, teachers, pending] = await Promise.all([
+            api.admin.getStudents().catch(() => ({ data: [] })),
+            api.admin.getTeachers().catch(() => ({ data: [] })),
+            api.admin.getPendingApprovals().catch(() => ({ data: { teachers: [] } }))
+        ]);
+        
+        // Update stat elements if they exist
+        const studentEl = document.getElementById('total-students');
+        if (studentEl) studentEl.textContent = students.data?.length || 0;
+        
+        const teacherEl = document.getElementById('total-teachers');
+        if (teacherEl) teacherEl.textContent = teachers.data?.length || 0;
+        
+        const pendingEl = document.getElementById('pending-teachers');
+        if (pendingEl) pendingEl.textContent = pending.data?.teachers?.length || 0;
+        
+        const pendingBadge = document.getElementById('pending-count');
+        if (pendingBadge) pendingBadge.textContent = pending.data?.teachers?.length || 0;
+        
+        const pendingBadge2 = document.getElementById('pending-count-badge');
+        if (pendingBadge2) pendingBadge2.textContent = (pending.data?.teachers?.length || 0) + ' pending';
+        
+        // Load classes count
+        const classes = await api.admin.getClasses().catch(() => ({ data: [] }));
+        const classesEl = document.getElementById('total-classes');
+        if (classesEl) classesEl.textContent = classes.data?.length || 0;
+        
+    } catch (error) {
+        console.error('Error updating admin stats:', error);
+    }
+}
+
+// Call this when admin dashboard loads
+if (typeof showDashboardSection === 'function') {
+    const originalShowDashboard = showDashboardSection;
+    window.showDashboardSection = async function(section) {
+        await originalShowDashboard(section);
+        if (section === 'dashboard' && getCurrentRole() === 'admin') {
+            setTimeout(updateAdminStats, 500);
+        }
+    };
+}
+
 // Add this function to main.js to render the schools table
 async function refreshSchoolsList() {
     const container = document.getElementById('schools-table-body');
@@ -1975,6 +2023,30 @@ async function refreshNameChangeRequests() {
 async function renderAdminSection(section) {
     switch(section) {
         case 'dashboard':
+            // Load the admin.html content
+            const response = await fetch('/path/to/admin.html'); // Adjust path
+             const html = await response.text();
+
+            // After rendering, update stats
+            setTimeout(() => {
+                if (typeof refreshAdminStudentList === 'function') {
+                    refreshAdminStudentList();
+
+                }
+
+                if (typeof refreshPendingTeachers === 'function') {
+                    refreshPendingTeachers();
+                }
+
+                if (typeof updateAdminStats === 'function') {
+                    updateAdminStats();
+
+                }
+
+            }, 500);
+
+            return html;
+               
             return renderAdminDashboard();
         case 'teachers':
             return await renderAdminTeachers();
