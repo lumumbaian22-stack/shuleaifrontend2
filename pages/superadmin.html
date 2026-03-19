@@ -114,6 +114,11 @@
                 </thead>
                 <tbody class="divide-y" id="schools-table-body">
                     <!-- Schools will be loaded here dynamically -->
+                    <tr class="hover:bg-accent/50 transition-colors">
+                        <td class="px-4 py-3 font-medium" colspan="5" class="text-center text-muted-foreground">
+                            Loading schools...
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -126,6 +131,24 @@
         </div>
         <div class="divide-y" id="name-change-requests-list">
             <!-- Requests will be loaded here dynamically -->
+            <div class="p-4 text-center text-muted-foreground">
+                No pending name change requests
+            </div>
         </div>
     </div>
+</div>
+
+<!-- School Details Modal (keep existing) -->
+<div id="school-details-modal" class="fixed inset-0 z-50 hidden">
+    <!-- modal content -->
+</div>
+
+<!-- Edit School Modal (keep existing) -->
+<div id="edit-school-modal" class="fixed inset-0 z-50 hidden">
+    <!-- modal content -->
+</div>
+
+<!-- Create School Modal (keep existing) -->
+<div id="create-school-modal" class="fixed inset-0 z-50 hidden">
+    <!-- modal content -->
 </div>
