@@ -1419,15 +1419,16 @@ function renderSuperAdminDashboard() {
     const data = dashboardData || {};
     return `
         <div class="space-y-6 animate-fade-in">
+            <!-- Stats Grid with proper IDs -->
             <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div class="rounded-xl border bg-card p-6 card-hover">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm font-medium text-muted-foreground">Total Schools</p>
-                            <h3 class="text-2xl font-bold mt-1">${data.schools?.length || 0}</h3>
+                            <h3 class="text-2xl font-bold mt-1" id="total-schools">${data.schools?.length || 0}</h3>
                             <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
                                 <i data-lucide="trending-up" class="h-3 w-3"></i>
-                                +${data.pendingSchools?.length || 0} pending approval
+                                <span id="new-schools">${data.pendingSchools?.length || 0}</span> pending approval
                             </p>
                         </div>
                         <div class="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -1440,10 +1441,10 @@ function renderSuperAdminDashboard() {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm font-medium text-muted-foreground">Active Schools</p>
-                            <h3 class="text-2xl font-bold mt-1">${data.schools?.filter(s => s.status === 'active').length || 0}</h3>
+                            <h3 class="text-2xl font-bold mt-1" id="active-admins">${data.schools?.filter(s => s.status === 'active').length || 0}</h3>
                             <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
                                 <i data-lucide="trending-up" class="h-3 w-3"></i>
-                                ${data.schools?.filter(s => s.status !== 'active').length || 0} inactive
+                                <span id="new-admins">${data.schools?.filter(s => s.status !== 'active').length || 0}</span> inactive
                             </p>
                         </div>
                         <div class="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
@@ -1455,12 +1456,15 @@ function renderSuperAdminDashboard() {
                 <div class="rounded-xl border bg-card p-6 card-hover">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-muted-foreground">Total Students</p>
-                            <h3 class="text-2xl font-bold mt-1">${data.students || 0}</h3>
-                            <p class="text-xs text-muted-foreground mt-1">Across all schools</p>
+                            <p class="text-sm font-medium text-muted-foreground">Pending Approvals</p>
+                            <h3 class="text-2xl font-bold mt-1" id="pending-approvals">${data.pendingSchools?.length || 0}</h3>
+                            <p class="text-xs text-yellow-600 mt-1 flex items-center gap-1">
+                                <i data-lucide="clock" class="h-3 w-3"></i>
+                                Awaiting review
+                            </p>
                         </div>
-                        <div class="h-12 w-12 rounded-lg bg-violet-100 flex items-center justify-center">
-                            <i data-lucide="users" class="h-6 w-6 text-violet-600"></i>
+                        <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
+                            <i data-lucide="alert-circle" class="h-6 w-6 text-amber-600"></i>
                         </div>
                     </div>
                 </div>
@@ -1468,37 +1472,103 @@ function renderSuperAdminDashboard() {
                 <div class="rounded-xl border bg-card p-6 card-hover">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-muted-foreground">Total Teachers</p>
-                            <h3 class="text-2xl font-bold mt-1">${data.teachers || 0}</h3>
-                            <p class="text-xs text-muted-foreground mt-1">Active educators</p>
+                            <p class="text-sm font-medium text-muted-foreground">Revenue (MTD)</p>
+                            <h3 class="text-2xl font-bold mt-1" id="revenue">$0</h3>
+                            <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
+                                <i data-lucide="trending-up" class="h-3 w-3"></i>
+                                +<span id="revenue-growth">0</span>% from last month
+                            </p>
                         </div>
-                        <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
-                            <i data-lucide="user-plus" class="h-6 w-6 text-amber-600"></i>
+                        <div class="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
+                            <i data-lucide="dollar-sign" class="h-6 w-6 text-emerald-600"></i>
                         </div>
                     </div>
                 </div>
             </div>
             
+            <!-- Charts Row with proper IDs -->
             <div class="grid gap-4 lg:grid-cols-2">
                 <div class="rounded-xl border bg-card p-6">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-semibold">School Growth Trends</h3>
+                        <select class="text-sm border rounded-md px-2 py-1 bg-background" onchange="updateSuperAdminChart(this.value)">
+                            <option value="year">This Year</option>
+                            <option value="last-year">Last Year</option>
+                        </select>
                     </div>
                     <div class="chart-container h-64">
-                        <canvas id="superadmin-growthChart"></canvas>
+                        <canvas id="superadmin-enrollmentChart"></canvas>
                     </div>
                 </div>
                 
                 <div class="rounded-xl border bg-card p-6">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-semibold">School Distribution</h3>
+                        <select class="text-sm border rounded-md px-2 py-1 bg-background" onchange="updateSuperAdminPieChart(this.value)">
+                            <option value="level">By Level</option>
+                            <option value="region">By Region</option>
+                        </select>
                     </div>
                     <div class="chart-container h-64">
-                        <canvas id="superadmin-distChart"></canvas>
+                        <canvas id="superadmin-gradeChart"></canvas>
                     </div>
                 </div>
             </div>
             
+            <!-- Schools Table with proper ID -->
+            <div class="rounded-xl border bg-card overflow-hidden">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h3 class="font-semibold">School/Admin Management</h3>
+                    <span class="text-sm text-muted-foreground" id="school-count">${data.schools?.length || 0} total</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-muted/50">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-medium">School</th>
+                                <th class="px-4 py-3 text-left font-medium">Admin</th>
+                                <th class="px-4 py-3 text-left font-medium">Level</th>
+                                <th class="px-4 py-3 text-left font-medium">Status</th>
+                                <th class="px-4 py-3 text-right font-medium">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y" id="schools-table-body">
+                            ${(data.schools || []).map(school => `
+                                <tr class="hover:bg-accent/50 transition-colors">
+                                    <td class="px-4 py-3 font-medium">${school.name}</td>
+                                    <td class="px-4 py-3">${school.adminEmail || 'N/A'}</td>
+                                    <td class="px-4 py-3">${school.settings?.schoolLevel || 'N/A'}</td>
+                                    <td class="px-4 py-3">
+                                        <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium 
+                                            ${school.status === 'active' ? 'bg-green-100 text-green-700' : 
+                                              school.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 
+                                              'bg-gray-100 text-gray-700'}">
+                                            ${school.status}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-right">
+                                        <button onclick="viewSchoolDetails('${school.id}')" class="p-2 hover:bg-accent rounded-lg">
+                                            <i data-lucide="eye" class="h-4 w-4"></i>
+                                        </button>
+                                        <button onclick="editSchool('${school.id}')" class="p-2 hover:bg-accent rounded-lg">
+                                            <i data-lucide="edit" class="h-4 w-4"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                            ${(!data.schools || data.schools.length === 0) ? `
+                                <tr>
+                                    <td colspan="5" class="px-4 py-8 text-center text-muted-foreground">
+                                        No schools found
+                                    </td>
+                                </tr>
+                            ` : ''}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Quick Action Buttons -->
             <div class="grid gap-4 md:grid-cols-3">
                 <button onclick="showDashboardSection('school-approvals')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
                     <i data-lucide="check-circle" class="h-8 w-8 text-green-600 mb-3"></i>
@@ -1518,6 +1588,32 @@ function renderSuperAdminDashboard() {
                     <h4 class="font-semibold">Name Change Requests</h4>
                     <p class="text-sm text-muted-foreground">Review school name changes</p>
                 </button>
+            </div>
+            
+            <!-- Name Change Requests with proper ID -->
+            <div class="rounded-xl border bg-card" id="name-change-requests">
+                <div class="p-4 border-b">
+                    <h3 class="font-semibold">Name Change Requests</h3>
+                </div>
+                <div class="divide-y" id="name-change-requests-list">
+                    ${(data.nameChangeRequests || []).map(request => `
+                        <div class="p-4 flex items-center justify-between hover:bg-accent/50 transition-colors">
+                            <div>
+                                <p class="text-sm font-medium">${request.oldName} → ${request.newName}</p>
+                                <p class="text-xs text-muted-foreground">${timeAgo(request.createdAt)}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="approveNameChange('${request.id}')" class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full hover:bg-green-200">Approve</button>
+                                <button onclick="rejectNameChange('${request.id}')" class="px-3 py-1 bg-red-100 text-red-700 text-xs rounded-full hover:bg-red-200">Reject</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                    ${(!data.nameChangeRequests || data.nameChangeRequests.length === 0) ? `
+                        <div class="p-4 text-center text-muted-foreground">
+                            No pending name change requests
+                        </div>
+                    ` : ''}
+                </div>
             </div>
         </div>
     `;
