@@ -1,32 +1,24 @@
-// admin-student-management.js - COMPLETE FIXED VERSION
-
-// ============ LOAD ALL STUDENTS ============
-
-async function loadAllStudents() {
-    try {
-        console.log('📥 Loading all students...');
-        const response = await api.admin.getStudents();
-        return response.data || [];
-    } catch (error) {
-        console.error('❌ Failed to load students:', error);
-        if (error.message.includes('403')) {
-            showToast('You do not have admin permissions', 'error');
-        } else {
-            showToast(error.message || 'Failed to load students', 'error');
-        }
-        return [];
-    }
-}
-
-// ============ REFRESH ADMIN STUDENT TABLE ============
+// In admin-student-management.js, find this function:
 
 async function refreshAdminStudentList() {
-    const container = document.getElementById('admin-students-table-body');
+    // CHANGE THIS LINE:
+    // const container = document.getElementById('admin-students-table-body');
+    
+    // TO THIS:
+    const container = document.querySelector('#admin-dashboard-content table tbody');
+    
     if (!container) {
-        console.warn('⚠️ Admin student table container not found');
+        console.warn('⚠️ Admin student table container not found - using fallback');
+        // Try fallback IDs
+        const fallback = document.getElementById('my-students-table') || 
+                        document.querySelector('table tbody');
+        if (fallback) {
+            await refreshWithFallback(fallback);
+        }
         return;
     }
     
+    // Rest of the function remains the same...
     try {
         container.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center">Loading...</td></tr>';
         
@@ -92,19 +84,3 @@ async function refreshAdminStudentList() {
         container.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-red-500">Error loading students</td></tr>';
     }
 }
-
-// ============ ADMIN STUDENT ACTIONS ============
-
-function viewAdminStudent(studentId) {
-    showToast(`View student ${studentId} - Feature coming soon`, 'info');
-}
-
-function editAdminStudent(studentId) {
-    showToast(`Edit student ${studentId} - Feature coming soon`, 'info');
-}
-
-// ============ EXPORT ============
-window.loadAllStudents = loadAllStudents;
-window.refreshAdminStudentList = refreshAdminStudentList;
-window.viewAdminStudent = viewAdminStudent;
-window.editAdminStudent = editAdminStudent;
