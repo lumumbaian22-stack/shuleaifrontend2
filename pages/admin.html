@@ -9,7 +9,7 @@
                 </div>
                 <div class="flex items-center gap-4">
                     <p class="text-sm"><span class="font-mono bg-muted px-2 py-1 rounded" id="school-shortcode">SHL-XXXXX</span></p>
-                    <button onclick="showNameChangeModal()" class="text-sm text-primary hover:underline">Change School Name</button>
+                    <button onclick="showNameChangeModal()" class="text-sm text-primary hover:underline">Change School Name ($50)</button>
                 </div>
             </div>
             <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
@@ -96,7 +96,7 @@
         </button>
     </div>
 
-    <!-- Student Management Table - CRITICAL FIX: Added proper ID -->
+    <!-- Student Management Table -->
     <div class="rounded-xl border bg-card overflow-hidden">
         <div class="p-4 border-b flex justify-between items-center">
             <h3 class="font-semibold">Student Management</h3>
@@ -266,6 +266,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (typeof refreshPendingTeachers === 'function') {
             refreshPendingTeachers();
         }
+        if (typeof loadSchoolSettings === 'function') {
+            loadSchoolSettings();
+        }
     }, 500);
 });
 
@@ -280,5 +283,28 @@ function closeEditTeacherModal() {
 
 function closeAttendanceModal() {
     document.getElementById('attendance-modal').classList.add('hidden');
+}
+
+// Update stats with real data
+function updateAdminStats(students, teachers, pending) {
+    const studentEl = document.getElementById('total-students');
+    const teacherEl = document.getElementById('total-teachers');
+    const pendingEl = document.getElementById('pending-teachers');
+    const pendingBadge = document.getElementById('pending-count');
+    const pendingBadge2 = document.getElementById('pending-count-badge');
+    const classesEl = document.getElementById('total-classes');
+    
+    if (studentEl) studentEl.textContent = students?.length || 0;
+    if (teacherEl) teacherEl.textContent = teachers?.length || 0;
+    if (pendingEl) pendingEl.textContent = pending?.length || 0;
+    if (pendingBadge) pendingBadge.textContent = pending?.length || 0;
+    if (pendingBadge2) pendingBadge2.textContent = (pending?.length || 0) + ' pending';
+    
+    // Get classes count from somewhere
+    if (classesEl && typeof loadAllClasses === 'function') {
+        loadAllClasses().then(classes => {
+            classesEl.textContent = classes?.length || 0;
+        });
+    }
 }
 </script>
