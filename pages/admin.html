@@ -19,13 +19,13 @@
         </div>
     </div>
 
-    <!-- Stats Grid - WITH CORRECT IDs -->
+    <!-- Stats Grid -->
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-xl border bg-card p-6 card-hover">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-muted-foreground">Total Students</p>
-                    <h3 class="text-2xl font-bold mt-1" id="total-students">11</h3>
+                    <h3 class="text-2xl font-bold mt-1" id="total-students">0</h3>
                 </div>
                 <div class="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
                     <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
@@ -37,7 +37,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-muted-foreground">Teachers</p>
-                    <h3 class="text-2xl font-bold mt-1" id="total-teachers">2</h3>
+                    <h3 class="text-2xl font-bold mt-1" id="total-teachers">0</h3>
                     <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
                         <i data-lucide="trending-up" class="h-3 w-3"></i>
                         <span id="pending-teachers">0</span> pending approval
@@ -53,7 +53,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-muted-foreground">Classes</p>
-                    <h3 class="text-2xl font-bold mt-1" id="total-classes">3</h3>
+                    <h3 class="text-2xl font-bold mt-1" id="total-classes">0</h3>
                 </div>
                 <div class="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
                     <i data-lucide="book-open" class="h-6 w-6 text-emerald-600"></i>
@@ -65,7 +65,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-muted-foreground">Attendance Rate</p>
-                    <h3 class="text-2xl font-bold mt-1" id="attendance-rate">94.2%</h3>
+                    <h3 class="text-2xl font-bold mt-1" id="attendance-rate">94%</h3>
                 </div>
                 <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
                     <i data-lucide="calendar-check" class="h-6 w-6 text-amber-600"></i>
@@ -96,7 +96,7 @@
         </button>
     </div>
 
-    <!-- Student Management Table - WITH CORRECT ID -->
+    <!-- STUDENT MANAGEMENT TABLE -->
     <div class="rounded-xl border bg-card overflow-hidden">
         <div class="p-4 border-b flex justify-between items-center">
             <h3 class="font-semibold">Student Management</h3>
@@ -110,18 +110,18 @@
                         <th class="px-4 py-3 text-left font-medium">ELIMUID</th>
                         <th class="px-4 py-3 text-left font-medium">Grade</th>
                         <th class="px-4 py-3 text-left font-medium">Status</th>
-                        <th class="px-4 py-3 text-left font-medium">Parent</th>
+                        <th class="px-4 py-3 text-left font-medium">Parent(s)</th>
                         <th class="px-4 py-3 text-right font-medium">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y" id="admin-students-table-body">
-                    <!-- Students will be loaded here by JavaScript -->
+                <tbody id="admin-students-table-body">
+                    <tr><td colspan="6" class="px-4 py-8 text-center text-muted-foreground">Loading students...</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Teacher Approval Queue - WITH CORRECT ID -->
+    <!-- PENDING TEACHERS TABLE -->
     <div class="rounded-xl border bg-card overflow-hidden">
         <div class="p-4 border-b flex justify-between items-center">
             <h3 class="font-semibold">Pending Teacher Approvals</h3>
@@ -138,8 +138,8 @@
                         <th class="px-4 py-3 text-right font-medium">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y" id="pending-teachers-table">
-                    <!-- Pending teachers will be loaded here by JavaScript -->
+                <tbody id="pending-teachers-table">
+                    <tr><td colspan="5" class="px-4 py-8 text-center text-muted-foreground">No pending approvals</td></tr>
                 </tbody>
             </table>
         </div>
@@ -160,6 +160,9 @@
             <div class="modal-content space-y-4">
                 <!-- Content will be filled dynamically -->
             </div>
+            <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
+                <button onclick="closeStudentDetailsModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -174,6 +177,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (typeof refreshPendingTeachers === 'function') {
             refreshPendingTeachers();
         }
+        if (typeof updateAdminStats === 'function') {
+            updateAdminStats();
+        }
     }, 500);
 });
 
@@ -181,4 +187,9 @@ document.addEventListener('DOMContentLoaded', function() {
 function closeStudentDetailsModal() {
     document.getElementById('student-details-modal').classList.add('hidden');
 }
+
+// View student function (if not exists)
+window.viewStudent = function(studentId) {
+    showToast('View student: ' + studentId, 'info');
+};
 </script>
