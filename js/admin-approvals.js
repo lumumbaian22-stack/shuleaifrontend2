@@ -527,8 +527,12 @@ function renderStudentsTable(students) {
 
 // ==================== REFRESH FUNCTIONS ====================
 
+// In admin-approval.js, find this function:
+
 async function refreshPendingTeachers() {
-    const container = document.getElementById('pending-teachers-container');
+    const container = document.querySelector('#pending-teachers-table') || 
+                     document.querySelectorAll('table')[1]?.querySelector('tbody');
+    
     if (!container) return;
     const teachers = await loadPendingTeachers();
     container.innerHTML = renderPendingTeachersTable(teachers);
