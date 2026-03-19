@@ -1739,6 +1739,48 @@ function renderSuperAdminSettings() {
     `;
 }
 
+// Add to main.js
+async function refreshNameChangeRequests() {
+    const container = document.getElementById('name-change-requests');
+    if (!container) return;
+    
+    try {
+        const response = await api.superAdmin.getPendingRequests();
+        const requests = response.data || [];
+        
+        if (requests.length === 0) {
+            container.innerHTML = '<div class="p-8 text-center text-muted-foreground">No pending name change requests</div>';
+            return;
+        }
+        
+        let html = '';
+        requests.forEach(request => {
+            html += `
+                <div class="p-4 flex items-center justify-between hover:bg-accent/50 transition-colors">
+                    <div>
+                        <p class="text-sm font-medium">${request.currentName} → ${request.newName}</p>
+                        <p class="text-xs text-muted-foreground">Requested by: ${request.User?.name || 'Unknown'} • ${timeAgo(request.createdAt)}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="approveNameChange('${request.id}')" class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full hover:bg-green-200">Approve</button>
+                        <button onclick="rejectNameChange('${request.id}')" class="px-3 py-1 bg-red-100 text-red-700 text-xs rounded-full hover:bg-red-200">Reject</button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+        
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+        
+    } catch (error) {
+        console.error('Error loading name change requests:', error);
+        container.innerHTML = '<div class="p-8 text-center text-red-500">Error loading requests</div>';
+    }
+}
+
 // ============ ADMIN SECTIONS ============
 
 async function renderAdminSection(section) {
