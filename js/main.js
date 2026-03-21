@@ -233,9 +233,11 @@ function formatDate(dateString) {
     });
 }
 
-// ============ CURRICULUM MANAGEMENT ============
+// ============================================
+// CURRICULUM CHANGE FOR ALL USERS - Add to main.js
+// ============================================
 
-// Handle curriculum change - updates EVERYTHING in real-time
+// Override handleCurriculumChange to broadcast to all users
 async function handleCurriculumChange(newCurriculum) {
     if (!newCurriculum) return;
     
@@ -247,7 +249,7 @@ async function handleCurriculumChange(newCurriculum) {
             return;
         }
         
-        // Update school settings
+        // Update school settings on backend
         const response = await api.admin.updateSchoolSettings({
             ...school.settings,
             curriculum: newCurriculum
@@ -258,36 +260,122 @@ async function handleCurriculumChange(newCurriculum) {
             schoolSettings.curriculum = newCurriculum;
             localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings));
             
-            // Emit real-time update to all connected clients
+            // Emit real-time update to ALL connected clients
             if (typeof emitCurriculumUpdate === 'function') {
                 emitCurriculumUpdate(newCurriculum);
             }
             
-            // Update grading system in memory
+            // Update grading system
             updateGradingSystem(newCurriculum);
             
-            // Refresh current dashboard based on role
+            // Get current user role
             const user = getCurrentUser();
-            if (user?.role === 'teacher' && typeof refreshMyStudents === 'function') {
+            const role = user?.role;
+            
+            // Force refresh ALL data for this school
+            // This will update all users when they next refresh
+            const updateTimestamp = new Date().toISOString();
+            localStorage.setItem('curriculumUpdateTimestamp', updateTimestamp);
+            
+            // Refresh ALL users' dashboards
+            if (role === 'teacher') {
                 await refreshMyStudents();
-            } else if (user?.role === 'admin' && typeof refreshStudentsList === 'function') {
+                await loadTeacherMessages();
+                // Update grade display for all students
+                document.querySelectorAll('.student-grade').forEach(el => {
+                    const scoreEl = el.closest('tr')?.querySelector('.student-score');
+                    if (scoreEl) {
+                        const score = parseInt(scoreEl.value);
+                        if (!isNaN(score)) {
+                            const gradeInfo = getGradeFromScore(score, newCurriculum, schoolSettings.schoolLevel || 'secondary');
+                            el.textContent = gradeInfo.grade;
+                        }
+                    }
+                });
+            } else if (role === 'admin') {
                 await refreshStudentsList();
                 await refreshTeachersList();
                 await refreshClassesList();
-            } else if (user?.role === 'parent' && typeof refreshParentDashboard === 'function') {
+                await updateAdminStats();
+            } else if (role === 'parent') {
                 await refreshParentDashboard();
-            } else if (user?.role === 'student' && typeof refreshStudentDashboard === 'function') {
+                // Update grade display for parent view
+                document.querySelectorAll('#grades-table-body tr').forEach(row => {
+                    const scoreEl = row.querySelector('td:nth-child(2)');
+                    if (scoreEl) {
+                        const score = parseInt(scoreEl.textContent);
+                        if (!isNaN(score)) {
+                            const gradeInfo = getGradeFromScore(score, newCurriculum, schoolSettings.schoolLevel || 'secondary');
+                            const gradeCell = row.querySelector('td:nth-child(3)');
+                            if (gradeCell) {
+                                gradeCell.innerHTML = `<span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">${gradeInfo.grade}</span>`;
+                            }
+                        }
+                    }
+                });
+            } else if (role === 'student') {
                 await refreshStudentDashboard();
+                // Update student's own grades
+                document.querySelectorAll('#my-grades div').forEach(gradeDiv => {
+                    const scoreSpan = gradeDiv.querySelector('.font-semibold');
+                    if (scoreSpan) {
+                        const match = scoreSpan.textContent.match(/(\d+)%/);
+                        if (match) {
+                            const score = parseInt(match[1]);
+                            const gradeInfo = getGradeFromScore(score, newCurriculum, schoolSettings.schoolLevel || 'secondary');
+                            scoreSpan.textContent = `${score}% (${gradeInfo.grade})`;
+                        }
+                    }
+                });
             }
             
-            showToast(`✅ Curriculum changed to ${CURRICULUMS[newCurriculum]?.name}`, 'success');
+            // Show success message
+            const curriculumName = CURRICULUMS[newCurriculum]?.name || newCurriculum;
+            showToast(`✅ Curriculum changed to ${curriculumName}. All users will see updated grading.`, 'success');
+            
+            // Store the curriculum in a cookie/session for other tabs
+            document.cookie = `schoolCurriculum=${newCurriculum}; path=/; max-age=${30*24*60*60}`;
+            
         }
     } catch (error) {
+        console.error('Curriculum change error:', error);
         showToast('Failed to update curriculum', 'error');
     } finally {
         hideLoading();
     }
 }
+
+// Listen for curriculum updates from other tabs
+window.addEventListener('storage', function(e) {
+    if (e.key === 'schoolSettings' && e.newValue) {
+        const newSettings = JSON.parse(e.newValue);
+        const oldSettings = schoolSettings;
+        
+        if (newSettings.curriculum !== oldSettings?.curriculum) {
+            console.log('Curriculum changed in another tab:', newSettings.curriculum);
+            schoolSettings = newSettings;
+            showToast(`Curriculum updated to ${CURRICULUMS[newSettings.curriculum]?.name || newSettings.curriculum}`, 'info');
+            
+            // Refresh current view
+            if (currentSection) {
+                showDashboardSection(currentSection);
+            }
+        }
+    }
+});
+
+// Listen for cross-tab curriculum update timestamp
+window.addEventListener('storage', function(e) {
+    if (e.key === 'curriculumUpdateTimestamp') {
+        console.log('Curriculum update detected from another tab');
+        // Force reload of curriculum data
+        loadSchoolSettings().then(() => {
+            if (currentSection) {
+                showDashboardSection(currentSection);
+            }
+        });
+    }
+});
 
 // Update grading system based on curriculum
 function updateGradingSystem(curriculum) {
@@ -1067,6 +1155,125 @@ function showStudentHelp() {
     showToast('Contact your teacher to reset your password or get your ELIMUID', 'info', 5000);
 }
 
+// ============================================
+// HELP SECTION - Add to main.js
+// ============================================
+
+function renderHelpSection() {
+    const user = getCurrentUser();
+    const role = user?.role || 'user';
+    
+    const helpContent = {
+        superadmin: {
+            title: 'Super Admin Help',
+            guides: [
+                { title: 'Managing Schools', content: 'View all schools, approve new registrations, suspend/reactivate schools' },
+                { title: 'School Approvals', content: 'Review and approve pending school registrations' },
+                { title: 'Name Change Requests', content: 'Approve or reject school name change requests' },
+                { title: 'Platform Health', content: 'Monitor system status, CPU usage, and recent events' }
+            ]
+        },
+        admin: {
+            title: 'Admin Help',
+            guides: [
+                { title: 'Teacher Management', content: 'Approve teacher registrations, manage teacher profiles, assign classes' },
+                { title: 'Student Management', content: 'Add students, view student details, suspend/reactivate students' },
+                { title: 'Class Management', content: 'Create classes, assign class teachers, manage student enrollment' },
+                { title: 'Duty Management', content: 'Generate duty rosters, assign duty points, view fairness reports' },
+                { title: 'Curriculum Settings', content: 'Change school curriculum, add custom subjects' }
+            ]
+        },
+        teacher: {
+            title: 'Teacher Help',
+            guides: [
+                { title: 'Student Management', content: 'Add students to your class, view student profiles, copy ELIMUIDs' },
+                { title: 'Take Attendance', content: 'Mark students present/absent, add notes for absences' },
+                { title: 'Enter Grades', content: 'Record test scores, view grade calculations based on curriculum' },
+                { title: 'Duty Management', content: 'View your duty schedule, check in/out, request duty swaps' },
+                { title: 'Parent Communication', content: 'Reply to parent messages, share student progress' }
+            ]
+        },
+        parent: {
+            title: 'Parent Help',
+            guides: [
+                { title: 'View Child Progress', content: 'Check grades, attendance, and teacher comments' },
+                { title: 'Report Absence', content: 'Notify school when your child is absent' },
+                { title: 'Make Payments', content: 'Pay school fees, upgrade subscription plans' },
+                { title: 'Message Teachers', content: 'Communicate with class teachers and school admin' }
+            ]
+        },
+        student: {
+            title: 'Student Help',
+            guides: [
+                { title: 'View Grades', content: 'Check your academic performance and progress' },
+                { title: 'Attendance History', content: 'View your attendance records' },
+                { title: 'Study Groups', content: 'Chat with fellow students for group study' },
+                { title: 'AI Tutor', content: 'Get help with any subject from our AI tutor' }
+            ]
+        }
+    };
+    
+    const content = helpContent[role] || helpContent.student;
+    
+    return `
+        <div class="space-y-6 animate-fade-in max-w-4xl mx-auto">
+            <div class="text-center">
+                <h2 class="text-3xl font-bold">${content.title}</h2>
+                <p class="text-muted-foreground mt-2">Find answers to common questions and learn how to use the platform</p>
+            </div>
+            
+            <div class="grid gap-4">
+                ${content.guides.map(guide => `
+                    <div class="rounded-xl border bg-card p-6 hover:shadow-md transition-shadow">
+                        <h3 class="font-semibold text-lg mb-2">📚 ${guide.title}</h3>
+                        <p class="text-muted-foreground">${guide.content}</p>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div class="rounded-xl border bg-card p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700">
+                <h3 class="font-semibold text-lg mb-2">💬 Need More Help?</h3>
+                <p class="text-muted-foreground mb-4">Contact support or check our documentation for more detailed guides.</p>
+                <div class="flex gap-3">
+                    <button onclick="showToast('Support request sent', 'info')" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">
+                        Contact Support
+                    </button>
+                    <button onclick="window.open('https://shuleai.com/docs', '_blank')" class="px-4 py-2 border rounded-lg hover:bg-accent">
+                        View Documentation
+                    </button>
+                </div>
+            </div>
+            
+            <div class="rounded-xl border bg-card p-6">
+                <h3 class="font-semibold text-lg mb-4">❓ Frequently Asked Questions</h3>
+                <div class="space-y-3">
+                    <div class="p-3 bg-muted/30 rounded-lg">
+                        <p class="font-medium">How do I reset my password?</p>
+                        <p class="text-sm text-muted-foreground mt-1">Go to Settings → Change Password. Enter your current password and new password.</p>
+                    </div>
+                    <div class="p-3 bg-muted/30 rounded-lg">
+                        <p class="font-medium">Why can't I see some students?</p>
+                        <p class="text-sm text-muted-foreground mt-1">Make sure you're assigned to the correct class. Contact admin if you should have access to more students.</p>
+                    </div>
+                    <div class="p-3 bg-muted/30 rounded-lg">
+                        <p class="font-medium">How do I report a technical issue?</p>
+                        <p class="text-sm text-muted-foreground mt-1">Use the Contact Support button above or email support@shuleai.com</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Add help section to renderDashboardSection
+async function renderDashboardSection(role, section) {
+    if (section === 'help') {
+        return renderHelpSection();
+    }
+    
+    // ... rest of existing renderDashboardSection code
+}
+
 // ============ DASHBOARD FUNCTIONS ============
 async function showDashboard(role) {
     console.log('🔵 showDashboard called with role:', role);
@@ -1623,6 +1830,303 @@ function renderSuperAdminDashboard() {
     `;
 }
 
+// ============================================
+// MISSING LOAD FUNCTIONS - Add to main.js
+// ============================================
+
+// Load pending schools (for super admin)
+async function loadPendingSchools() {
+    try {
+        const response = await api.superAdmin.getPendingSchools();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load pending schools:', error);
+        return [];
+    }
+}
+
+// Load all schools (for super admin)
+async function loadAllSchools() {
+    try {
+        const response = await api.superAdmin.getSchools();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load schools:', error);
+        return [];
+    }
+}
+
+// Add this near the other load functions
+async function loadStudentAnalytics() {
+    try {
+        const user = getCurrentUser();
+        if (user?.role === 'student') {
+            // You might want to add analytics endpoint here
+            console.log('Loading student analytics...');
+        }
+    } catch (error) {
+        console.error('Error loading student analytics:', error);
+    }
+}
+
+// Load name change requests
+async function loadNameChangeRequests() {
+    try {
+        const response = await api.superAdmin.getPendingRequests();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load name change requests:', error);
+        return [];
+    }
+}
+
+// Load fairness report
+async function loadFairnessReport() {
+    try {
+        const response = await api.admin.getFairnessReport();
+        return response.data || {};
+    } catch (error) {
+        console.error('Failed to load fairness report:', error);
+        return {};
+    }
+}
+
+// Load teacher workload
+async function loadTeacherWorkload() {
+    try {
+        const response = await api.admin.getTeacherWorkload();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load teacher workload:', error);
+        return [];
+    }
+}
+
+// Load today's duty
+async function loadTodayDuty() {
+    try {
+        const response = await api.duty.getTodayDuty();
+        return response.data || {};
+    } catch (error) {
+        console.error('Failed to load today duty:', error);
+        return {};
+    }
+}
+
+// Load weekly duty
+async function loadWeeklyDuty() {
+    try {
+        const response = await api.duty.getWeeklyDuty();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load weekly duty:', error);
+        return [];
+    }
+}
+
+// Load understaffed areas
+async function loadUnderstaffedAreas() {
+    try {
+        const response = await api.admin.getUnderstaffedAreas();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load understaffed areas:', error);
+        return [];
+    }
+}
+
+// Load pending teachers
+async function loadPendingTeachers() {
+    try {
+        const response = await api.admin.getPendingApprovals();
+        return response.data?.teachers || [];
+    } catch (error) {
+        console.error('Failed to load pending teachers:', error);
+        return [];
+    }
+}
+
+// Load all teachers
+async function loadAllTeachers() {
+    try {
+        const response = await api.admin.getTeachers();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load teachers:', error);
+        return [];
+    }
+}
+
+// Load all students
+async function loadAllStudents() {
+    try {
+        const response = await api.admin.getStudents();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load students:', error);
+        return [];
+    }
+}
+
+// Load my students (teacher)
+async function loadMyStudents() {
+    try {
+        const response = await api.teacher.getMyStudents();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load my students:', error);
+        return [];
+    }
+}
+
+// ============================================
+// MISSING RENDER FUNCTIONS - Add to main.js
+// ============================================
+
+// Render pending schools table
+function renderPendingSchoolsTable(schools) {
+    if (!schools || schools.length === 0) {
+        return '<div class="text-center py-8 text-muted-foreground">No pending schools</div>';
+    }
+    
+    return `
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-muted/50">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-medium">School</th>
+                        <th class="px-4 py-3 text-left font-medium">Admin Email</th>
+                        <th class="px-4 py-3 text-left font-medium">Short Code</th>
+                        <th class="px-4 py-3 text-left font-medium">Level</th>
+                        <th class="px-4 py-3 text-left font-medium">Applied</th>
+                        <th class="px-4 py-3 text-right font-medium">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+                    ${schools.map(school => {
+                        const admin = school.admins && school.admins.length > 0 ? school.admins[0] : null;
+                        return `
+                            <tr class="hover:bg-accent/50 transition-colors">
+                                <td class="px-4 py-3 font-medium">${school.name || 'N/A'}</td>
+                                <td class="px-4 py-3">${admin ? admin.email : 'No admin'}</td>
+                                <td class="px-4 py-3"><span class="font-mono text-xs bg-muted px-2 py-1 rounded">${school.shortCode || 'N/A'}</span></td>
+                                <td class="px-4 py-3">${school.settings?.schoolLevel || 'N/A'}</td>
+                                <td class="px-4 py-3">${timeAgo(school.createdAt)}</td>
+                                <td class="px-4 py-3 text-right">
+                                    <button onclick="approveSchool('${school.id}')" class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full hover:bg-green-200 mr-2">Approve</button>
+                                    <button onclick="rejectSchool('${school.id}')" class="px-3 py-1 bg-red-100 text-red-700 text-xs rounded-full hover:bg-red-200">Reject</button>
+                                    <button onclick="viewSchoolDetails('${school.id}')" class="p-2 hover:bg-accent rounded-lg"><i data-lucide="eye" class="h-4 w-4"></i></button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+// Render schools table
+function renderSchoolsTable(schools) {
+    if (!schools || schools.length === 0) {
+        return '<div class="text-center py-8 text-muted-foreground">No schools found</div>';
+    }
+    
+    return `
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-muted/50">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-medium">School</th>
+                        <th class="px-4 py-3 text-left font-medium">Short Code</th>
+                        <th class="px-4 py-3 text-left font-medium">Status</th>
+                        <th class="px-4 py-3 text-left font-medium">Level</th>
+                        <th class="px-4 py-3 text-right font-medium">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+                    ${schools.map(school => `
+                        <tr class="hover:bg-accent/50 transition-colors">
+                            <td class="px-4 py-3 font-medium">${school.name || 'Unknown'}</td>
+                            <td class="px-4 py-3"><span class="font-mono text-xs bg-muted px-2 py-1 rounded">${school.shortCode || 'N/A'}</span></td>
+                            <td class="px-4 py-3">
+                                <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium 
+                                    ${school.status === 'active' ? 'bg-green-100 text-green-700' : 
+                                      school.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 
+                                      'bg-gray-100 text-gray-700'}">
+                                    ${school.status}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3">${school.settings?.schoolLevel || 'N/A'}</td>
+                            <td class="px-4 py-3 text-right">
+                                <button onclick="viewSchoolDetails('${school.id}')" class="p-2 hover:bg-accent rounded-lg"><i data-lucide="eye" class="h-4 w-4"></i></button>
+                                <button onclick="editSchool('${school.id}')" class="p-2 hover:bg-accent rounded-lg"><i data-lucide="edit" class="h-4 w-4"></i></button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+// Render teachers table
+function renderTeachersTable(teachers) {
+    if (!teachers || teachers.length === 0) {
+        return '<div class="text-center py-8 text-muted-foreground">No teachers found</div>';
+    }
+    
+    return `
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-muted/50">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-medium">Teacher</th>
+                        <th class="px-4 py-3 text-left font-medium">Email</th>
+                        <th class="px-4 py-3 text-left font-medium">Subjects</th>
+                        <th class="px-4 py-3 text-left font-medium">Status</th>
+                        <th class="px-4 py-3 text-right font-medium">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+                    ${teachers.map(teacher => {
+                        const user = teacher.User || {};
+                        const isActive = teacher.isActive !== false;
+                        return `
+                            <tr class="hover:bg-accent/50 transition-colors">
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                            <span class="font-medium text-blue-700 text-sm">${getInitials(user.name)}</span>
+                                        </div>
+                                        <span class="font-medium">${user.name || 'Unknown'}</span>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3">${user.email || 'N/A'}</td>
+                                <td class="px-4 py-3">${(teacher.subjects || []).join(', ')}</td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium 
+                                        ${isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                                        ${isActive ? 'Active' : 'Inactive'}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <button onclick="viewTeacher('${teacher.id}')" class="p-2 hover:bg-accent rounded-lg"><i data-lucide="eye" class="h-4 w-4"></i></button>
+                                    ${isActive ? 
+                                        `<button onclick="deactivateTeacher('${teacher.id}', '${user.name}')" class="p-2 hover:bg-yellow-100 rounded-lg text-yellow-600"><i data-lucide="pause-circle" class="h-4 w-4"></i></button>` : 
+                                        `<button onclick="activateTeacher('${teacher.id}', '${user.name}')" class="p-2 hover:bg-green-100 rounded-lg text-green-600"><i data-lucide="play-circle" class="h-4 w-4"></i></button>`
+                                    }
+                                    <button onclick="removeTeacher('${teacher.id}')" class="p-2 hover:bg-red-100 rounded-lg text-red-600"><i data-lucide="trash-2" class="h-4 w-4"></i></button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
 async function renderSuperAdminPendingSchools() {
     try {
         const schools = await loadPendingSchools();
@@ -1876,6 +2380,193 @@ async function updateAdminStats() {
     }
 }
 
+// ============================================
+// MISSING FUNCTION FIXES - Add to main.js
+// ============================================
+
+// Render Admin Dashboard
+function renderAdminDashboard() {
+    const school = getCurrentSchool();
+    const data = dashboardData || {};
+    
+    return `
+        <div class="space-y-6 animate-fade-in">
+            <!-- School Profile Card -->
+            <div class="rounded-xl border bg-card p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 card-hover">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <div class="flex items-center gap-3 mb-2">
+                            <h2 class="text-2xl font-bold" id="school-name">${school?.name || 'Your School'}</h2>
+                            <span class="px-3 py-1 ${school?.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} text-xs rounded-full">
+                                ${school?.status || 'pending'}
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <p class="text-sm"><span class="font-mono bg-muted px-2 py-1 rounded">School ID: ${school?.schoolId || 'N/A'}</span></p>
+                            <button onclick="showNameChangeModal()" class="text-sm text-primary hover:underline">Change School Name</button>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
+                        <p class="text-xs text-muted-foreground">Share this code with teachers</p>
+                        <p class="text-lg font-mono font-bold">${school?.shortCode || 'SHL-XXXXX'}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stats Grid -->
+            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div class="rounded-xl border bg-card p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-muted-foreground">Total Students</p>
+                            <h3 class="text-2xl font-bold mt-1" id="total-students">${data.students?.length || 0}</h3>
+                        </div>
+                        <div class="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                            <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="rounded-xl border bg-card p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-muted-foreground">Teachers</p>
+                            <h3 class="text-2xl font-bold mt-1" id="total-teachers">${data.teachers?.length || 0}</h3>
+                            <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
+                                <i data-lucide="trending-up" class="h-3 w-3"></i>
+                                <span id="pending-teachers">${data.pendingTeachers?.length || 0}</span> pending approval
+                            </p>
+                        </div>
+                        <div class="h-12 w-12 rounded-lg bg-violet-100 flex items-center justify-center">
+                            <i data-lucide="user-plus" class="h-6 w-6 text-violet-600"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="rounded-xl border bg-card p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-muted-foreground">Classes</p>
+                            <h3 class="text-2xl font-bold mt-1" id="total-classes">${data.classes?.length || 0}</h3>
+                        </div>
+                        <div class="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
+                            <i data-lucide="book-open" class="h-6 w-6 text-emerald-600"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="rounded-xl border bg-card p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-muted-foreground">Attendance Rate</p>
+                            <h3 class="text-2xl font-bold mt-1" id="attendance-rate">94%</h3>
+                        </div>
+                        <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
+                            <i data-lucide="calendar-check" class="h-6 w-6 text-amber-600"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="grid gap-4 md:grid-cols-3">
+                <button onclick="showDashboardSection('teacher-approvals')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
+                    <i data-lucide="user-plus" class="h-8 w-8 text-blue-600 mb-3"></i>
+                    <h4 class="font-semibold">Teacher Approvals</h4>
+                    <p class="text-sm text-muted-foreground">Approve pending teachers</p>
+                    <span class="mt-2 inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700" id="pending-count-badge">${data.pendingTeachers?.length || 0} pending</span>
+                </button>
+                
+                <button onclick="showDashboardSection('students')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
+                    <i data-lucide="users" class="h-8 w-8 text-green-600 mb-3"></i>
+                    <h4 class="font-semibold">Student Management</h4>
+                    <p class="text-sm text-muted-foreground">View and manage all students</p>
+                </button>
+                
+                <button onclick="showDashboardSection('settings')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
+                    <i data-lucide="settings" class="h-8 w-8 text-purple-600 mb-3"></i>
+                    <h4 class="font-semibold">School Settings</h4>
+                    <p class="text-sm text-muted-foreground">Configure curriculum and subjects</p>
+                </button>
+            </div>
+            
+            <!-- Charts -->
+            <div class="grid gap-4 lg:grid-cols-2">
+                <div class="rounded-xl border bg-card p-6">
+                    <h3 class="font-semibold mb-4">Enrollment Trends</h3>
+                    <div class="chart-container h-64">
+                        <canvas id="admin-enrollmentChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="rounded-xl border bg-card p-6">
+                    <h3 class="font-semibold mb-4">Grade Distribution</h3>
+                    <div class="chart-container h-64">
+                        <canvas id="admin-gradeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Render Admin Pending Teachers
+async function renderAdminPendingTeachers() {
+    try {
+        const teachers = await loadPendingTeachers();
+        return `
+            <div class="space-y-6 animate-fade-in">
+                <h2 class="text-2xl font-bold">Pending Teacher Approvals</h2>
+                <div class="rounded-xl border bg-card overflow-hidden">
+                    ${teachers.length > 0 ? `
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-muted/50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left font-medium">Teacher</th>
+                                        <th class="px-4 py-3 text-left font-medium">Email</th>
+                                        <th class="px-4 py-3 text-left font-medium">Subjects</th>
+                                        <th class="px-4 py-3 text-left font-medium">Qualification</th>
+                                        <th class="px-4 py-3 text-left font-medium">Applied</th>
+                                        <th class="px-4 py-3 text-right font-medium">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">
+                                    ${teachers.map(teacher => {
+                                        const user = teacher.User || {};
+                                        return `
+                                            <tr class="hover:bg-accent/50 transition-colors">
+                                                <td class="px-4 py-3">
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="h-8 w-8 rounded-full bg-violet-100 flex items-center justify-center">
+                                                            <span class="font-medium text-violet-700 text-sm">${getInitials(user.name)}</span>
+                                                        </div>
+                                                        <span class="font-medium">${user.name || 'Unknown'}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-4 py-3">${user.email || 'N/A'}</td>
+                                                <td class="px-4 py-3">${(teacher.subjects || []).join(', ')}</td>
+                                                <td class="px-4 py-3">${teacher.qualification || 'N/A'}</td>
+                                                <td class="px-4 py-3">${timeAgo(teacher.createdAt)}</td>
+                                                <td class="px-4 py-3 text-right">
+                                                    <button onclick="approveTeacher('${teacher.id}')" class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full hover:bg-green-200 mr-2">Approve</button>
+                                                    <button onclick="rejectTeacher('${teacher.id}')" class="px-3 py-1 bg-red-100 text-red-700 text-xs rounded-full hover:bg-red-200">Reject</button>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : '<div class="p-8 text-center text-muted-foreground">No pending teacher approvals</div>'}
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        return `<div class="text-center py-12 text-red-500">Error loading pending teachers: ${error.message}</div>`;
+    }
+}
+
 // Call this when admin dashboard loads
 if (typeof showDashboardSection === 'function') {
     const originalShowDashboard = showDashboardSection;
@@ -2023,6 +2714,678 @@ async function refreshNameChangeRequests() {
 }
 
 // ============================================
+// CALENDAR FUNCTIONS - Add to main.js
+// ============================================
+
+// Load calendar events from localStorage
+function loadCalendarEvents() {
+    try {
+        const events = localStorage.getItem('calendarEvents');
+        return events ? JSON.parse(events) : [];
+    } catch (error) {
+        console.error('Error loading calendar events:', error);
+        return [];
+    }
+}
+
+// Save calendar events
+function saveCalendarEvents(events) {
+    localStorage.setItem('calendarEvents', JSON.stringify(events));
+}
+
+// Show add event modal
+window.showAddEventModal = function(prefillDate) {
+    let modal = document.getElementById('add-event-modal');
+    if (!modal) {
+        createAddEventModal();
+        modal = document.getElementById('add-event-modal');
+    }
+    
+    if (prefillDate) {
+        document.getElementById('event-date').value = prefillDate;
+    } else {
+        document.getElementById('event-date').value = new Date().toISOString().split('T')[0];
+    }
+    
+    document.getElementById('event-title').value = '';
+    document.getElementById('event-description').value = '';
+    document.getElementById('event-time').value = '';
+    document.getElementById('event-location').value = '';
+    
+    modal.classList.remove('hidden');
+};
+
+// Create add event modal
+function createAddEventModal() {
+    const modalHTML = `
+        <div id="add-event-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeAddEventModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                    <h3 class="text-lg font-semibold mb-4">Add Calendar Event</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Event Title *</label>
+                            <input type="text" id="event-title" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Date *</label>
+                            <input type="date" id="event-date" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Time (Optional)</label>
+                            <input type="time" id="event-time" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Location</label>
+                            <input type="text" id="event-location" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Description</label>
+                            <textarea id="event-description" rows="3" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"></textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button onclick="closeAddEventModal()" class="px-4 py-2 text-sm border rounded-lg hover:bg-accent">Cancel</button>
+                        <button onclick="saveCalendarEvent()" class="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Save Event</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// Close add event modal
+window.closeAddEventModal = function() {
+    const modal = document.getElementById('add-event-modal');
+    if (modal) modal.classList.add('hidden');
+};
+
+// ============================================
+// DUTY FUNCTIONS - Add to main.js
+// ============================================
+
+// Check in duty
+window.checkInDuty = async function(location = 'School Gate', notes = '') {
+    try {
+        const response = await api.duty.checkIn({ location, notes });
+        showToast('✅ Checked in successfully!', 'success');
+        updateDutyStatus('checked-in');
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to check in', 'error');
+        throw error;
+    }
+};
+
+// Check out duty
+window.checkOutDuty = async function(location = 'School Gate', notes = '') {
+    try {
+        const response = await api.duty.checkOut({ location, notes });
+        showToast('✅ Checked out successfully!', 'success');
+        updateDutyStatus('checked-out');
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to check out', 'error');
+        throw error;
+    }
+};
+
+// Request duty swap
+window.requestDutySwap = async function(dutyDate, reason, targetTeacherId = null) {
+    try {
+        const response = await api.duty.requestSwap({ dutyDate, reason, targetTeacherId });
+        showToast('✅ Swap request sent to admin', 'success');
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to request swap', 'error');
+        throw error;
+    }
+};
+
+// Update duty preferences
+window.updateDutyPreferences = async function(preferences) {
+    try {
+        const response = await api.duty.updatePreferences(preferences);
+        showToast('✅ Preferences updated', 'success');
+        return response;
+    } catch (error) {
+        showToast(error.message || 'Failed to update preferences', 'error');
+        throw error;
+    }
+};
+
+// Update duty status UI
+function updateDutyStatus(status) {
+    const dutyCard = document.getElementById('duty-card');
+    if (!dutyCard) return;
+    
+    const statusSpan = dutyCard.querySelector('.duty-status');
+    const checkInBtn = document.getElementById('check-in-btn');
+    const checkOutBtn = document.getElementById('check-out-btn');
+    
+    if (status === 'checked-in') {
+        if (statusSpan) {
+            statusSpan.textContent = 'Checked In';
+            statusSpan.className = 'duty-status px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full';
+        }
+        if (checkInBtn) checkInBtn.disabled = true;
+        if (checkOutBtn) checkOutBtn.disabled = false;
+    } else if (status === 'checked-out') {
+        if (statusSpan) {
+            statusSpan.textContent = 'Checked Out';
+            statusSpan.className = 'duty-status px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full';
+        }
+        if (checkInBtn) checkInBtn.disabled = true;
+        if (checkOutBtn) checkOutBtn.disabled = true;
+    } else {
+        if (statusSpan) {
+            statusSpan.textContent = 'Not Checked In';
+            statusSpan.className = 'duty-status px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full';
+        }
+        if (checkInBtn) checkInBtn.disabled = false;
+        if (checkOutBtn) checkOutBtn.disabled = true;
+    }
+}
+
+// Save calendar event
+window.saveCalendarEvent = function() {
+    const title = document.getElementById('event-title')?.value;
+    const date = document.getElementById('event-date')?.value;
+    const time = document.getElementById('event-time')?.value;
+    const location = document.getElementById('event-location')?.value;
+    const description = document.getElementById('event-description')?.value;
+    
+    if (!title || !date) {
+        showToast('Title and date are required', 'error');
+        return;
+    }
+    
+    const events = loadCalendarEvents();
+    const newEvent = {
+        id: Date.now().toString(),
+        title,
+        date,
+        time,
+        location,
+        description,
+        createdAt: new Date().toISOString()
+    };
+    
+    events.push(newEvent);
+    saveCalendarEvents(events);
+    
+    showToast('Event added successfully', 'success');
+    closeAddEventModal();
+    
+    if (currentSection === 'calendar') {
+        showDashboardSection('calendar');
+    }
+};
+
+// Delete event
+window.deleteEvent = function(eventId) {
+    if (!confirm('Delete this event?')) return;
+    
+    const events = loadCalendarEvents();
+    const filtered = events.filter(e => e.id !== eventId);
+    saveCalendarEvents(filtered);
+    
+    showToast('Event deleted', 'success');
+    
+    if (currentSection === 'calendar') {
+        showDashboardSection('calendar');
+    }
+};
+
+// Show day details modal
+window.showDayDetails = function(dateStr) {
+    const events = loadCalendarEvents();
+    const dayEvents = events.filter(e => e.date === dateStr);
+    const date = new Date(dateStr);
+    
+    let modal = document.getElementById('day-details-modal');
+    if (!modal) {
+        createDayDetailsModal();
+        modal = document.getElementById('day-details-modal');
+    }
+    
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) {
+        modalContent.innerHTML = `
+            <div class="space-y-4">
+                <div class="border-b pb-3">
+                    <h4 class="font-semibold text-lg">${date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h4>
+                </div>
+                ${dayEvents.length > 0 ? `
+                    <div class="space-y-2">
+                        ${dayEvents.map(event => `
+                            <div class="p-3 border rounded-lg">
+                                <p class="font-medium">${event.title}</p>
+                                ${event.time ? `<p class="text-sm text-muted-foreground">🕐 ${event.time}</p>` : ''}
+                                ${event.location ? `<p class="text-sm text-muted-foreground">📍 ${event.location}</p>` : ''}
+                                ${event.description ? `<p class="text-sm mt-2">${event.description}</p>` : ''}
+                                <button onclick="deleteEvent('${event.id}')" class="mt-2 text-xs text-red-600 hover:underline">Delete</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : '<p class="text-center text-muted-foreground py-8">No events for this day</p>'}
+                <button onclick="showAddEventModal('${dateStr}')" class="w-full mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">
+                    Add Event
+                </button>
+            </div>
+        `;
+    }
+    
+    modal.classList.remove('hidden');
+};
+
+// Create day details modal
+function createDayDetailsModal() {
+    const modalHTML = `
+        <div id="day-details-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeDayDetailsModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Day Details</h3>
+                        <button onclick="closeDayDetailsModal()" class="p-2 hover:bg-accent rounded-lg">
+                            <i data-lucide="x" class="h-5 w-5"></i>
+                        </button>
+                    </div>
+                    <div class="modal-content">
+                        <!-- Content will be filled dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// Close day details modal
+window.closeDayDetailsModal = function() {
+    const modal = document.getElementById('day-details-modal');
+    if (modal) modal.classList.add('hidden');
+};
+
+// Calendar navigation
+window.calendarChangeMonth = function(direction) {
+    console.log('Changing month by:', direction);
+    showToast('Calendar month navigation - Feature coming soon', 'info');
+};
+
+window.calendarGoToToday = function() {
+    console.log('Going to today');
+    showToast('Calendar navigation - Feature coming soon', 'info');
+};
+
+window.calendarGoToDate = function(year, month, day) {
+    console.log('Going to date:', year, month, day);
+    showToast('Calendar navigation - Feature coming soon', 'info');
+};
+
+// ============================================
+// ENHANCED DUTY MANAGEMENT WITH MANUAL POINTS
+// ============================================
+
+// Duty points storage
+let dutyPoints = {
+    teachers: {}, // teacherId -> { points, preferences, ratings }
+    areas: {
+        'morning': { basePoints: 10, multiplier: 1 },
+        'lunch': { basePoints: 15, multiplier: 1.5 },
+        'afternoon': { basePoints: 12, multiplier: 1.2 },
+        'whole_day': { basePoints: 25, multiplier: 2.5 }
+    }
+};
+
+// Load duty points from localStorage
+function loadDutyPoints() {
+    try {
+        const saved = localStorage.getItem('dutyPoints');
+        if (saved) {
+            dutyPoints = JSON.parse(saved);
+        }
+    } catch (error) {
+        console.error('Error loading duty points:', error);
+    }
+}
+
+// Save duty points
+function saveDutyPoints() {
+    localStorage.setItem('dutyPoints', JSON.stringify(dutyPoints));
+}
+
+// Update teacher duty points
+window.updateTeacherDutyPoints = function(teacherId, points, reason) {
+    if (!dutyPoints.teachers[teacherId]) {
+        dutyPoints.teachers[teacherId] = {
+            points: 0,
+            history: [],
+            preferences: {},
+            rating: 0
+        };
+    }
+    
+    dutyPoints.teachers[teacherId].points += points;
+    dutyPoints.teachers[teacherId].history.push({
+        date: new Date().toISOString(),
+        points: points,
+        reason: reason,
+        total: dutyPoints.teachers[teacherId].points
+    });
+    
+    saveDutyPoints();
+    showToast(`Added ${points} points to teacher`, 'success');
+    refreshDutyPointsDisplay();
+};
+
+// Get teacher duty points
+window.getTeacherDutyPoints = function(teacherId) {
+    return dutyPoints.teachers[teacherId]?.points || 0;
+};
+
+// Render duty points management UI
+function renderDutyPointsManagement() {
+    const teachers = dashboardData?.teachers || [];
+    
+    return `
+        <div class="space-y-6 animate-fade-in">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold">Duty Points Management</h2>
+                <button onclick="resetDutyPoints()" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200">
+                    Reset All Points
+                </button>
+            </div>
+            
+            <div class="grid gap-6">
+                <!-- Manual Point Assignment -->
+                <div class="rounded-xl border bg-card p-6">
+                    <h3 class="font-semibold mb-4">Manual Point Assignment</h3>
+                    <div class="grid gap-4 md:grid-cols-3">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Select Teacher</label>
+                            <select id="point-teacher" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                                <option value="">-- Select Teacher --</option>
+                                ${teachers.map(t => `
+                                    <option value="${t.id}">${t.User?.name || 'Unknown'}</option>
+                                `).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Points to Add</label>
+                            <input type="number" id="point-amount" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="e.g., 10, -5">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Reason</label>
+                            <input type="text" id="point-reason" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="e.g., Completed extra duty">
+                        </div>
+                    </div>
+                    <button onclick="assignManualPoints()" class="mt-4 w-full bg-primary text-primary-foreground py-2 rounded-lg hover:bg-primary/90">
+                        Assign Points
+                    </button>
+                </div>
+                
+                <!-- Area Point Configuration -->
+                <div class="rounded-xl border bg-card p-6">
+                    <h3 class="font-semibold mb-4">Duty Area Point Configuration</h3>
+                    <div class="space-y-3">
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div class="p-3 bg-muted/30 rounded-lg">
+                                <p class="font-medium">Morning Duty</p>
+                                <p class="text-sm text-muted-foreground">Base Points: <span id="morning-points">${dutyPoints.areas.morning.basePoints}</span></p>
+                                <input type="number" id="morning-points-input" value="${dutyPoints.areas.morning.basePoints}" class="mt-2 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm">
+                                <button onclick="updateAreaPoints('morning')" class="mt-2 w-full text-sm bg-primary/10 text-primary py-1 rounded hover:bg-primary/20">Update</button>
+                            </div>
+                            <div class="p-3 bg-muted/30 rounded-lg">
+                                <p class="font-medium">Lunch Duty</p>
+                                <p class="text-sm text-muted-foreground">Base Points: <span id="lunch-points">${dutyPoints.areas.lunch.basePoints}</span></p>
+                                <input type="number" id="lunch-points-input" value="${dutyPoints.areas.lunch.basePoints}" class="mt-2 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm">
+                                <button onclick="updateAreaPoints('lunch')" class="mt-2 w-full text-sm bg-primary/10 text-primary py-1 rounded hover:bg-primary/20">Update</button>
+                            </div>
+                            <div class="p-3 bg-muted/30 rounded-lg">
+                                <p class="font-medium">Afternoon Duty</p>
+                                <p class="text-sm text-muted-foreground">Base Points: <span id="afternoon-points">${dutyPoints.areas.afternoon.basePoints}</span></p>
+                                <input type="number" id="afternoon-points-input" value="${dutyPoints.areas.afternoon.basePoints}" class="mt-2 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm">
+                                <button onclick="updateAreaPoints('afternoon')" class="mt-2 w-full text-sm bg-primary/10 text-primary py-1 rounded hover:bg-primary/20">Update</button>
+                            </div>
+                            <div class="p-3 bg-muted/30 rounded-lg">
+                                <p class="font-medium">Whole Day Duty</p>
+                                <p class="text-sm text-muted-foreground">Base Points: <span id="whole_day-points">${dutyPoints.areas.whole_day.basePoints}</span></p>
+                                <input type="number" id="whole_day-points-input" value="${dutyPoints.areas.whole_day.basePoints}" class="mt-2 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm">
+                                <button onclick="updateAreaPoints('whole_day')" class="mt-2 w-full text-sm bg-primary/10 text-primary py-1 rounded hover:bg-primary/20">Update</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Teacher Points Table -->
+                <div class="rounded-xl border bg-card overflow-hidden">
+                    <div class="p-4 border-b">
+                        <h3 class="font-semibold">Teacher Duty Points Leaderboard</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-muted/50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-medium">Teacher</th>
+                                    <th class="px-4 py-3 text-center font-medium">Total Points</th>
+                                    <th class="px-4 py-3 text-center font-medium">Duties Completed</th>
+                                    <th class="px-4 py-3 text-center font-medium">Reliability</th>
+                                    <th class="px-4 py-3 text-right font-medium">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y" id="teacher-points-table">
+                                ${teachers.map(t => {
+                                    const points = dutyPoints.teachers[t.id]?.points || 0;
+                                    const reliability = t.statistics?.reliabilityScore || 100;
+                                    const dutiesCompleted = t.statistics?.dutiesCompleted || 0;
+                                    return `
+                                        <tr class="hover:bg-accent/50 transition-colors">
+                                            <td class="px-4 py-3 font-medium">${t.User?.name || 'Unknown'}</td>
+                                            <td class="px-4 py-3 text-center">
+                                                <span class="font-bold text-lg ${points >= 100 ? 'text-green-600' : points >= 50 ? 'text-blue-600' : 'text-gray-600'}">
+                                                    ${points}
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3 text-center">${dutiesCompleted}</td>
+                                            <td class="px-4 py-3 text-center">
+                                                <div class="flex items-center justify-center gap-2">
+                                                    <div class="h-2 w-16 rounded-full bg-muted overflow-hidden">
+                                                        <div class="h-full w-[${reliability}%] bg-green-500 rounded-full"></div>
+                                                    </div>
+                                                    <span>${reliability}%</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-3 text-right">
+                                                <button onclick="showTeacherPointHistory('${t.id}')" class="p-2 hover:bg-accent rounded-lg" title="View History">
+                                                    <i data-lucide="history" class="h-4 w-4"></i>
+                                                </button>
+                                                <button onclick="showAddPointsModal('${t.id}', '${t.User?.name}')" class="p-2 hover:bg-accent rounded-lg" title="Add Points">
+                                                    <i data-lucide="plus-circle" class="h-4 w-4 text-green-600"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Assign manual points
+window.assignManualPoints = function() {
+    const teacherId = document.getElementById('point-teacher')?.value;
+    const amount = parseInt(document.getElementById('point-amount')?.value);
+    const reason = document.getElementById('point-reason')?.value;
+    
+    if (!teacherId || !amount) {
+        showToast('Please select teacher and enter points', 'error');
+        return;
+    }
+    
+    updateTeacherDutyPoints(teacherId, amount, reason || 'Manual assignment');
+    document.getElementById('point-amount').value = '';
+    document.getElementById('point-reason').value = '';
+};
+
+// Update area points
+window.updateAreaPoints = function(area) {
+    const inputId = `${area}-points-input`;
+    const newPoints = parseInt(document.getElementById(inputId)?.value);
+    
+    if (!newPoints || newPoints < 0) {
+        showToast('Please enter valid points', 'error');
+        return;
+    }
+    
+    dutyPoints.areas[area].basePoints = newPoints;
+    saveDutyPoints();
+    
+    const spanId = `${area}-points`;
+    if (document.getElementById(spanId)) {
+        document.getElementById(spanId).textContent = newPoints;
+    }
+    
+    showToast(`Updated ${area} duty points to ${newPoints}`, 'success');
+};
+
+// Enhanced duty roster generation with points
+async function generateDutyRosterWithPoints(startDate, endDate) {
+    showLoading();
+    try {
+        const teachers = await loadAllTeachers();
+        const availableTeachers = teachers.filter(t => t.approvalStatus === 'approved' && t.User?.isActive);
+        
+        // Calculate teacher weights based on points and reliability
+        const teacherWeights = availableTeachers.map(teacher => {
+            const points = getTeacherDutyPoints(teacher.id);
+            const reliability = teacher.statistics?.reliabilityScore || 100;
+            const preferences = teacher.dutyPreferences || {};
+            
+            // Weight formula: higher points = lower weight (to balance)
+            // Lower points get priority for assignments
+            const weight = Math.max(1, 100 - (points / 10) - (reliability / 2));
+            
+            return {
+                teacher,
+                points,
+                reliability,
+                weight,
+                preferences
+            };
+        });
+        
+        // Sort by weight (lowest weight = highest priority for assignment)
+        teacherWeights.sort((a, b) => a.weight - b.weight);
+        
+        const start = moment(startDate);
+        const end = moment(endDate);
+        const days = end.diff(start, 'days') + 1;
+        
+        const rosters = [];
+        
+        for (let i = 0; i < days; i++) {
+            const currentDate = start.clone().add(i, 'days');
+            if (currentDate.day() === 0) continue; // Skip Sunday
+            
+            const dateStr = currentDate.format('YYYY-MM-DD');
+            const dayOfWeek = currentDate.format('dddd').toLowerCase();
+            
+            const dayDuties = [];
+            const assignedTeachers = new Set();
+            
+            // Assign duties for each slot
+            for (const [slot, config] of Object.entries(dutyPoints.areas)) {
+                const required = 2; // Default 2 teachers per slot
+                const basePoints = config.basePoints;
+                
+                // Find available teachers not already assigned this day
+                const available = teacherWeights.filter(tw => !assignedTeachers.has(tw.teacher.id));
+                
+                // Check blackout dates
+                const eligible = available.filter(tw => {
+                    const blackouts = tw.preferences.blackoutDates || [];
+                    return !blackouts.includes(dateStr);
+                });
+                
+                // Check max duties per week
+                const weeklyEligible = eligible.filter(tw => {
+                    const weeklyCount = tw.teacher.statistics?.weeklyDutyCount || 0;
+                    const maxWeekly = tw.preferences.maxDutiesPerWeek || 3;
+                    return weeklyCount < maxWeekly;
+                });
+                
+                // Select teachers based on weight (lowest weight gets priority)
+                const selected = weeklyEligible.slice(0, required);
+                
+                selected.forEach(tw => {
+                    const pointsEarned = basePoints;
+                    dayDuties.push({
+                        teacherId: tw.teacher.id,
+                        teacherName: tw.teacher.User?.name || 'Unknown',
+                        type: slot,
+                        area: slot === 'morning' ? 'Main Gate / Assembly Area' :
+                              slot === 'lunch' ? 'Dining Hall / Playground' :
+                              slot === 'afternoon' ? 'School Compound' : 'General Supervision',
+                        timeSlot: {
+                            start: slot === 'morning' ? '07:30' : slot === 'lunch' ? '12:30' : slot === 'afternoon' ? '15:30' : '07:30',
+                            end: slot === 'morning' ? '08:30' : slot === 'lunch' ? '14:00' : slot === 'afternoon' ? '16:30' : '16:30'
+                        },
+                        pointsEarned: pointsEarned,
+                        status: 'scheduled'
+                    });
+                    
+                    assignedTeachers.add(tw.teacher.id);
+                    
+                    // Award points immediately
+                    updateTeacherDutyPoints(tw.teacher.id, pointsEarned, `${slot} duty on ${dateStr}`);
+                });
+            }
+            
+            if (dayDuties.length > 0) {
+                rosters.push({
+                    date: dateStr,
+                    duties: dayDuties,
+                    totalPoints: dayDuties.reduce((sum, d) => sum + d.pointsEarned, 0)
+                });
+            }
+        }
+        
+        // Save roster
+        localStorage.setItem('dutyRoster', JSON.stringify(rosters));
+        
+        showToast(`✅ Generated ${rosters.length} days of duty roster with point-based assignment`, 'success');
+        await showDashboardSection('duty');
+        
+    } catch (error) {
+        console.error('Error generating duty roster:', error);
+        showToast(error.message || 'Failed to generate duty roster', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Load duty roster
+function loadDutyRoster() {
+    try {
+        const saved = localStorage.getItem('dutyRoster');
+        return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+        return [];
+    }
+}
+
+// Override generateDutyRoster function
+window.generateDutyRoster = generateDutyRosterWithPoints;
+
+// ============================================
 // CHART INITIALIZATION FOR ADMIN DASHBOARD
 // ============================================
 
@@ -2129,6 +3492,122 @@ function initAdminCharts() {
         console.warn('⚠️ admin-gradeChart canvas not found');
     }
 }
+
+// ============================================
+// MISSING HELPER FUNCTIONS - Add to main.js
+// ============================================
+
+// Render duty preferences form
+function renderDutyPreferencesForm(preferences) {
+    return `
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-1">Preferred Days</label>
+                <div class="flex flex-wrap gap-3">
+                    ${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(day => `
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" name="preferredDays" value="${day.toLowerCase()}" 
+                                ${preferences.preferredDays?.includes(day.toLowerCase()) ? 'checked' : ''}
+                                class="rounded border-input">
+                            <span class="text-sm">${day}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-1">Preferred Duty Areas</label>
+                <div class="flex flex-wrap gap-3">
+                    ${[
+                        { value: 'morning', label: 'Morning (7:30-8:30)' },
+                        { value: 'lunch', label: 'Lunch (12:30-14:00)' },
+                        { value: 'afternoon', label: 'Afternoon (15:30-16:30)' },
+                        { value: 'whole_day', label: 'Whole Day' }
+                    ].map(area => `
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" name="preferredAreas" value="${area.value}" 
+                                ${preferences.preferredAreas?.includes(area.value) ? 'checked' : ''}
+                                class="rounded border-input">
+                            <span class="text-sm">${area.label}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-1">Max Duties Per Week</label>
+                <input type="number" id="max-duties" value="${preferences.maxDutiesPerWeek || 3}" 
+                    min="1" max="5" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-1">Blackout Dates (Cannot do duty)</label>
+                <div class="flex gap-2">
+                    <input type="date" id="blackout-date" class="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                    <button type="button" onclick="addBlackoutDate()" class="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm">Add</button>
+                </div>
+                <div id="blackout-dates-list" class="mt-2 space-y-1">
+                    ${(preferences.blackoutDates || []).map(date => `
+                        <div class="flex justify-between items-center p-2 bg-muted/30 rounded">
+                            <span class="text-sm">${new Date(date).toLocaleDateString()}</span>
+                            <button type="button" onclick="removeBlackoutDate('${date}')" class="text-red-600">
+                                <i data-lucide="x" class="h-4 w-4"></i>
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <button type="button" onclick="saveDutyPreferences()" class="w-full bg-primary text-primary-foreground py-2 rounded-lg hover:bg-primary/90">
+                Save Preferences
+            </button>
+        </div>
+    `;
+}
+
+// Add blackout date
+window.addBlackoutDate = function() {
+    const dateInput = document.getElementById('blackout-date');
+    const date = dateInput?.value;
+    if (!date) {
+        showToast('Please select a date', 'error');
+        return;
+    }
+    
+    const listContainer = document.getElementById('blackout-dates-list');
+    if (listContainer) {
+        // Check if already added
+        if (listContainer.innerHTML.includes(date)) {
+            showToast('Date already added', 'warning');
+            return;
+        }
+        
+        listContainer.innerHTML += `
+            <div class="flex justify-between items-center p-2 bg-muted/30 rounded">
+                <span class="text-sm">${new Date(date).toLocaleDateString()}</span>
+                <button onclick="removeBlackoutDate('${date}')" class="text-red-600">
+                    <i data-lucide="x" class="h-4 w-4"></i>
+                </button>
+            </div>
+        `;
+        dateInput.value = '';
+        
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    }
+};
+
+// Remove blackout date
+window.removeBlackoutDate = function(date) {
+    const listContainer = document.getElementById('blackout-dates-list');
+    if (listContainer) {
+        const item = Array.from(listContainer.children).find(
+            div => div.textContent.includes(new Date(date).toLocaleDateString())
+        );
+        if (item) item.remove();
+    }
+};
 
 // Update charts with new data
 window.updateAdminChart = function(value) {
@@ -2286,10 +3765,7 @@ async function renderAdminStudents() {
     }
 }
 
-// ============================================
-// ADMIN SECTION ROUTER - ADD THIS FUNCTION
-// ============================================
-
+// Update renderAdminSection function
 async function renderAdminSection(section) {
     try {
         switch(section) {
@@ -2301,10 +3777,14 @@ async function renderAdminSection(section) {
                 return await renderAdminTeachers();
             case 'teacher-approvals':
                 return await renderAdminPendingTeachers();
+            case 'class-management':
+                return await renderClassManagement(); // Make sure this exists
             case 'classes':
                 return await renderAdminClasses();
             case 'duty':
                 return await renderAdminDuty();
+            case 'duty-points':
+                return renderDutyPointsManagement();
             case 'fairness-report':
                 return await renderAdminFairnessReport();
             case 'teacher-workload':
@@ -2315,117 +3795,14 @@ async function renderAdminSection(section) {
                 return renderAdminCustomSubjects();
             case 'calendar':
                 return renderAdminCalendar();
-            case 'attendance':
-                return renderAdminAttendance();
-            case 'grades':
-                return renderAdminGrades();
-            case 'analytics':
-                return renderAdminAnalytics();
-            case 'tasks':
-                return renderAdminTasks();
-            case 'timetable':
-                return renderAdminTimetable();
+            case 'help':
+                return renderHelpSection();
             default:
                 return '<div class="text-center py-12">Section not found</div>';
         }
     } catch (error) {
         console.error('Error rendering admin section:', error);
         return `<div class="text-center py-12 text-red-500">Error loading section: ${error.message}</div>`;
-    }
-}
-
-// ============================================
-// ADMIN CLASSES SECTION - COMPLETE WORKING VERSION
-// ============================================
-
-async function renderAdminClasses() {
-    try {
-        const classes = await loadAllClasses();
-        const teachers = await loadAvailableTeachers();
-        
-        return `
-            <div class="space-y-6 animate-fade-in">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-2xl font-bold">Class Management</h2>
-                    <button onclick="showAddClassModal()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
-                        <i data-lucide="plus" class="h-4 w-4"></i>
-                        Add Class
-                    </button>
-                </div>
-                
-                <!-- Stats Cards -->
-                <div class="grid gap-4 md:grid-cols-3">
-                    <div class="rounded-xl border bg-card p-4">
-                        <p class="text-sm text-muted-foreground">Total Classes</p>
-                        <p class="text-2xl font-bold">${classes.length}</p>
-                    </div>
-                    <div class="rounded-xl border bg-card p-4">
-                        <p class="text-sm text-muted-foreground">With Teachers</p>
-                        <p class="text-2xl font-bold text-green-600">${classes.filter(c => c.teacherId).length}</p>
-                    </div>
-                    <div class="rounded-xl border bg-card p-4">
-                        <p class="text-sm text-muted-foreground">Without Teachers</p>
-                        <p class="text-2xl font-bold text-yellow-600">${classes.filter(c => !c.teacherId).length}</p>
-                    </div>
-                </div>
-                
-                <!-- Classes Grid -->
-                <div class="grid gap-4">
-                    ${classes.length > 0 ? classes.map(cls => {
-                        const currentTeacher = cls.Teacher?.User?.name || 'Not assigned';
-                        const teacherOptions = teachers.map(t => `
-                            <option value="${t.id}" ${t.id === cls.teacherId ? 'selected' : ''}>
-                                ${t.User?.name || 'Unknown'} (${t.subjects?.join(', ') || 'No subjects'})
-                            </option>
-                        `).join('');
-                        
-                        return `
-                            <div class="border rounded-lg p-4 bg-card hover:shadow-md transition-shadow" data-class-id="${cls.id}">
-                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                    <div class="flex-1">
-                                        <h3 class="font-semibold text-lg">${cls.name}</h3>
-                                        <p class="text-sm text-muted-foreground">Grade: ${cls.grade} | Stream: ${cls.stream || 'N/A'}</p>
-                                        <p class="text-sm mt-2">
-                                            <span class="font-medium">Class Teacher:</span> 
-                                            <span class="${cls.Teacher ? 'text-green-600' : 'text-yellow-600'} font-semibold">${currentTeacher}</span>
-                                        </p>
-                                        <p class="text-xs text-muted-foreground mt-1">📚 ${cls.studentCount || 0} students enrolled</p>
-                                    </div>
-                                    
-                                    <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                                        <select id="teacher-${cls.id}" class="rounded-lg border border-input bg-background px-3 py-2 text-sm min-w-[200px]">
-                                            <option value="">-- Select Teacher --</option>
-                                            ${teacherOptions}
-                                        </select>
-                                        <button onclick="assignClassTeacher('${cls.id}')" 
-                                                class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm whitespace-nowrap">
-                                            <i data-lucide="user-check" class="h-4 w-4 inline mr-1"></i>
-                                            Assign
-                                        </button>
-                                        <button onclick="editClass('${cls.id}')" 
-                                                class="p-2 border rounded-lg hover:bg-accent" title="Edit Class">
-                                            <i data-lucide="edit" class="h-4 w-4"></i>
-                                        </button>
-                                        <button onclick="deleteClass('${cls.id}')" 
-                                                class="p-2 border rounded-lg hover:bg-red-100 text-red-600" title="Delete Class">
-                                            <i data-lucide="trash-2" class="h-4 w-4"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('') : `
-                        <div class="text-center py-12 border rounded-lg bg-card">
-                            <i data-lucide="school" class="h-12 w-12 mx-auto text-muted-foreground mb-4"></i>
-                            <p class="text-muted-foreground">No classes found. Click "Add Class" to create your first class.</p>
-                        </div>
-                    `}
-                </div>
-            </div>
-        `;
-    } catch (error) {
-        console.error('Error rendering classes:', error);
-        return `<div class="text-center py-12 text-red-500">Error loading classes: ${error.message}</div>`;
     }
 }
 
@@ -2702,6 +4079,151 @@ async function renderAdminTeacherWorkload() {
         return `<div class="text-center py-12 text-red-500">Error loading workload: ${error.message}</div>`;
     }
 }
+
+// ============================================
+// CLASS MANAGEMENT - Add to main.js
+// ============================================
+
+async function renderClassManagement() {
+    try {
+        const classes = await loadAllClasses();
+        const teachers = await loadAvailableTeachers();
+        
+        return `
+            <div class="space-y-6 animate-fade-in">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold">Class Teacher Assignment</h2>
+                    <button onclick="showAddClassModal()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
+                        <i data-lucide="plus" class="h-4 w-4"></i>
+                        Add New Class
+                    </button>
+                </div>
+                
+                <div class="grid gap-4">
+                    ${classes.length > 0 ? classes.map(cls => {
+                        const currentTeacher = cls.Teacher?.User?.name || 'Not assigned';
+                        return `
+                            <div class="border rounded-lg p-4 bg-card hover:shadow-md transition-shadow">
+                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                    <div>
+                                        <h3 class="font-semibold text-lg">${cls.name}</h3>
+                                        <p class="text-sm text-muted-foreground">Grade: ${cls.grade} | Stream: ${cls.stream || 'N/A'}</p>
+                                        <p class="text-sm mt-1">
+                                            <span class="font-medium">Current Teacher:</span> 
+                                            <span class="${cls.Teacher ? 'text-green-600' : 'text-yellow-600'}">${currentTeacher}</span>
+                                        </p>
+                                        <p class="text-xs text-muted-foreground mt-1">${cls.studentCount || 0} students enrolled</p>
+                                    </div>
+                                    
+                                    <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                                        <select id="class-teacher-${cls.id}" class="rounded-lg border border-input bg-background px-3 py-2 text-sm min-w-[200px]">
+                                            <option value="">-- Select Teacher --</option>
+                                            ${teachers.map(t => `
+                                                <option value="${t.id}" ${t.id === cls.teacherId ? 'selected' : ''}>
+                                                    ${t.User?.name || 'Unknown'} (${t.subjects?.join(', ') || 'No subjects'})
+                                                </option>
+                                            `).join('')}
+                                        </select>
+                                        <button onclick="assignClassTeacher('${cls.id}')" 
+                                                class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm whitespace-nowrap">
+                                            Assign Teacher
+                                        </button>
+                                        <button onclick="editClassDetails('${cls.id}')" 
+                                                class="p-2 border rounded-lg hover:bg-accent">
+                                            <i data-lucide="edit" class="h-4 w-4"></i>
+                                        </button>
+                                        <button onclick="deleteClassItem('${cls.id}')" 
+                                                class="p-2 border rounded-lg hover:bg-red-100 text-red-600">
+                                            <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('') : `
+                        <div class="text-center py-12 border rounded-lg bg-card">
+                            <i data-lucide="school" class="h-12 w-12 mx-auto text-muted-foreground mb-4"></i>
+                            <p class="text-muted-foreground">No classes found. Click "Add New Class" to create your first class.</p>
+                        </div>
+                    `}
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error rendering classes:', error);
+        return `<div class="text-center py-12 text-red-500">Error loading classes: ${error.message}</div>`;
+    }
+}
+
+// Edit class details
+window.editClassDetails = async function(classId) {
+    const classes = await loadAllClasses();
+    const classData = classes.find(c => c.id == classId);
+    
+    if (!classData) {
+        showToast('Class not found', 'error');
+        return;
+    }
+    
+    const newName = prompt('Enter new class name:', classData.name);
+    if (newName && newName !== classData.name) {
+        const newGrade = prompt('Enter new grade:', classData.grade);
+        const newStream = prompt('Enter new stream:', classData.stream || '');
+        
+        showLoading();
+        try {
+            await api.admin.updateClass(classId, { 
+                name: newName, 
+                grade: newGrade || classData.grade,
+                stream: newStream || classData.stream
+            });
+            showToast('✅ Class updated successfully', 'success');
+            await showDashboardSection('class-management');
+        } catch (error) {
+            showToast(error.message || 'Failed to update class', 'error');
+        } finally {
+            hideLoading();
+        }
+    }
+};
+
+// Delete class item
+window.deleteClassItem = async function(classId) {
+    if (!confirm('⚠️ Are you sure you want to delete this class? This will remove all student associations.')) return;
+    
+    showLoading();
+    try {
+        await api.admin.deleteClass(classId);
+        showToast('✅ Class deleted successfully', 'success');
+        await showDashboardSection('class-management');
+    } catch (error) {
+        showToast(error.message || 'Failed to delete class', 'error');
+    } finally {
+        hideLoading();
+    }
+};
+
+// Show add class modal
+window.showAddClassModal = function() {
+    const className = prompt('Enter class name (e.g., Form 1A, Grade 10):');
+    if (!className) return;
+    
+    const grade = prompt('Enter grade/level (e.g., 10, Form 1):');
+    if (!grade) return;
+    
+    const stream = prompt('Enter stream (optional, e.g., A, B, Science):', '');
+    
+    showLoading();
+    api.admin.createClass({ name: className, grade, stream })
+        .then(() => {
+            showToast('✅ Class created successfully', 'success');
+            showDashboardSection('class-management');
+        })
+        .catch(err => {
+            showToast(err.message || 'Failed to create class', 'error');
+        })
+        .finally(() => hideLoading());
+};
 
 // ============================================
 // CLASS HELPER FUNCTIONS
@@ -3125,6 +4647,7 @@ function renderAdminTimetable() {
 // STUDENT SUSPEND/REACTIVATE FUNCTIONS
 // ============================================
 
+// Replace refreshAdminStudentList with refreshStudentsList
 window.suspendStudent = async function(studentId, studentName) {
     const reason = prompt(`Enter reason for suspending ${studentName}:`);
     if (!reason) return;
@@ -3140,7 +4663,7 @@ window.suspendStudent = async function(studentId, studentName) {
             if (currentSection === 'students') {
                 await showDashboardSection('students');
             } else {
-                await refreshAdminStudentList();
+                await refreshStudentsList(); // FIXED: was refreshAdminStudentList
             }
         }
     } catch (error) {
@@ -3162,7 +4685,7 @@ window.reactivateStudent = async function(studentId, studentName) {
             if (currentSection === 'students') {
                 await showDashboardSection('students');
             } else {
-                await refreshAdminStudentList();
+                await refreshStudentsList(); // FIXED: was refreshAdminStudentList
             }
         }
     } catch (error) {
@@ -3190,7 +4713,7 @@ window.deleteStudent = async function(studentId, studentName) {
             if (currentSection === 'students') {
                 await showDashboardSection('students');
             } else {
-                await refreshAdminStudentList();
+                await refreshStudentsList(); // FIXED: was refreshAdminStudentList
             }
         }
     } catch (error) {
@@ -4343,6 +5866,28 @@ async function renderParentDashboard() {
     }
 }
 
+async function refreshParentDashboard() {
+    try {
+        const children = await api.parent.getChildren();
+        if (children.data && children.data.length > 0) {
+            const summary = await api.parent.getChildSummary(children.data[0].id);
+            dashboardData = {
+                children: children.data,
+                selectedChild: summary.data,
+                selectedChildId: children.data[0].id
+            };
+        } else {
+            dashboardData = { children: [], selectedChild: null, selectedChildId: null };
+        }
+        
+        if (currentSection === 'dashboard') {
+            await showDashboardSection('dashboard');
+        }
+    } catch (error) {
+        console.error('Error refreshing parent dashboard:', error);
+    }
+}
+
 // ============ PARENT PROGRESS ============
 async function renderParentProgress() {
     try {
@@ -4729,6 +6274,9 @@ function renderParentChat() {
     // Get class teacher from summary if available
     const classTeacher = dashboardData?.selectedChild?.classTeacher;
     
+    // Get stored messages or initialize empty
+    const messages = JSON.parse(localStorage.getItem('parent_messages') || '[]');
+    
     return `
         <div class="max-w-4xl mx-auto space-y-6 animate-fade-in">
             <div class="rounded-xl border bg-card p-4 h-[600px] flex flex-col">
@@ -4747,10 +6295,20 @@ function renderParentChat() {
                 </div>
                 
                 <div class="flex-1 overflow-y-auto space-y-4 mb-4 p-4 bg-muted/20 rounded-lg" id="parent-chat-messages">
-                    <div class="text-center text-muted-foreground py-8">
-                        <i data-lucide="message-circle" class="h-12 w-12 mx-auto mb-3 opacity-50"></i>
-                        <p>Select a recipient and start messaging</p>
-                    </div>
+                    ${messages.length > 0 ? messages.map(msg => `
+                        <div class="flex ${msg.sender === 'parent' ? 'justify-end' : 'justify-start'}">
+                            <div class="${msg.sender === 'parent' ? 'chat-bubble-sent' : 'chat-bubble-received'} max-w-[70%]">
+                                <p class="text-sm font-medium">${msg.sender === 'parent' ? 'You' : msg.senderName}</p>
+                                <p class="text-sm">${msg.content}</p>
+                                <p class="text-xs text-muted-foreground mt-1">${timeAgo(msg.timestamp)}</p>
+                            </div>
+                        </div>
+                    `).join('') : `
+                        <div class="text-center text-muted-foreground py-8">
+                            <i data-lucide="message-circle" class="h-12 w-12 mx-auto mb-3 opacity-50"></i>
+                            <p>Select a recipient and start messaging</p>
+                        </div>
+                    `}
                 </div>
                 
                 <div class="flex gap-2">
@@ -5910,17 +7468,28 @@ async function handleSwapRequest() {
 }
 
 async function saveDutyPreferences() {
-    const preferredDays = Array.from(document.querySelectorAll('input[type="checkbox"][value^="monday"], input[type="checkbox"][value^="tuesday"], input[type="checkbox"][value^="wednesday"], input[type="checkbox"][value^="thursday"], input[type="checkbox"][value^="friday"]'))
-        .filter(cb => cb.checked)
+    // Collect preferred days
+    const preferredDays = Array.from(document.querySelectorAll('input[name="preferredDays"]:checked'))
         .map(cb => cb.value);
     
-    const preferredAreas = Array.from(document.querySelectorAll('input[type="checkbox"][value="morning"], input[type="checkbox"][value="lunch"], input[type="checkbox"][value="afternoon"], input[type="checkbox"][value="whole_day"]'))
-        .filter(cb => cb.checked)
+    // Collect preferred areas
+    const preferredAreas = Array.from(document.querySelectorAll('input[name="preferredAreas"]:checked'))
         .map(cb => cb.value);
     
     const maxDutiesPerWeek = parseInt(document.getElementById('max-duties')?.value) || 3;
     
+    // Collect blackout dates
     const blackoutDates = [];
+    document.querySelectorAll('#blackout-dates-list .flex.justify-between').forEach(div => {
+        const dateSpan = div.querySelector('span');
+        if (dateSpan && dateSpan.textContent) {
+            // Convert back to YYYY-MM-DD format
+            const date = new Date(dateSpan.textContent);
+            if (!isNaN(date.getTime())) {
+                blackoutDates.push(date.toISOString().split('T')[0]);
+            }
+        }
+    });
     
     const preferences = {
         preferredDays,
@@ -6375,6 +7944,260 @@ window.addEventListener('student-added', function(e) {
     }
 });
 
+// ============================================
+// REFRESH FUNCTIONS - Add to main.js
+// ============================================
+
+// Refresh students list (admin)
+async function refreshStudentsList() {
+    const container = document.getElementById('students-table-body');
+    if (!container) return;
+    
+    try {
+        const students = await loadAllStudents();
+        const tbody = container;
+        
+        if (students.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-muted-foreground">No students found</td></tr>';
+            return;
+        }
+        
+        let html = '';
+        students.forEach(student => {
+            const user = student.User || {};
+            const name = user.name || 'Unknown';
+            const status = student.status || 'active';
+            const statusClass = status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700';
+            
+            html += `
+                <tr class="hover:bg-accent/50 transition-colors">
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-3">
+                            <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                <span class="font-medium text-blue-700 text-sm">${getInitials(name)}</span>
+                            </div>
+                            <span class="font-medium">${name}</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3"><span class="font-mono text-xs bg-muted px-2 py-1 rounded">${student.elimuid || 'N/A'}</span></td>
+                    <td class="px-4 py-3">${student.grade || 'N/A'}</td>
+                    <td class="px-4 py-3"><span class="px-2 py-1 ${statusClass} text-xs rounded-full">${status}</span></td>
+                    <td class="px-4 py-3">${student.parents?.length || 0}</td>
+                    <td class="px-4 py-3 text-right">
+                        <button onclick="viewStudentDetails('${student.id}')" class="p-2 hover:bg-accent rounded-lg"><i data-lucide="eye" class="h-4 w-4"></i></button>
+                        <button onclick="copyElimuid('${student.elimuid}')" class="p-2 hover:bg-accent rounded-lg"><i data-lucide="copy" class="h-4 w-4"></i></button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        tbody.innerHTML = html;
+        
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    } catch (error) {
+        console.error('Error refreshing students:', error);
+        container.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-red-500">Error loading students</td></tr>';
+    }
+}
+
+// Add this near the other refresh functions (around line 8000)
+async function refreshClassesList() {
+    const container = document.getElementById('classes-list-container');
+    if (!container) return;
+    
+    try {
+        const classes = await loadAllClasses();
+        
+        if (classes.length === 0) {
+            container.innerHTML = '<div class="text-center py-12 text-muted-foreground">No classes found</div>';
+            return;
+        }
+        
+        let html = '';
+        classes.forEach(cls => {
+            const currentTeacher = cls.Teacher?.User?.name || 'Not assigned';
+            html += `
+                <div class="border rounded-lg p-4 bg-card hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-semibold">${cls.name}</h3>
+                            <p class="text-sm text-muted-foreground">Grade: ${cls.grade} | Stream: ${cls.stream || 'N/A'}</p>
+                            <p class="text-sm mt-1">
+                                <span class="font-medium">Class Teacher:</span> 
+                                <span class="${cls.Teacher ? 'text-green-600' : 'text-yellow-600'}">${currentTeacher}</span>
+                            </p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="editClass('${cls.id}')" class="p-2 hover:bg-accent rounded-lg"><i data-lucide="edit" class="h-4 w-4"></i></button>
+                            <button onclick="deleteClass('${cls.id}')" class="p-2 hover:bg-red-100 rounded-lg text-red-600"><i data-lucide="trash-2" class="h-4 w-4"></i></button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+        
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    } catch (error) {
+        console.error('Error refreshing classes:', error);
+        container.innerHTML = '<div class="text-center py-8 text-red-500">Error loading classes</div>';
+    }
+}
+
+// Add this function
+function refreshDutyPointsDisplay() {
+    const container = document.getElementById('teacher-points-table');
+    if (!container) return;
+    
+    const teachers = dashboardData?.teachers || [];
+    
+    let html = '';
+    teachers.forEach(t => {
+        const points = dutyPoints.teachers[t.id]?.points || 0;
+        const reliability = t.statistics?.reliabilityScore || 100;
+        const dutiesCompleted = t.statistics?.dutiesCompleted || 0;
+        html += `
+            <tr class="hover:bg-accent/50 transition-colors">
+                <td class="px-4 py-3 font-medium">${t.User?.name || 'Unknown'}</td>
+                <td class="px-4 py-3 text-center">
+                    <span class="font-bold text-lg ${points >= 100 ? 'text-green-600' : points >= 50 ? 'text-blue-600' : 'text-gray-600'}">
+                        ${points}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-center">${dutiesCompleted}</td>
+                <td class="px-4 py-3 text-center">
+                    <div class="flex items-center justify-center gap-2">
+                        <div class="h-2 w-16 rounded-full bg-muted overflow-hidden">
+                            <div class="h-full w-[${reliability}%] bg-green-500 rounded-full"></div>
+                        </div>
+                        <span>${reliability}%</span>
+                    </div>
+                </td>
+                <td class="px-4 py-3 text-right">
+                    <button onclick="showTeacherPointHistory('${t.id}')" class="p-2 hover:bg-accent rounded-lg">
+                        <i data-lucide="history" class="h-4 w-4"></i>
+                    </button>
+                    <button onclick="showAddPointsModal('${t.id}', '${t.User?.name}')" class="p-2 hover:bg-accent rounded-lg">
+                        <i data-lucide="plus-circle" class="h-4 w-4 text-green-600"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    container.innerHTML = html;
+    
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+// Add this near the other refresh functions
+async function refreshStudentDashboard() {
+    try {
+        const grades = await api.student.getGrades();
+        const attendance = await api.student.getAttendance();
+        
+        dashboardData = {
+            grades: grades.data || [],
+            attendance: attendance.data || []
+        };
+        
+        if (currentSection === 'dashboard') {
+            await showDashboardSection('dashboard');
+        } else if (currentSection === 'grades') {
+            await showDashboardSection('grades');
+        } else if (currentSection === 'attendance') {
+            await showDashboardSection('attendance');
+        }
+    } catch (error) {
+        console.error('Error refreshing student dashboard:', error);
+    }
+}w
+
+// Refresh teachers list (admin)
+async function refreshTeachersList() {
+    const container = document.getElementById('teachers-table-container');
+    if (!container) return;
+    
+    try {
+        const teachers = await loadAllTeachers();
+        container.innerHTML = renderTeachersTable(teachers);
+        
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    } catch (error) {
+        console.error('Error refreshing teachers:', error);
+        container.innerHTML = '<div class="text-center py-8 text-red-500">Error loading teachers</div>';
+    }
+}
+
+// Refresh my students (teacher)
+async function refreshMyStudents() {
+    const container = document.getElementById('my-students-table');
+    if (!container) return;
+    
+    try {
+        const students = await loadMyStudents();
+        
+        if (students.length === 0) {
+            container.innerHTML = '<div class="text-center py-8 text-muted-foreground">No students yet. Click "Add Student" to get started.</div>';
+            return;
+        }
+        
+        let html = '';
+        students.forEach(student => {
+            const user = student.User || {};
+            html += `
+                <tr class="hover:bg-accent/50 transition-colors">
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-3">
+                            <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                <span class="font-medium text-blue-700 text-sm">${getInitials(user.name)}</span>
+                            </div>
+                            <span class="font-medium">${user.name}</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3">Grade ${student.grade}</td>
+                    <td class="px-4 py-3"><span class="font-mono text-xs bg-muted px-2 py-1 rounded">${student.elimuid}</span></td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-2">
+                            <div class="h-2 w-16 rounded-full bg-muted overflow-hidden">
+                                <div class="h-full w-[${student.attendance || 95}%] bg-green-500 rounded-full"></div>
+                            </div>
+                            <span class="text-xs">${student.attendance || 95}%</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3"><span class="font-semibold">${student.average || 0}%</span></td>
+                    <td class="px-4 py-3 text-right">
+                        <button onclick="copyElimuid('${student.elimuid}')" class="p-2 hover:bg-accent rounded-lg"><i data-lucide="copy" class="h-4 w-4"></i></button>
+                        <button onclick="viewStudentDetails('${student.id}')" class="p-2 hover:bg-accent rounded-lg"><i data-lucide="eye" class="h-4 w-4"></i></button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        container.innerHTML = html;
+        
+        // Update stats
+        const countEl = document.getElementById('my-students-count');
+        if (countEl) countEl.textContent = students.length;
+        
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    } catch (error) {
+        console.error('Error refreshing my students:', error);
+        container.innerHTML = '<div class="text-center py-8 text-red-500">Error loading students</div>';
+    }
+}
+
 // Listen for attendance updates
 window.addEventListener('attendance-updated', function() {
     console.log('Attendance updated, refreshing...');
@@ -6395,6 +8218,62 @@ window.addEventListener('class-updated', function() {
         refreshClassesList();
     }
 });
+
+// Add these near the duty points functions
+window.resetDutyPoints = function() {
+    if (!confirm('⚠️ Are you sure you want to reset ALL duty points for ALL teachers? This action cannot be undone.')) return;
+    
+    dutyPoints = {
+        teachers: {},
+        areas: {
+            'morning': { basePoints: 10, multiplier: 1 },
+            'lunch': { basePoints: 15, multiplier: 1.5 },
+            'afternoon': { basePoints: 12, multiplier: 1.2 },
+            'whole_day': { basePoints: 25, multiplier: 2.5 }
+        }
+    };
+    
+    saveDutyPoints();
+    refreshDutyPointsDisplay();
+    showToast('All duty points have been reset', 'info');
+};
+
+window.showTeacherPointHistory = function(teacherId) {
+    const teacher = dutyPoints.teachers[teacherId];
+    if (!teacher || !teacher.history || teacher.history.length === 0) {
+        showToast('No history available for this teacher', 'info');
+        return;
+    }
+    
+    let historyHTML = '<div class="space-y-2 max-h-96 overflow-y-auto">';
+    teacher.history.forEach(record => {
+        historyHTML += `
+            <div class="p-2 border-b">
+                <p class="text-sm"><span class="font-medium">${record.points > 0 ? '+' : ''}${record.points} points</span> - ${record.reason}</p>
+                <p class="text-xs text-muted-foreground">${formatDate(record.date)}</p>
+            </div>
+        `;
+    });
+    historyHTML += '</div>';
+    
+    alert(`Point History:\n${teacher.history.map(h => `${h.points > 0 ? '+' : ''}${h.points}: ${h.reason} (${formatDate(h.date)})`).join('\n')}`);
+};
+
+window.showAddPointsModal = function(teacherId, teacherName) {
+    const points = prompt(`Enter points to add for ${teacherName}:`, '10');
+    if (points === null) return;
+    
+    const amount = parseInt(points);
+    if (isNaN(amount)) {
+        showToast('Please enter a valid number', 'error');
+        return;
+    }
+    
+    const reason = prompt('Enter reason for adding points:', 'Manual adjustment');
+    if (reason === null) return;
+    
+    updateTeacherDutyPoints(teacherId, amount, reason);
+};
 
 // ============ EXPORT GLOBAL FUNCTIONS ============
 window.openAuthModal = openAuthModal;
