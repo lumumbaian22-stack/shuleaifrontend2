@@ -2023,220 +2023,6 @@ async function refreshNameChangeRequests() {
 }
 
 // ============================================
-// ADMIN DASHBOARD - COMPLETE FIXED VERSION
-// ============================================
-
-function renderAdminDashboard() {
-    const school = getCurrentSchool();
-    const data = dashboardData || {};
-    
-    return `
-        <div class="space-y-6 animate-fade-in">
-            <!-- School Profile Card -->
-            <div class="rounded-xl border bg-card p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 card-hover">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <div class="flex items-center gap-3 mb-2">
-                            <h2 class="text-2xl font-bold" id="school-name">${school?.name || 'Your School'}</h2>
-                            <span class="px-3 py-1 ${school?.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} text-xs rounded-full">
-                                ${school?.status || 'pending'}
-                            </span>
-                        </div>
-                        <div class="flex items-center gap-4">
-                            <p class="text-sm"><span class="font-mono bg-muted px-2 py-1 rounded" id="school-shortcode">${school?.shortCode || 'SHL-XXXXX'}</span></p>
-                            <button onclick="showNameChangeModal()" class="text-sm text-primary hover:underline">Change School Name ($50)</button>
-                        </div>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
-                        <p class="text-xs text-muted-foreground">Share this code with teachers</p>
-                        <p class="text-lg font-mono font-bold" id="display-shortcode">${school?.shortCode || 'SHL-XXXXX'}</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Stats Grid -->
-            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <div class="rounded-xl border bg-card p-6 card-hover">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-muted-foreground">Total Students</p>
-                            <h3 class="text-2xl font-bold mt-1" id="total-students">${data.students?.length || 0}</h3>
-                        </div>
-                        <div class="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                            <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="rounded-xl border bg-card p-6 card-hover">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-muted-foreground">Teachers</p>
-                            <h3 class="text-2xl font-bold mt-1" id="total-teachers">${data.teachers?.length || 0}</h3>
-                            <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
-                                <i data-lucide="trending-up" class="h-3 w-3"></i>
-                                <span id="pending-teachers">${data.pendingTeachers?.length || 0}</span> pending approval
-                            </p>
-                        </div>
-                        <div class="h-12 w-12 rounded-lg bg-violet-100 flex items-center justify-center">
-                            <i data-lucide="user-plus" class="h-6 w-6 text-violet-600"></i>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="rounded-xl border bg-card p-6 card-hover">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-muted-foreground">Classes</p>
-                            <h3 class="text-2xl font-bold mt-1" id="total-classes">${data.classes?.length || 0}</h3>
-                        </div>
-                        <div class="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
-                            <i data-lucide="book-open" class="h-6 w-6 text-emerald-600"></i>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="rounded-xl border bg-card p-6 card-hover">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-muted-foreground">Attendance Rate</p>
-                            <h3 class="text-2xl font-bold mt-1" id="attendance-rate">94.2%</h3>
-                        </div>
-                        <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
-                            <i data-lucide="calendar-check" class="h-6 w-6 text-amber-600"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- CHARTS ROW -->
-            <div class="grid gap-4 lg:grid-cols-2">
-                <div class="rounded-xl border bg-card p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-semibold">Enrollment Trends</h3>
-                        <select class="text-sm border rounded-md px-2 py-1 bg-background" onchange="updateAdminChart(this.value)">
-                            <option value="year">This Year</option>
-                            <option value="last-year">Last Year</option>
-                        </select>
-                    </div>
-                    <div class="chart-container h-64">
-                        <canvas id="admin-enrollmentChart"></canvas>
-                    </div>
-                </div>
-                
-                <div class="rounded-xl border bg-card p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-semibold">Grade Distribution</h3>
-                        <select class="text-sm border rounded-md px-2 py-1 bg-background" onchange="updateAdminPieChart(this.value)">
-                            <option value="all">All Grades</option>
-                            <option value="9">Grade 9</option>
-                            <option value="10">Grade 10</option>
-                            <option value="11">Grade 11</option>
-                            <option value="12">Grade 12</option>
-                        </select>
-                    </div>
-                    <div class="chart-container h-64">
-                        <canvas id="admin-gradeChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Action Buttons -->
-            <div class="grid gap-4 md:grid-cols-4">
-                <button onclick="showDashboardSection('teacher-approvals')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
-                    <i data-lucide="user-plus" class="h-6 w-6 text-blue-600 mb-2"></i>
-                    <p class="font-medium">Teacher Approvals</p>
-                    <p class="text-xs text-muted-foreground">${data.pendingTeachers?.length || 0} pending</p>
-                </button>
-                
-                <button onclick="showDashboardSection('students')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
-                    <i data-lucide="users" class="h-6 w-6 text-green-600 mb-2"></i>
-                    <p class="font-medium">Students</p>
-                    <p class="text-xs text-muted-foreground">${data.students?.length || 0} total</p>
-                </button>
-                
-                <button onclick="showDashboardSection('teachers')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
-                    <i data-lucide="user" class="h-6 w-6 text-purple-600 mb-2"></i>
-                    <p class="font-medium">Teachers</p>
-                    <p class="text-xs text-muted-foreground">${data.teachers?.length || 0} active</p>
-                </button>
-                
-                <button onclick="showDashboardSection('classes')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
-                    <i data-lucide="book-open" class="h-6 w-6 text-amber-600 mb-2"></i>
-                    <p class="font-medium">Classes</p>
-                    <p class="text-xs text-muted-foreground">${data.classes?.length || 0} classes</p>
-                </button>
-            </div>
-
-            <!-- Student Management Table -->
-            <div class="rounded-xl border bg-card overflow-hidden">
-                <div class="p-4 border-b flex justify-between items-center">
-                    <h3 class="font-semibold">Student Management</h3>
-                    <button onclick="refreshAdminStudentList()" class="px-3 py-1 border rounded-lg text-sm hover:bg-accent">Refresh</button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead class="bg-muted/50">
-                            <tr>
-                                <th class="px-4 py-3 text-left font-medium">Student</th>
-                                <th class="px-4 py-3 text-left font-medium">ELIMUID</th>
-                                <th class="px-4 py-3 text-left font-medium">Grade</th>
-                                <th class="px-4 py-3 text-left font-medium">Status</th>
-                                <th class="px-4 py-3 text-left font-medium">Parent(s)</th>
-                                <th class="px-4 py-3 text-right font-medium">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="admin-students-table-body">
-                            <tr><td colspan="6" class="px-4 py-8 text-center text-muted-foreground">Loading students...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Pending Teachers Table -->
-            <div class="rounded-xl border bg-card overflow-hidden">
-                <div class="p-4 border-b flex justify-between items-center">
-                    <h3 class="font-semibold">Pending Teacher Approvals</h3>
-                    <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full" id="pending-count">${data.pendingTeachers?.length || 0}</span>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead class="bg-muted/50">
-                            <tr>
-                                <th class="px-4 py-3 text-left font-medium">Teacher</th>
-                                <th class="px-4 py-3 text-left font-medium">Email</th>
-                                <th class="px-4 py-3 text-left font-medium">Subjects</th>
-                                <th class="px-4 py-3 text-left font-medium">Applied</th>
-                                <th class="px-4 py-3 text-right font-medium">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pending-teachers-table">
-                            <tr><td colspan="5" class="px-4 py-8 text-center text-muted-foreground">No pending approvals</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-async function renderAdminPendingTeachers() {
-    try {
-        const teachers = await loadPendingTeachers();
-        return `
-            <div class="space-y-6 animate-fade-in">
-                <h2 class="text-2xl font-bold">Pending Teacher Approvals</h2>
-                <div id="pending-teachers-container" class="rounded-xl border bg-card overflow-hidden">
-                    ${renderPendingTeachersTable(teachers)}
-                </div>
-            </div>
-        `;
-    } catch (error) {
-        return `<div class="text-center py-12 text-red-500">Error loading teachers: ${error.message}</div>`;
-    }
-}
-
-// ============================================
 // CHART INITIALIZATION FOR ADMIN DASHBOARD
 // ============================================
 
@@ -2379,9 +2165,14 @@ async function renderAdminTeachers() {
     }
 }
 
+// ============================================
+// ADMIN STUDENTS SECTION - WITH PROPER VIEW
+// ============================================
+
 async function renderAdminStudents() {
     try {
         const students = await loadAllStudents();
+        
         return `
             <div class="space-y-6 animate-fade-in">
                 <div class="flex justify-between items-center">
@@ -2446,18 +2237,18 @@ async function renderAdminStudents() {
                                                     </div>
                                                     <span class="font-medium">${name}</span>
                                                 </div>
-                                            </td>
+                                             </td>
                                             <td class="px-4 py-3">
                                                 <span class="font-mono text-xs bg-muted px-2 py-1 rounded">${student.elimuid || 'N/A'}</span>
-                                            </td>
+                                             </td>
                                             <td class="px-4 py-3">${student.grade || 'N/A'}</td>
                                             <td class="px-4 py-3">
                                                 <span class="px-2 py-1 ${statusClass} text-xs rounded-full">${status}</span>
-                                            </td>
+                                             </td>
                                             <td class="px-4 py-3">${email}</td>
                                             <td class="px-4 py-3 text-center">
                                                 <div class="flex items-center justify-center gap-2">
-                                                    <button onclick="viewStudentDetails('${student.id}')" class="p-2 hover:bg-accent rounded-lg" title="View">
+                                                    <button onclick="viewStudentDetails('${student.id}')" class="p-2 hover:bg-accent rounded-lg" title="View Details">
                                                         <i data-lucide="eye" class="h-4 w-4 text-blue-600"></i>
                                                     </button>
                                                     <button onclick="editStudent('${student.id}')" class="p-2 hover:bg-accent rounded-lg" title="Edit">
@@ -2478,8 +2269,8 @@ async function renderAdminStudents() {
                                                         <i data-lucide="copy" class="h-4 w-4 text-purple-600"></i>
                                                     </button>
                                                 </div>
-                                            </td>
-                                        </tr>
+                                             </td>
+                                         </tr>
                                     `;
                                 }).join('')}
                                 ${students.length === 0 ? '<tr><td colspan="6" class="px-4 py-8 text-center text-muted-foreground">No students found</td></tr>' : ''}
@@ -2544,7 +2335,7 @@ async function renderAdminSection(section) {
 }
 
 // ============================================
-// ADMIN CLASSES SECTION - ADD THIS FUNCTION
+// ADMIN CLASSES SECTION - COMPLETE WORKING VERSION
 // ============================================
 
 async function renderAdminClasses() {
@@ -2561,10 +2352,26 @@ async function renderAdminClasses() {
                         Add Class
                     </button>
                 </div>
-
+                
+                <!-- Stats Cards -->
+                <div class="grid gap-4 md:grid-cols-3">
+                    <div class="rounded-xl border bg-card p-4">
+                        <p class="text-sm text-muted-foreground">Total Classes</p>
+                        <p class="text-2xl font-bold">${classes.length}</p>
+                    </div>
+                    <div class="rounded-xl border bg-card p-4">
+                        <p class="text-sm text-muted-foreground">With Teachers</p>
+                        <p class="text-2xl font-bold text-green-600">${classes.filter(c => c.teacherId).length}</p>
+                    </div>
+                    <div class="rounded-xl border bg-card p-4">
+                        <p class="text-sm text-muted-foreground">Without Teachers</p>
+                        <p class="text-2xl font-bold text-yellow-600">${classes.filter(c => !c.teacherId).length}</p>
+                    </div>
+                </div>
+                
                 <!-- Classes Grid -->
                 <div class="grid gap-4">
-                    ${classes.map(cls => {
+                    ${classes.length > 0 ? classes.map(cls => {
                         const currentTeacher = cls.Teacher?.User?.name || 'Not assigned';
                         const teacherOptions = teachers.map(t => `
                             <option value="${t.id}" ${t.id === cls.teacherId ? 'selected' : ''}>
@@ -2579,10 +2386,10 @@ async function renderAdminClasses() {
                                         <h3 class="font-semibold text-lg">${cls.name}</h3>
                                         <p class="text-sm text-muted-foreground">Grade: ${cls.grade} | Stream: ${cls.stream || 'N/A'}</p>
                                         <p class="text-sm mt-2">
-                                            <span class="font-medium">Current Teacher:</span> 
-                                            <span class="${cls.Teacher ? 'text-green-600' : 'text-yellow-600'}">${currentTeacher}</span>
+                                            <span class="font-medium">Class Teacher:</span> 
+                                            <span class="${cls.Teacher ? 'text-green-600' : 'text-yellow-600'} font-semibold">${currentTeacher}</span>
                                         </p>
-                                        <p class="text-xs text-muted-foreground mt-1">${cls.studentCount || 0} students enrolled</p>
+                                        <p class="text-xs text-muted-foreground mt-1">📚 ${cls.studentCount || 0} students enrolled</p>
                                     </div>
                                     
                                     <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -2592,27 +2399,27 @@ async function renderAdminClasses() {
                                         </select>
                                         <button onclick="assignClassTeacher('${cls.id}')" 
                                                 class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm whitespace-nowrap">
+                                            <i data-lucide="user-check" class="h-4 w-4 inline mr-1"></i>
                                             Assign
                                         </button>
                                         <button onclick="editClass('${cls.id}')" 
-                                                class="p-2 border rounded-lg hover:bg-accent">
+                                                class="p-2 border rounded-lg hover:bg-accent" title="Edit Class">
                                             <i data-lucide="edit" class="h-4 w-4"></i>
                                         </button>
                                         <button onclick="deleteClass('${cls.id}')" 
-                                                class="p-2 border rounded-lg hover:bg-red-100 text-red-600">
+                                                class="p-2 border rounded-lg hover:bg-red-100 text-red-600" title="Delete Class">
                                             <i data-lucide="trash-2" class="h-4 w-4"></i>
                                         </button>
                                     </div>
                                 </div>
                             </div>
                         `;
-                    }).join('')}
-                    ${classes.length === 0 ? `
+                    }).join('') : `
                         <div class="text-center py-12 border rounded-lg bg-card">
-                            <i data-lucide="users" class="h-12 w-12 mx-auto text-muted-foreground mb-4"></i>
-                            <p class="text-muted-foreground">No classes found. Click "Add Class" to create one.</p>
+                            <i data-lucide="school" class="h-12 w-12 mx-auto text-muted-foreground mb-4"></i>
+                            <p class="text-muted-foreground">No classes found. Click "Add Class" to create your first class.</p>
                         </div>
-                    ` : ''}
+                    `}
                 </div>
             </div>
         `;
@@ -2980,6 +2787,132 @@ window.showAddClassModal = function() {
         })
         .finally(() => hideLoading());
 };
+
+// ============================================
+// VIEW STUDENT DETAILS - ADMIN FUNCTION
+// ============================================
+
+window.viewStudentDetails = async function(studentId) {
+    showLoading();
+    try {
+        // Get student from the existing list
+        const students = await loadAllStudents();
+        const student = students.find(s => s.id == studentId);
+        
+        if (!student) {
+            showToast('Student not found', 'error');
+            return;
+        }
+        
+        const user = student.User || {};
+        const name = user.name || 'Unknown';
+        const email = user.email || 'N/A';
+        const status = student.status || 'active';
+        const grade = student.grade || 'N/A';
+        const elimuid = student.elimuid || 'N/A';
+        const gender = student.gender || 'Not specified';
+        const dob = student.dateOfBirth ? formatDate(student.dateOfBirth) : 'Not specified';
+        const enrollmentDate = student.enrollmentDate ? formatDate(student.enrollmentDate) : 'N/A';
+        
+        // Create modal
+        let modal = document.getElementById('student-details-modal');
+        if (!modal) {
+            createStudentDetailsModal();
+            modal = document.getElementById('student-details-modal');
+        }
+        
+        const modalContent = modal.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex items-center gap-4 pb-4 border-b">
+                        <div class="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
+                            ${getInitials(name)}
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg">${name}</h4>
+                            <p class="text-sm text-muted-foreground">${email}</p>
+                            <p class="text-xs text-muted-foreground mt-1">Status: <span class="font-semibold ${status === 'active' ? 'text-green-600' : 'text-red-600'}">${status}</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-3 bg-muted/30 rounded-lg">
+                            <p class="text-xs text-muted-foreground">ELIMUID</p>
+                            <p class="font-mono text-sm font-bold text-primary">${elimuid}</p>
+                        </div>
+                        <div class="p-3 bg-muted/30 rounded-lg">
+                            <p class="text-xs text-muted-foreground">Grade/Class</p>
+                            <p class="font-medium">${grade}</p>
+                        </div>
+                        <div class="p-3 bg-muted/30 rounded-lg">
+                            <p class="text-xs text-muted-foreground">Gender</p>
+                            <p class="font-medium">${gender}</p>
+                        </div>
+                        <div class="p-3 bg-muted/30 rounded-lg">
+                            <p class="text-xs text-muted-foreground">Date of Birth</p>
+                            <p class="font-medium">${dob}</p>
+                        </div>
+                        <div class="p-3 bg-muted/30 rounded-lg">
+                            <p class="text-xs text-muted-foreground">Enrolled</p>
+                            <p class="font-medium">${enrollmentDate}</p>
+                        </div>
+                        <div class="p-3 bg-muted/30 rounded-lg">
+                            <p class="text-xs text-muted-foreground">Parent(s)</p>
+                            <p class="font-medium">${student.parents?.length || 0} linked</p>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t pt-4">
+                        <button onclick="copyElimuid('${elimuid}')" class="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center justify-center gap-2">
+                            <i data-lucide="copy" class="h-4 w-4"></i>
+                            Copy ELIMUID
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        modal.classList.remove('hidden');
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+        
+    } catch (error) {
+        console.error('Error viewing student:', error);
+        showToast('Failed to load student details', 'error');
+    } finally {
+        hideLoading();
+    }
+};
+
+// Create student details modal
+function createStudentDetailsModal() {
+    const modalHTML = `
+        <div id="student-details-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeStudentDetailsModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Student Details</h3>
+                        <button onclick="closeStudentDetailsModal()" class="p-2 hover:bg-accent rounded-lg">
+                            <i data-lucide="x" class="h-5 w-5"></i>
+                        </button>
+                    </div>
+                    <div class="modal-content space-y-4">
+                        <!-- Content will be filled dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function closeStudentDetailsModal() {
+    const modal = document.getElementById('student-details-modal');
+    if (modal) modal.classList.add('hidden');
+}
 
 // ============================================
 // SETTINGS SECTION
@@ -6287,6 +6220,145 @@ async function handleChangePassword() {
         hideLoading();
     }
 
+}
+
+// ============================================
+// ADMIN CALENDAR SECTION - ADD THIS FUNCTION
+// ============================================
+
+function renderAdminCalendar() {
+    // Get events from localStorage
+    const events = loadCalendarEvents();
+    const today = new Date();
+    const currentMonth = today.toLocaleString('default', { month: 'long' });
+    const currentYear = today.getFullYear();
+    
+    // Get upcoming events (next 7 days)
+    const nextWeek = new Date();
+    nextWeek.setDate(today.getDate() + 7);
+    const upcomingEvents = events.filter(e => {
+        const eventDate = new Date(e.date);
+        return eventDate >= today && eventDate <= nextWeek;
+    }).sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    return `
+        <div class="space-y-6 animate-fade-in">
+            <!-- Calendar Header -->
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold">School Calendar</h2>
+                <button onclick="showAddEventModal()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
+                    <i data-lucide="plus" class="h-4 w-4"></i>
+                    Add Event
+                </button>
+            </div>
+            
+            <!-- Calendar Grid -->
+            <div class="rounded-xl border bg-card overflow-hidden">
+                <div class="p-4 border-b bg-muted/30">
+                    <h3 class="font-semibold text-center">${currentMonth} ${currentYear}</h3>
+                </div>
+                <div class="grid grid-cols-7 divide-x divide-y">
+                    ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => `
+                        <div class="p-3 text-center font-semibold text-sm bg-muted/20">${day}</div>
+                    `).join('')}
+                    ${renderCalendarDays(events)}
+                </div>
+            </div>
+            
+            <!-- Upcoming Events -->
+            <div class="rounded-xl border bg-card">
+                <div class="p-4 border-b">
+                    <h3 class="font-semibold">Upcoming Events (Next 7 Days)</h3>
+                </div>
+                <div class="divide-y">
+                    ${upcomingEvents.length > 0 ? upcomingEvents.map(event => `
+                        <div class="p-4 flex justify-between items-center hover:bg-accent/50 transition-colors">
+                            <div>
+                                <p class="font-medium">${event.title}</p>
+                                <p class="text-sm text-muted-foreground">${formatDate(event.date)}${event.time ? ` at ${event.time}` : ''}</p>
+                                ${event.location ? `<p class="text-xs text-muted-foreground mt-1">📍 ${event.location}</p>` : ''}
+                            </div>
+                            <button onclick="deleteEvent('${event.id}')" class="p-2 hover:bg-red-100 rounded-lg text-red-600">
+                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                            </button>
+                        </div>
+                    `).join('') : `
+                        <div class="p-8 text-center text-muted-foreground">
+                            <i data-lucide="calendar" class="h-12 w-12 mx-auto mb-3 opacity-50"></i>
+                            <p>No upcoming events</p>
+                            <button onclick="showAddEventModal()" class="mt-3 text-sm text-primary hover:underline">Add your first event</button>
+                        </div>
+                    `}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Helper function to render calendar days
+function renderCalendarDays(events) {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+    
+    let days = [];
+    
+    // Previous month days
+    for (let i = firstDay - 1; i >= 0; i--) {
+        const day = daysInPrevMonth - i;
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayEvents = events.filter(e => e.date === dateStr);
+        days.push(`
+            <div class="p-3 min-h-[80px] bg-muted/20">
+                <span class="text-xs text-muted-foreground">${day}</span>
+                ${dayEvents.length > 0 ? `
+                    <div class="mt-1">
+                        ${dayEvents.slice(0, 2).map(e => `
+                            <div class="text-[10px] truncate bg-primary/10 text-primary rounded px-1 py-0.5 mt-0.5">${e.title}</div>
+                        `).join('')}
+                        ${dayEvents.length > 2 ? `<div class="text-[10px] text-muted-foreground mt-0.5">+${dayEvents.length - 2} more</div>` : ''}
+                    </div>
+                ` : ''}
+            </div>
+        `);
+    }
+    
+    // Current month days
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayEvents = events.filter(e => e.date === dateStr);
+        const isToday = day === today.getDate() && month === today.getMonth();
+        
+        days.push(`
+            <div class="p-3 min-h-[80px] ${isToday ? 'bg-primary/5 border-l-2 border-primary' : 'hover:bg-accent/30'} transition-colors cursor-pointer" onclick="showDayDetails('${dateStr}')">
+                <span class="text-sm font-medium ${isToday ? 'text-primary' : ''}">${day}</span>
+                ${dayEvents.length > 0 ? `
+                    <div class="mt-1">
+                        ${dayEvents.slice(0, 2).map(e => `
+                            <div class="text-[10px] truncate bg-primary/10 text-primary rounded px-1 py-0.5 mt-0.5">${e.title}</div>
+                        `).join('')}
+                        ${dayEvents.length > 2 ? `<div class="text-[10px] text-muted-foreground mt-0.5">+${dayEvents.length - 2} more</div>` : ''}
+                    </div>
+                ` : ''}
+            </div>
+        `);
+    }
+    
+    // Next month days (to fill grid)
+    const totalCells = days.length;
+    const remainingCells = 42 - totalCells;
+    for (let day = 1; day <= remainingCells; day++) {
+        days.push(`
+            <div class="p-3 min-h-[80px] bg-muted/20">
+                <span class="text-xs text-muted-foreground">${day}</span>
+            </div>
+        `);
+    }
+    
+    return days.join('');
 }
 
 // ============ CROSS-TAB EVENT LISTENERS ============
