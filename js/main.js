@@ -576,6 +576,226 @@ function setupEventListeners() {
     });
 }
 
+// ============================================
+// FIXED SCHOOL DETAILS MODAL - BETTER SIZING
+// ============================================
+
+// Show school details modal
+function showSchoolDetailsModal(school) {
+    let modal = document.getElementById('school-details-modal');
+    
+    if (!modal) {
+        createSchoolDetailsModal();
+        modal = document.getElementById('school-details-modal');
+    }
+    
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) {
+        modalContent.innerHTML = getSchoolDetailsHTML(school);
+    }
+    
+    modal.classList.remove('hidden');
+    
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+// Create school details modal - FIXED SIZING
+function createSchoolDetailsModal() {
+    const modalHTML = `
+        <div id="school-details-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeSchoolDetailsModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl p-4">
+                <div class="rounded-2xl border bg-card shadow-2xl animate-fade-in overflow-hidden max-h-[85vh] overflow-y-auto">
+                    <div class="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-center">
+                        <h3 class="text-xl font-semibold">School Details</h3>
+                        <button onclick="closeSchoolDetailsModal()" class="p-2 hover:bg-accent rounded-lg transition-colors">
+                            <i data-lucide="x" class="h-5 w-5"></i>
+                        </button>
+                    </div>
+                    <div class="modal-content p-6 space-y-6">
+                        <!-- Content will be filled dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// Get school details HTML - FIXED WITH BETTER LAYOUT
+function getSchoolDetailsHTML(school) {
+    const admin = school.admins && school.admins.length > 0 ? school.admins[0] : null;
+    const stats = school.stats || {};
+    
+    // Determine status color
+    const statusColor = {
+        'active': 'bg-green-100 text-green-700 border-green-200',
+        'pending': 'bg-yellow-100 text-yellow-700 border-yellow-200',
+        'suspended': 'bg-red-100 text-red-700 border-red-200',
+        'rejected': 'bg-gray-100 text-gray-700 border-gray-200'
+    }[school.status] || 'bg-gray-100 text-gray-700 border-gray-200';
+    
+    return `
+        <div class="space-y-6">
+            <!-- Header with Status -->
+            <div class="flex items-start justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="h-16 w-16 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                        ${getInitials(school.name)}
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold">${school.name || 'Unknown'}</h2>
+                        <div class="flex items-center gap-3 mt-1">
+                            <span class="font-mono text-sm bg-muted px-3 py-1 rounded-lg">ID: ${school.schoolId || 'N/A'}</span>
+                            <span class="font-mono text-sm bg-muted px-3 py-1 rounded-lg">Code: ${school.shortCode || 'N/A'}</span>
+                            <span class="px-3 py-1 rounded-full text-xs font-medium border ${statusColor}">${school.status || 'Unknown'}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Two Column Layout -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Left Column -->
+                <div class="space-y-4">
+                    <div class="bg-muted/30 rounded-xl p-4">
+                        <h4 class="font-semibold mb-3 flex items-center gap-2">
+                            <i data-lucide="building-2" class="h-4 w-4 text-primary"></i>
+                            School Information
+                        </h4>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-sm text-muted-foreground">School Level</span>
+                                <span class="text-sm font-medium">${school.settings?.schoolLevel || 'N/A'}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-muted-foreground">Curriculum</span>
+                                <span class="text-sm font-medium">${school.system || 'N/A'}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-muted-foreground">Created</span>
+                                <span class="text-sm font-medium">${formatDate(school.createdAt)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-muted/30 rounded-xl p-4">
+                        <h4 class="font-semibold mb-3 flex items-center gap-2">
+                            <i data-lucide="mail" class="h-4 w-4 text-primary"></i>
+                            Contact Information
+                        </h4>
+                        <div class="space-y-2">
+                            <div>
+                                <p class="text-xs text-muted-foreground">Email</p>
+                                <p class="text-sm">${school.contact?.email || admin?.email || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-muted-foreground">Phone</p>
+                                <p class="text-sm">${school.contact?.phone || 'N/A'}</p>
+                            </div>
+                            ${school.address ? `
+                                <div>
+                                    <p class="text-xs text-muted-foreground">Address</p>
+                                    <p class="text-sm">${formatAddress(school.address)}</p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Column -->
+                <div class="space-y-4">
+                    <div class="bg-muted/30 rounded-xl p-4">
+                        <h4 class="font-semibold mb-3 flex items-center gap-2">
+                            <i data-lucide="user" class="h-4 w-4 text-primary"></i>
+                            Administrator
+                        </h4>
+                        <div class="space-y-2">
+                            <div>
+                                <p class="text-xs text-muted-foreground">Name</p>
+                                <p class="text-sm font-medium">${admin?.name || 'No admin assigned'}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-muted-foreground">Email</p>
+                                <p class="text-sm">${admin?.email || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-muted-foreground">Phone</p>
+                                <p class="text-sm">${admin?.phone || 'N/A'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-muted/30 rounded-xl p-4">
+                        <h4 class="font-semibold mb-3 flex items-center gap-2">
+                            <i data-lucide="bar-chart-2" class="h-4 w-4 text-primary"></i>
+                            Statistics
+                        </h4>
+                        <div class="grid grid-cols-3 gap-3 text-center">
+                            <div class="p-2 bg-background/50 rounded-lg">
+                                <p class="text-2xl font-bold text-blue-600">${stats.teachers || 0}</p>
+                                <p class="text-xs text-muted-foreground">Teachers</p>
+                            </div>
+                            <div class="p-2 bg-background/50 rounded-lg">
+                                <p class="text-2xl font-bold text-green-600">${stats.students || 0}</p>
+                                <p class="text-xs text-muted-foreground">Students</p>
+                            </div>
+                            <div class="p-2 bg-background/50 rounded-lg">
+                                <p class="text-2xl font-bold text-purple-600">${stats.parents || 0}</p>
+                                <p class="text-xs text-muted-foreground">Parents</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Suspension Information (if applicable) -->
+            ${school.suspensionReason ? `
+                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+                    <h4 class="font-semibold mb-2 flex items-center gap-2 text-red-700 dark:text-red-400">
+                        <i data-lucide="alert-triangle" class="h-4 w-4"></i>
+                        Suspension Information
+                    </h4>
+                    <p class="text-sm"><span class="font-medium">Reason:</span> ${school.suspensionReason}</p>
+                    <p class="text-sm mt-1"><span class="font-medium">Date:</span> ${formatDate(school.suspendedAt)}</p>
+                </div>
+            ` : ''}
+            
+            <!-- Action Buttons -->
+            <div class="flex justify-end gap-3 pt-4 border-t">
+                <button onclick="closeSchoolDetailsModal()" class="px-4 py-2 border rounded-lg hover:bg-accent transition-colors">
+                    Close
+                </button>
+                <button onclick="editSchool('${school.id}')" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2">
+                    <i data-lucide="edit" class="h-4 w-4"></i>
+                    Edit School
+                </button>
+                ${school.status === 'active' ? 
+                    `<button onclick="suspendSchool('${school.id}')" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors flex items-center gap-2">
+                        <i data-lucide="pause-circle" class="h-4 w-4"></i>
+                        Suspend
+                    </button>` : 
+                    school.status === 'suspended' ?
+                    `<button onclick="reactivateSchool('${school.id}')" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2">
+                        <i data-lucide="play-circle" class="h-4 w-4"></i>
+                        Reactivate
+                    </button>` : ''
+                }
+            </div>
+        </div>
+    `;
+}
+
+// Close school details modal
+function closeSchoolDetailsModal() {
+    const modal = document.getElementById('school-details-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
 // ============ AUTH MODAL FUNCTIONS ============
 
 function openAuthModal(role, mode) {
@@ -2651,7 +2871,7 @@ async function refreshSchoolsList() {
 }
 
 // ============================================
-// FIXED SCHOOL SUSPENSION FUNCTION
+// FIXED SUSPEND SCHOOL FUNCTION
 // ============================================
 
 window.suspendSchool = async function(schoolId) {
@@ -2663,19 +2883,26 @@ window.suspendSchool = async function(schoolId) {
     const reason = prompt('Please enter suspension reason:');
     if (reason === null) return;
     
+    if (!reason.trim()) {
+        showToast('Please enter a valid reason', 'error');
+        return;
+    }
+    
     if (!confirm(`⚠️ Are you sure you want to suspend this school? All users will be locked out.`)) {
         return;
     }
     
     showLoading();
     try {
-        const response = await api.superAdmin.suspendSchool(schoolId, { reason });
+        // FIXED: Send only the reason string, not an object
+        const response = await api.superAdmin.suspendSchool(schoolId, reason);
         
         if (response.success) {
             showToast('✅ School suspended successfully', 'success');
-            // Refresh both tables
+            // Refresh all school tables
             await refreshSchoolsList();
             await refreshSuspendedSchools();
+            await refreshPendingSchools();
             // Update stats
             await updateSuperAdminStats();
         }
@@ -2699,19 +2926,70 @@ window.reactivateSchool = async function(schoolId) {
     
     showLoading();
     try {
-        const response = await api.superAdmin.reactivateSchool(schoolId, { reason });
+        // FIXED: Send only the reason string
+        const response = await api.superAdmin.reactivateSchool(schoolId, reason);
         
         if (response.success) {
             showToast('✅ School reactivated successfully', 'success');
-            // Refresh both tables
             await refreshSchoolsList();
             await refreshSuspendedSchools();
-            // Update stats
+            await refreshPendingSchools();
             await updateSuperAdminStats();
         }
     } catch (error) {
         console.error('Reactivate school error:', error);
         showToast(error.message || 'Failed to reactivate school', 'error');
+    } finally {
+        hideLoading();
+    }
+};
+
+// Delete school
+window.deleteSchool = async function(schoolId) {
+    if (!schoolId) {
+        showToast('Invalid school ID', 'error');
+        return;
+    }
+    
+    // FIXED: Better confirmation flow
+    const confirmMessage = `⚠️ PERMANENT ACTION: Delete this school?
+    
+This will permanently delete:
+- All teachers
+- All students
+- All parents
+- All academic records
+- All attendance records
+- All payment records
+
+This action CANNOT be undone!`;
+    
+    if (!confirm(confirmMessage)) {
+        showToast('Deletion cancelled', 'info');
+        return;
+    }
+    
+    const confirmText = prompt('Type "DELETE THIS SCHOOL" to confirm deletion:');
+    if (confirmText !== 'DELETE THIS SCHOOL') {
+        showToast('Deletion cancelled - incorrect confirmation text', 'warning');
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.superAdmin.deleteSchool(schoolId);
+        
+        if (response.success) {
+            showToast('✅ School deleted successfully', 'success');
+            // Refresh all school tables
+            await refreshSchoolsList();
+            await refreshPendingSchools();
+            await refreshSuspendedSchools();
+            await updateSuperAdminStats();
+        }
+    } catch (error) {
+        console.error('Delete school error:', error);
+        showToast(error.message || 'Failed to delete school', 'error');
     } finally {
         hideLoading();
     }
