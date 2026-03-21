@@ -1354,10 +1354,14 @@ async function showDashboardSection(section) {
         
         if (section === 'dashboard' || section === 'analytics') {
             setTimeout(() => {
+                if (currentRole === 'admin') {
+                    initAdminCharts();
+                }
+
                 if (typeof initRoleCharts === 'function') {
                     initRoleCharts(currentRole, dashboardData);
                 }
-            }, 100);
+             }, 300);
         }
         
         setupSectionListeners(currentRole, section);
@@ -2018,361 +2022,45 @@ async function refreshNameChangeRequests() {
     }
 }
 
-// ============ ADMIN SECTIONS ============
-
-// In main.js - REPLACE your renderAdminSection function with this:
-
-// ============ ADMIN SECTIONS - COMPLETE FIXED VERSION ============
-// ============ ADMIN SECTIONS - COMPLETE FIXED VERSION ============
-
-async function renderAdminSection(section) {
-    try {
-        // For dashboard section, return the HTML directly instead of fetching
-        if (section === 'dashboard') {
-            return `
-                <div class="space-y-6 animate-fade-in" id="admin-dashboard-content">
-                    <!-- School Profile Card -->
-                    <div class="rounded-xl border bg-card p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 card-hover">
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <div>
-                                <div class="flex items-center gap-3 mb-2">
-                                    <h2 class="text-2xl font-bold" id="school-name">Your School</h2>
-                                    <span class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full" id="school-status">Active</span>
-                                </div>
-                                <div class="flex items-center gap-4">
-                                    <p class="text-sm"><span class="font-mono bg-muted px-2 py-1 rounded" id="school-shortcode">SHL-7LCQL</span></p>
-                                    <button onclick="showNameChangeModal()" class="text-sm text-primary hover:underline">Change School Name ($50)</button>
-                                </div>
-                            </div>
-                            <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
-                                <p class="text-xs text-muted-foreground">Share this code with teachers</p>
-                                <p class="text-lg font-mono font-bold" id="display-shortcode">SHL-7LCQL</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Stats Grid -->
-                    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        <div class="rounded-xl border bg-card p-6 card-hover">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-muted-foreground">Total Students</p>
-                                    <h3 class="text-2xl font-bold mt-1" id="total-students">0</h3>
-                                </div>
-                                <div class="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                                    <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="rounded-xl border bg-card p-6 card-hover">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-muted-foreground">Teachers</p>
-                                    <h3 class="text-2xl font-bold mt-1" id="total-teachers">0</h3>
-                                    <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
-                                        <i data-lucide="trending-up" class="h-3 w-3"></i>
-                                        <span id="pending-teachers">0</span> pending approval
-                                    </p>
-                                </div>
-                                <div class="h-12 w-12 rounded-lg bg-violet-100 flex items-center justify-center">
-                                    <i data-lucide="user-plus" class="h-6 w-6 text-violet-600"></i>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="rounded-xl border bg-card p-6 card-hover">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-muted-foreground">Classes</p>
-                                    <h3 class="text-2xl font-bold mt-1" id="total-classes">0</h3>
-                                </div>
-                                <div class="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
-                                    <i data-lucide="book-open" class="h-6 w-6 text-emerald-600"></i>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="rounded-xl border bg-card p-6 card-hover">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-muted-foreground">Attendance Rate</p>
-                                    <h3 class="text-2xl font-bold mt-1" id="attendance-rate">94%</h3>
-                                </div>
-                                <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
-                                    <i data-lucide="calendar-check" class="h-6 w-6 text-amber-600"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Quick Actions -->
-                    <div class="grid gap-4 md:grid-cols-3">
-                        <button onclick="showDashboardSection('teacher-approvals')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
-                            <i data-lucide="user-plus" class="h-8 w-8 text-blue-600 mb-3"></i>
-                            <h4 class="font-semibold">Teacher Approvals</h4>
-                            <p class="text-sm text-muted-foreground">Approve pending teachers</p>
-                            <span class="mt-2 inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700" id="pending-count-badge">0 pending</span>
-                        </button>
-                        
-                        <button onclick="showDashboardSection('students')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
-                            <i data-lucide="users" class="h-8 w-8 text-green-600 mb-3"></i>
-                            <h4 class="font-semibold">Student Management</h4>
-                            <p class="text-sm text-muted-foreground">View and manage all students</p>
-                        </button>
-                        
-                        <button onclick="showDashboardSection('settings')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
-                            <i data-lucide="settings" class="h-8 w-8 text-purple-600 mb-3"></i>
-                            <h4 class="font-semibold">School Settings</h4>
-                            <p class="text-sm text-muted-foreground">Configure curriculum and subjects</p>
-                        </button>
-                    </div>
-
-                    <!-- Student Management Table -->
-                    <div class="rounded-xl border bg-card overflow-hidden">
-                        <div class="p-4 border-b flex justify-between items-center">
-                            <h3 class="font-semibold">Student Management</h3>
-                            <button onclick="refreshAdminStudentList()" class="px-3 py-1 border rounded-lg text-sm hover:bg-accent">Refresh</button>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm">
-                                <thead class="bg-muted/50">
-                                    <tr>
-                                        <th class="px-4 py-3 text-left font-medium">Student</th>
-                                        <th class="px-4 py-3 text-left font-medium">ELIMUID</th>
-                                        <th class="px-4 py-3 text-left font-medium">Grade</th>
-                                        <th class="px-4 py-3 text-left font-medium">Status</th>
-                                        <th class="px-4 py-3 text-left font-medium">Parent(s)</th>
-                                        <th class="px-4 py-3 text-right font-medium">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="admin-students-table-body">
-                                    <tr><td colspan="6" class="px-4 py-8 text-center text-muted-foreground">Loading students...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Pending Teachers Table -->
-                    <div class="rounded-xl border bg-card overflow-hidden">
-                        <div class="p-4 border-b flex justify-between items-center">
-                            <h3 class="font-semibold">Pending Teacher Approvals</h3>
-                            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full" id="pending-count">0</span>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm">
-                                <thead class="bg-muted/50">
-                                    <tr>
-                                        <th class="px-4 py-3 text-left font-medium">Teacher</th>
-                                        <th class="px-4 py-3 text-left font-medium">Email</th>
-                                        <th class="px-4 py-3 text-left font-medium">Subjects</th>
-                                        <th class="px-4 py-3 text-left font-medium">Applied</th>
-                                        <th class="px-4 py-3 text-right font-medium">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="pending-teachers-table">
-                                    <tr><td colspan="5" class="px-4 py-8 text-center text-muted-foreground">No pending approvals</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Student Details Modal -->
-                <div id="student-details-modal" class="fixed inset-0 z-50 hidden">
-                    <div class="absolute inset-0 bg-black/50" onclick="closeStudentDetailsModal()"></div>
-                    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
-                        <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-lg font-semibold">Student Details</h3>
-                                <button onclick="closeStudentDetailsModal()" class="p-2 hover:bg-accent rounded-lg">
-                                    <i data-lucide="x" class="h-5 w-5"></i>
-                                </button>
-                            </div>
-                            <div class="modal-content space-y-4">
-                                <!-- Content will be filled dynamically -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <script>
-                function closeStudentDetailsModal() {
-                    document.getElementById('student-details-modal').classList.add('hidden');
-                }
-                window.viewStudent = function(id) {
-                    if (typeof showToast === 'function') {
-                        showToast('Viewing student: ' + id, 'info');
-                    }
-                };
-                </script>
-            `;
-        }
-        
-        // Handle other sections - ADDED ALL MISSING CASES
-        switch(section) {
-            case 'students':
-                return await renderAdminStudents();
-            case 'teachers':
-                return await renderAdminTeachers();
-            case 'teacher-approvals':
-                return await renderAdminPendingTeachers();
-            case 'classes':
-                return await renderAdminClasses();
-            case 'duty':
-                return await renderAdminDuty();
-            case 'fairness-report':
-                return await renderAdminFairnessReport();
-            case 'teacher-workload':
-                return await renderAdminTeacherWorkload();
-            case 'settings':
-                return renderAdminSettings();
-            case 'custom-subjects':
-                return renderAdminCustomSubjects();
-            case 'calendar':
-                return renderAdminCalendar();
-            case 'attendance':
-                return renderAdminAttendance();
-            case 'grades':
-                return renderAdminGrades();
-            case 'analytics':
-                return renderAdminAnalytics();
-            case 'tasks':
-                return renderAdminTasks();
-            case 'timetable':
-                return renderAdminTimetable();
-            default:
-                return '<div class="text-center py-12">Section not found</div>';
-        }
-    } catch (error) {
-        console.error('Error rendering admin section:', error);
-        return '<div class="text-center py-12 text-red-500">Error loading section</div>';
-    }
-}
-
 // ============================================
-// ADMIN CLASSES SECTION
-// ============================================
-
-async function renderAdminClasses() {
-    try {
-        const classes = await loadAllClasses();
-        const teachers = await loadAvailableTeachers();
-        
-        return `
-            <div class="space-y-6 animate-fade-in">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-2xl font-bold">Class Management</h2>
-                    <button onclick="showAddClassModal()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
-                        <i data-lucide="plus" class="h-4 w-4"></i>
-                        Add Class
-                    </button>
-                </div>
-
-                <!-- Classes Grid -->
-                <div class="grid gap-4">
-                    ${classes.map(cls => {
-                        const currentTeacher = cls.Teacher?.User?.name || 'Not assigned';
-                        const teacherOptions = teachers.map(t => `
-                            <option value="${t.id}" ${t.id === cls.teacherId ? 'selected' : ''}>
-                                ${t.User?.name || 'Unknown'} (${t.subjects?.join(', ') || 'No subjects'})
-                            </option>
-                        `).join('');
-                        
-                        return `
-                            <div class="border rounded-lg p-4 bg-card hover:shadow-md transition-shadow" data-class-id="${cls.id}">
-                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                    <div class="flex-1">
-                                        <h3 class="font-semibold text-lg">${cls.name}</h3>
-                                        <p class="text-sm text-muted-foreground">Grade: ${cls.grade} | Stream: ${cls.stream || 'N/A'}</p>
-                                        <p class="text-sm mt-2">
-                                            <span class="font-medium">Current Teacher:</span> 
-                                            <span class="${cls.Teacher ? 'text-green-600' : 'text-yellow-600'}">${currentTeacher}</span>
-                                        </p>
-                                        <p class="text-xs text-muted-foreground mt-1">${cls.studentCount || 0} students enrolled</p>
-                                    </div>
-                                    
-                                    <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                                        <select id="teacher-${cls.id}" class="rounded-lg border border-input bg-background px-3 py-2 text-sm min-w-[200px]">
-                                            <option value="">-- Select Teacher --</option>
-                                            ${teacherOptions}
-                                        </select>
-                                        <button onclick="assignClassTeacher('${cls.id}')" 
-                                                class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm whitespace-nowrap">
-                                            Assign
-                                        </button>
-                                        <button onclick="editClass('${cls.id}')" 
-                                                class="p-2 border rounded-lg hover:bg-accent">
-                                            <i data-lucide="edit" class="h-4 w-4"></i>
-                                        </button>
-                                        <button onclick="deleteClass('${cls.id}')" 
-                                                class="p-2 border rounded-lg hover:bg-red-100 text-red-600">
-                                            <i data-lucide="trash-2" class="h-4 w-4"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
-                    ${classes.length === 0 ? `
-                        <div class="text-center py-12 border rounded-lg bg-card">
-                            <i data-lucide="users" class="h-12 w-12 mx-auto text-muted-foreground mb-4"></i>
-                            <p class="text-muted-foreground">No classes found. Click "Add Class" to create one.</p>
-                        </div>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-    } catch (error) {
-        console.error('Error rendering classes:', error);
-        return `<div class="text-center py-12 text-red-500">Error loading classes: ${error.message}</div>`;
-    }
-}
-
-// ============================================
-// EXISTING FUNCTIONS (keep these as they are)
+// ADMIN DASHBOARD - COMPLETE FIXED VERSION
 // ============================================
 
 function renderAdminDashboard() {
     const school = getCurrentSchool();
     const data = dashboardData || {};
-    const curriculum = schoolSettings.curriculum || 'cbc';
-    const schoolLevel = schoolSettings.schoolLevel || 'secondary';
-    const curriculumInfo = CURRICULUMS[curriculum];
     
     return `
         <div class="space-y-6 animate-fade-in">
+            <!-- School Profile Card -->
             <div class="rounded-xl border bg-card p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 card-hover">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <div class="flex items-center gap-3 mb-2">
-                            <h2 class="text-2xl font-bold">${school?.name || 'Your School'}</h2>
+                            <h2 class="text-2xl font-bold" id="school-name">${school?.name || 'Your School'}</h2>
                             <span class="px-3 py-1 ${school?.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} text-xs rounded-full">
                                 ${school?.status || 'pending'}
                             </span>
                         </div>
                         <div class="flex items-center gap-4">
-                            <p class="text-sm"><span class="font-mono bg-muted px-2 py-1 rounded">Short Code: ${school?.shortCode || 'SHL-XXXXX'}</span></p>
+                            <p class="text-sm"><span class="font-mono bg-muted px-2 py-1 rounded" id="school-shortcode">${school?.shortCode || 'SHL-XXXXX'}</span></p>
                             <button onclick="showNameChangeModal()" class="text-sm text-primary hover:underline">Change School Name ($50)</button>
                         </div>
                     </div>
                     <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
                         <p class="text-xs text-muted-foreground">Share this code with teachers</p>
-                        <p class="text-lg font-mono font-bold">${school?.shortCode || 'SHL-XXXXX'}</p>
+                        <p class="text-lg font-mono font-bold" id="display-shortcode">${school?.shortCode || 'SHL-XXXXX'}</p>
                     </div>
                 </div>
             </div>
-            
+
+            <!-- Stats Grid -->
             <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div class="rounded-xl border bg-card p-6 card-hover">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm font-medium text-muted-foreground">Total Students</p>
-                            <h3 class="text-2xl font-bold mt-1">${data.students?.length || 0}</h3>
-                            <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
-                                <i data-lucide="trending-up" class="h-3 w-3"></i>
-                                Enrolled
-                            </p>
+                            <h3 class="text-2xl font-bold mt-1" id="total-students">${data.students?.length || 0}</h3>
                         </div>
                         <div class="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
                             <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
@@ -2384,10 +2072,10 @@ function renderAdminDashboard() {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm font-medium text-muted-foreground">Teachers</p>
-                            <h3 class="text-2xl font-bold mt-1">${data.teachers?.length || 0}</h3>
+                            <h3 class="text-2xl font-bold mt-1" id="total-teachers">${data.teachers?.length || 0}</h3>
                             <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
                                 <i data-lucide="trending-up" class="h-3 w-3"></i>
-                                +${data.pendingTeachers?.length || 0} pending approval
+                                <span id="pending-teachers">${data.pendingTeachers?.length || 0}</span> pending approval
                             </p>
                         </div>
                         <div class="h-12 w-12 rounded-lg bg-violet-100 flex items-center justify-center">
@@ -2400,8 +2088,7 @@ function renderAdminDashboard() {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm font-medium text-muted-foreground">Classes</p>
-                            <h3 class="text-2xl font-bold mt-1">${data.classes?.length || 0}</h3>
-                            <p class="text-xs text-muted-foreground mt-1">School classes</p>
+                            <h3 class="text-2xl font-bold mt-1" id="total-classes">${data.classes?.length || 0}</h3>
                         </div>
                         <div class="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
                             <i data-lucide="book-open" class="h-6 w-6 text-emerald-600"></i>
@@ -2413,11 +2100,7 @@ function renderAdminDashboard() {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm font-medium text-muted-foreground">Attendance Rate</p>
-                            <h3 class="text-2xl font-bold mt-1">94.2%</h3>
-                            <p class="text-xs text-yellow-600 mt-1 flex items-center gap-1">
-                                <i data-lucide="alert-circle" class="h-3 w-3"></i>
-                                This term
-                            </p>
+                            <h3 class="text-2xl font-bold mt-1" id="attendance-rate">94.2%</h3>
                         </div>
                         <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
                             <i data-lucide="calendar-check" class="h-6 w-6 text-amber-600"></i>
@@ -2425,32 +2108,16 @@ function renderAdminDashboard() {
                     </div>
                 </div>
             </div>
-            
-            <div class="grid gap-4 md:grid-cols-3">
-                <button onclick="showDashboardSection('teacher-approvals')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
-                    <i data-lucide="user-plus" class="h-8 w-8 text-blue-600 mb-3"></i>
-                    <h4 class="font-semibold">Teacher Approvals</h4>
-                    <p class="text-sm text-muted-foreground">Approve pending teachers</p>
-                    ${data.pendingTeachers?.length ? `<span class="mt-2 inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700">${data.pendingTeachers.length} pending</span>` : ''}
-                </button>
-                
-                <button onclick="showDashboardSection('duty')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
-                    <i data-lucide="clock" class="h-8 w-8 text-green-600 mb-3"></i>
-                    <h4 class="font-semibold">Duty Management</h4>
-                    <p class="text-sm text-muted-foreground">Generate and manage duty rosters</p>
-                </button>
-                
-                <button onclick="showDashboardSection('settings')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
-                    <i data-lucide="settings" class="h-8 w-8 text-purple-600 mb-3"></i>
-                    <h4 class="font-semibold">School Settings</h4>
-                    <p class="text-sm text-muted-foreground">Configure curriculum and subjects</p>
-                </button>
-            </div>
-            
+
+            <!-- CHARTS ROW -->
             <div class="grid gap-4 lg:grid-cols-2">
                 <div class="rounded-xl border bg-card p-6">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-semibold">Enrollment Trends</h3>
+                        <select class="text-sm border rounded-md px-2 py-1 bg-background" onchange="updateAdminChart(this.value)">
+                            <option value="year">This Year</option>
+                            <option value="last-year">Last Year</option>
+                        </select>
                     </div>
                     <div class="chart-container h-64">
                         <canvas id="admin-enrollmentChart"></canvas>
@@ -2460,10 +2127,93 @@ function renderAdminDashboard() {
                 <div class="rounded-xl border bg-card p-6">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-semibold">Grade Distribution</h3>
+                        <select class="text-sm border rounded-md px-2 py-1 bg-background" onchange="updateAdminPieChart(this.value)">
+                            <option value="all">All Grades</option>
+                            <option value="9">Grade 9</option>
+                            <option value="10">Grade 10</option>
+                            <option value="11">Grade 11</option>
+                            <option value="12">Grade 12</option>
+                        </select>
                     </div>
                     <div class="chart-container h-64">
                         <canvas id="admin-gradeChart"></canvas>
                     </div>
+                </div>
+            </div>
+
+            <!-- Quick Action Buttons -->
+            <div class="grid gap-4 md:grid-cols-4">
+                <button onclick="showDashboardSection('teacher-approvals')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
+                    <i data-lucide="user-plus" class="h-6 w-6 text-blue-600 mb-2"></i>
+                    <p class="font-medium">Teacher Approvals</p>
+                    <p class="text-xs text-muted-foreground">${data.pendingTeachers?.length || 0} pending</p>
+                </button>
+                
+                <button onclick="showDashboardSection('students')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
+                    <i data-lucide="users" class="h-6 w-6 text-green-600 mb-2"></i>
+                    <p class="font-medium">Students</p>
+                    <p class="text-xs text-muted-foreground">${data.students?.length || 0} total</p>
+                </button>
+                
+                <button onclick="showDashboardSection('teachers')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
+                    <i data-lucide="user" class="h-6 w-6 text-purple-600 mb-2"></i>
+                    <p class="font-medium">Teachers</p>
+                    <p class="text-xs text-muted-foreground">${data.teachers?.length || 0} active</p>
+                </button>
+                
+                <button onclick="showDashboardSection('classes')" class="p-4 border rounded-lg hover:bg-accent transition-colors text-left">
+                    <i data-lucide="book-open" class="h-6 w-6 text-amber-600 mb-2"></i>
+                    <p class="font-medium">Classes</p>
+                    <p class="text-xs text-muted-foreground">${data.classes?.length || 0} classes</p>
+                </button>
+            </div>
+
+            <!-- Student Management Table -->
+            <div class="rounded-xl border bg-card overflow-hidden">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h3 class="font-semibold">Student Management</h3>
+                    <button onclick="refreshAdminStudentList()" class="px-3 py-1 border rounded-lg text-sm hover:bg-accent">Refresh</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-muted/50">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-medium">Student</th>
+                                <th class="px-4 py-3 text-left font-medium">ELIMUID</th>
+                                <th class="px-4 py-3 text-left font-medium">Grade</th>
+                                <th class="px-4 py-3 text-left font-medium">Status</th>
+                                <th class="px-4 py-3 text-left font-medium">Parent(s)</th>
+                                <th class="px-4 py-3 text-right font-medium">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-students-table-body">
+                            <tr><td colspan="6" class="px-4 py-8 text-center text-muted-foreground">Loading students...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Pending Teachers Table -->
+            <div class="rounded-xl border bg-card overflow-hidden">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h3 class="font-semibold">Pending Teacher Approvals</h3>
+                    <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full" id="pending-count">${data.pendingTeachers?.length || 0}</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-muted/50">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-medium">Teacher</th>
+                                <th class="px-4 py-3 text-left font-medium">Email</th>
+                                <th class="px-4 py-3 text-left font-medium">Subjects</th>
+                                <th class="px-4 py-3 text-left font-medium">Applied</th>
+                                <th class="px-4 py-3 text-right font-medium">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pending-teachers-table">
+                            <tr><td colspan="5" class="px-4 py-8 text-center text-muted-foreground">No pending approvals</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -2485,6 +2235,133 @@ async function renderAdminPendingTeachers() {
         return `<div class="text-center py-12 text-red-500">Error loading teachers: ${error.message}</div>`;
     }
 }
+
+// ============================================
+// CHART INITIALIZATION FOR ADMIN DASHBOARD
+// ============================================
+
+function initAdminCharts() {
+    console.log('📊 Initializing admin charts...');
+    
+    // Enrollment Chart
+    const enrollCtx = document.getElementById('admin-enrollmentChart');
+    if (enrollCtx) {
+        // Destroy existing chart if any
+        if (window.adminEnrollChart) {
+            window.adminEnrollChart.destroy();
+        }
+        
+        window.adminEnrollChart = new Chart(enrollCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                datasets: [{
+                    label: 'Students',
+                    data: [520, 535, 543, 550, 558, 565, 572, 580, 585, 590, 595, 600],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 2,
+                    pointBackgroundColor: '#3b82f6',
+                    pointBorderColor: '#fff',
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,0.05)' },
+                        ticks: { stepSize: 100 }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+        console.log('✅ Enrollment chart initialized');
+    } else {
+        console.warn('⚠️ admin-enrollmentChart canvas not found');
+    }
+    
+    // Grade Distribution Chart (Doughnut)
+    const gradeCtx = document.getElementById('admin-gradeChart');
+    if (gradeCtx) {
+        if (window.adminGradeChart) {
+            window.adminGradeChart.destroy();
+        }
+        
+        window.adminGradeChart = new Chart(gradeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
+                datasets: [{
+                    data: [142, 138, 135, 128],
+                    backgroundColor: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b'],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20,
+                            font: { size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} students (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        console.log('✅ Grade distribution chart initialized');
+    } else {
+        console.warn('⚠️ admin-gradeChart canvas not found');
+    }
+}
+
+// Update charts with new data
+window.updateAdminChart = function(value) {
+    console.log('Updating admin chart with:', value);
+    // You can add logic here to fetch new data based on the selected value
+    // For now, just refresh the existing chart
+    if (window.adminEnrollChart) {
+        // Could update with new data here
+        console.log('Chart update triggered');
+    }
+};
+
+window.updateAdminPieChart = function(value) {
+    console.log('Updating admin pie chart with:', value);
+    if (window.adminGradeChart) {
+        // Could update with new data here
+        console.log('Pie chart update triggered');
+    }
+};
 
 async function renderAdminTeachers() {
     try {
@@ -2615,6 +2492,133 @@ async function renderAdminStudents() {
     } catch (error) {
         console.error('Error rendering students:', error);
         return `<div class="text-center py-12 text-red-500">Error loading students: ${error.message}</div>`;
+    }
+}
+
+// ============================================
+// ADMIN SECTION ROUTER - ADD THIS FUNCTION
+// ============================================
+
+async function renderAdminSection(section) {
+    try {
+        switch(section) {
+            case 'dashboard':
+                return renderAdminDashboard();
+            case 'students':
+                return await renderAdminStudents();
+            case 'teachers':
+                return await renderAdminTeachers();
+            case 'teacher-approvals':
+                return await renderAdminPendingTeachers();
+            case 'classes':
+                return await renderAdminClasses();
+            case 'duty':
+                return await renderAdminDuty();
+            case 'fairness-report':
+                return await renderAdminFairnessReport();
+            case 'teacher-workload':
+                return await renderAdminTeacherWorkload();
+            case 'settings':
+                return renderAdminSettings();
+            case 'custom-subjects':
+                return renderAdminCustomSubjects();
+            case 'calendar':
+                return renderAdminCalendar();
+            case 'attendance':
+                return renderAdminAttendance();
+            case 'grades':
+                return renderAdminGrades();
+            case 'analytics':
+                return renderAdminAnalytics();
+            case 'tasks':
+                return renderAdminTasks();
+            case 'timetable':
+                return renderAdminTimetable();
+            default:
+                return '<div class="text-center py-12">Section not found</div>';
+        }
+    } catch (error) {
+        console.error('Error rendering admin section:', error);
+        return `<div class="text-center py-12 text-red-500">Error loading section: ${error.message}</div>`;
+    }
+}
+
+// ============================================
+// ADMIN CLASSES SECTION - ADD THIS FUNCTION
+// ============================================
+
+async function renderAdminClasses() {
+    try {
+        const classes = await loadAllClasses();
+        const teachers = await loadAvailableTeachers();
+        
+        return `
+            <div class="space-y-6 animate-fade-in">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold">Class Management</h2>
+                    <button onclick="showAddClassModal()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
+                        <i data-lucide="plus" class="h-4 w-4"></i>
+                        Add Class
+                    </button>
+                </div>
+
+                <!-- Classes Grid -->
+                <div class="grid gap-4">
+                    ${classes.map(cls => {
+                        const currentTeacher = cls.Teacher?.User?.name || 'Not assigned';
+                        const teacherOptions = teachers.map(t => `
+                            <option value="${t.id}" ${t.id === cls.teacherId ? 'selected' : ''}>
+                                ${t.User?.name || 'Unknown'} (${t.subjects?.join(', ') || 'No subjects'})
+                            </option>
+                        `).join('');
+                        
+                        return `
+                            <div class="border rounded-lg p-4 bg-card hover:shadow-md transition-shadow" data-class-id="${cls.id}">
+                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                    <div class="flex-1">
+                                        <h3 class="font-semibold text-lg">${cls.name}</h3>
+                                        <p class="text-sm text-muted-foreground">Grade: ${cls.grade} | Stream: ${cls.stream || 'N/A'}</p>
+                                        <p class="text-sm mt-2">
+                                            <span class="font-medium">Current Teacher:</span> 
+                                            <span class="${cls.Teacher ? 'text-green-600' : 'text-yellow-600'}">${currentTeacher}</span>
+                                        </p>
+                                        <p class="text-xs text-muted-foreground mt-1">${cls.studentCount || 0} students enrolled</p>
+                                    </div>
+                                    
+                                    <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                                        <select id="teacher-${cls.id}" class="rounded-lg border border-input bg-background px-3 py-2 text-sm min-w-[200px]">
+                                            <option value="">-- Select Teacher --</option>
+                                            ${teacherOptions}
+                                        </select>
+                                        <button onclick="assignClassTeacher('${cls.id}')" 
+                                                class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm whitespace-nowrap">
+                                            Assign
+                                        </button>
+                                        <button onclick="editClass('${cls.id}')" 
+                                                class="p-2 border rounded-lg hover:bg-accent">
+                                            <i data-lucide="edit" class="h-4 w-4"></i>
+                                        </button>
+                                        <button onclick="deleteClass('${cls.id}')" 
+                                                class="p-2 border rounded-lg hover:bg-red-100 text-red-600">
+                                            <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                    ${classes.length === 0 ? `
+                        <div class="text-center py-12 border rounded-lg bg-card">
+                            <i data-lucide="users" class="h-12 w-12 mx-auto text-muted-foreground mb-4"></i>
+                            <p class="text-muted-foreground">No classes found. Click "Add Class" to create one.</p>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error rendering classes:', error);
+        return `<div class="text-center py-12 text-red-500">Error loading classes: ${error.message}</div>`;
     }
 }
 
@@ -2891,6 +2895,91 @@ async function renderAdminTeacherWorkload() {
         return `<div class="text-center py-12 text-red-500">Error loading workload: ${error.message}</div>`;
     }
 }
+
+// ============================================
+// CLASS HELPER FUNCTIONS
+// ============================================
+
+async function loadAllClasses() {
+    try {
+        const response = await api.admin.getClasses();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load classes:', error);
+        return [];
+    }
+}
+
+async function loadAvailableTeachers() {
+    try {
+        const response = await api.admin.getAvailableTeachers();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load teachers:', error);
+        return [];
+    }
+}
+
+window.assignClassTeacher = async function(classId) {
+    const select = document.getElementById(`teacher-${classId}`);
+    const teacherId = select?.value;
+    
+    if (!teacherId) {
+        showToast('Please select a teacher', 'error');
+        return;
+    }
+    
+    showLoading();
+    try {
+        await api.admin.assignTeacherToClass(classId, teacherId);
+        showToast('✅ Teacher assigned successfully', 'success');
+        await showDashboardSection('classes');
+    } catch (error) {
+        showToast(error.message || 'Failed to assign teacher', 'error');
+    } finally {
+        hideLoading();
+    }
+};
+
+window.editClass = async function(classId) {
+    showToast('Edit class feature coming soon', 'info');
+};
+
+window.deleteClass = async function(classId) {
+    if (!confirm('⚠️ Are you sure you want to delete this class?')) return;
+    
+    showLoading();
+    try {
+        await api.admin.deleteClass(classId);
+        showToast('✅ Class deleted successfully', 'success');
+        await showDashboardSection('classes');
+    } catch (error) {
+        showToast(error.message || 'Failed to delete class', 'error');
+    } finally {
+        hideLoading();
+    }
+};
+
+window.showAddClassModal = function() {
+    const newClassName = prompt('Enter class name:');
+    if (!newClassName) return;
+    
+    const grade = prompt('Enter grade/level (e.g., Grade 10, Form 2):');
+    if (!grade) return;
+    
+    const stream = prompt('Enter stream (optional):', '');
+    
+    showLoading();
+    api.admin.createClass({ name: newClassName, grade, stream })
+        .then(() => {
+            showToast('✅ Class created successfully', 'success');
+            showDashboardSection('classes');
+        })
+        .catch(err => {
+            showToast(err.message || 'Failed to create class', 'error');
+        })
+        .finally(() => hideLoading());
+};
 
 // ============================================
 // SETTINGS SECTION
