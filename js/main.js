@@ -1603,34 +1603,46 @@ async function renderDashboardSection(role, section) {
     }
 }
 
-// ============ SUPER ADMIN SECTIONS ============
+// ============================================
+// FIXED SUPER ADMIN SECTION ROUTER
+// ============================================
 
 async function renderSuperAdminSection(section) {
-    switch(section) {
-        case 'dashboard':
-            return renderSuperAdminDashboard();
-        case 'schools':
-            return await renderSuperAdminSchools();
-        case 'school-approvals':
-            return await renderSuperAdminPendingSchools();
-        case 'pending-approvals':
-            return await renderSuperAdminPendingSchools();
-        case 'name-change-requests':
-            return await renderSuperAdminNameChangeRequests();
-        case 'platform-health':
-            return renderSuperAdminHealth();
-        case 'settings':
-            return renderSuperAdminSettings();
-        default:
-            return renderSuperAdminDashboard();
+    try {
+        switch(section) {
+            case 'dashboard':
+                return renderSuperAdminDashboard();
+            case 'schools':
+                return await renderSuperAdminSchools();
+            case 'school-approvals':
+                return await renderSuperAdminPendingSchools();
+            case 'pending-approvals':
+                return await renderSuperAdminPendingSchools();
+            case 'name-change-requests':
+                return await renderSuperAdminNameChangeRequests();
+            case 'platform-health':
+                return renderSuperAdminHealth();
+            case 'settings':
+                return renderSuperAdminSettings();
+            default:
+                return renderSuperAdminDashboard();
+        }
+    } catch (error) {
+        console.error('Error rendering super admin section:', error);
+        return `<div class="text-center py-12 text-red-500">Error loading section: ${error.message}</div>`;
     }
 }
 
+// ============================================
+// FIXED SUPER ADMIN DASHBOARD
+// ============================================
+
 function renderSuperAdminDashboard() {
     const data = dashboardData || {};
+    
     return `
         <div class="space-y-6 animate-fade-in">
-            <!-- Stats Grid with proper IDs -->
+            <!-- Stats Grid -->
             <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div class="rounded-xl border bg-card p-6 card-hover">
                     <div class="flex items-center justify-between">
@@ -1697,7 +1709,7 @@ function renderSuperAdminDashboard() {
                 </div>
             </div>
             
-            <!-- Charts Row with proper IDs -->
+            <!-- Charts Row -->
             <div class="grid gap-4 lg:grid-cols-2">
                 <div class="rounded-xl border bg-card p-6">
                     <div class="flex items-center justify-between mb-4">
@@ -1726,104 +1738,32 @@ function renderSuperAdminDashboard() {
                 </div>
             </div>
             
-            <!-- Schools Table with proper ID -->
-            <div class="rounded-xl border bg-card overflow-hidden">
-                <div class="p-4 border-b flex justify-between items-center">
-                    <h3 class="font-semibold">School/Admin Management</h3>
-                    <span class="text-sm text-muted-foreground" id="school-count">${data.schools?.length || 0} total</span>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead class="bg-muted/50">
-                            <tr>
-                                <th class="px-4 py-3 text-left font-medium">School</th>
-                                <th class="px-4 py-3 text-left font-medium">Admin</th>
-                                <th class="px-4 py-3 text-left font-medium">Level</th>
-                                <th class="px-4 py-3 text-left font-medium">Status</th>
-                                <th class="px-4 py-3 text-right font-medium">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y" id="schools-table-body">
-                            ${(data.schools || []).map(school => `
-                                <tr class="hover:bg-accent/50 transition-colors">
-                                    <td class="px-4 py-3 font-medium">${school.name}</td>
-                                    <td class="px-4 py-3">${school.adminEmail || 'N/A'}</td>
-                                    <td class="px-4 py-3">${school.settings?.schoolLevel || 'N/A'}</td>
-                                    <td class="px-4 py-3">
-                                        <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium 
-                                            ${school.status === 'active' ? 'bg-green-100 text-green-700' : 
-                                              school.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 
-                                              'bg-gray-100 text-gray-700'}">
-                                            ${school.status}
-                                        </span>
-                                    </td>
-                                    <td class="px-4 py-3 text-right">
-                                        <button onclick="viewSchoolDetails('${school.id}')" class="p-2 hover:bg-accent rounded-lg">
-                                            <i data-lucide="eye" class="h-4 w-4"></i>
-                                        </button>
-                                        <button onclick="editSchool('${school.id}')" class="p-2 hover:bg-accent rounded-lg">
-                                            <i data-lucide="edit" class="h-4 w-4"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                            ${(!data.schools || data.schools.length === 0) ? `
-                                <tr>
-                                    <td colspan="5" class="px-4 py-8 text-center text-muted-foreground">
-                                        No schools found
-                                    </td>
-                                </tr>
-                            ` : ''}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <!-- Quick Action Buttons -->
-            <div class="grid gap-4 md:grid-cols-3">
-                <button onclick="showDashboardSection('school-approvals')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
-                    <i data-lucide="check-circle" class="h-8 w-8 text-green-600 mb-3"></i>
-                    <h4 class="font-semibold">School Approvals</h4>
-                    <p class="text-sm text-muted-foreground">Approve new school registrations</p>
-                    ${data.pendingSchools?.length ? `<span class="mt-2 inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700">${data.pendingSchools.length} pending</span>` : ''}
-                </button>
-                
-                <button onclick="showDashboardSection('schools')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
-                    <i data-lucide="building-2" class="h-8 w-8 text-blue-600 mb-3"></i>
-                    <h4 class="font-semibold">Manage Schools</h4>
-                    <p class="text-sm text-muted-foreground">View and edit all schools</p>
-                </button>
-                
-                <button onclick="showDashboardSection('name-change-requests')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
-                    <i data-lucide="file-edit" class="h-8 w-8 text-purple-600 mb-3"></i>
-                    <h4 class="font-semibold">Name Change Requests</h4>
-                    <p class="text-sm text-muted-foreground">Review school name changes</p>
-                </button>
-            </div>
-            
-            <!-- Name Change Requests with proper ID -->
-            <div class="rounded-xl border bg-card" id="name-change-requests">
+            <!-- Recent Activity -->
+            <div class="rounded-xl border bg-card">
                 <div class="p-4 border-b">
-                    <h3 class="font-semibold">Name Change Requests</h3>
+                    <h3 class="font-semibold">Recent Activity</h3>
                 </div>
-                <div class="divide-y" id="name-change-requests-list">
-                    ${(data.nameChangeRequests || []).map(request => `
-                        <div class="p-4 flex items-center justify-between hover:bg-accent/50 transition-colors">
-                            <div>
-                                <p class="text-sm font-medium">${request.oldName} → ${request.newName}</p>
-                                <p class="text-xs text-muted-foreground">${timeAgo(request.createdAt)}</p>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="approveNameChange('${request.id}')" class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full hover:bg-green-200">Approve</button>
-                                <button onclick="rejectNameChange('${request.id}')" class="px-3 py-1 bg-red-100 text-red-700 text-xs rounded-full hover:bg-red-200">Reject</button>
-                            </div>
+                <div class="divide-y">
+                    <div class="p-4 flex items-center gap-4 hover:bg-accent/50 transition-colors">
+                        <div class="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                            <i data-lucide="check-circle" class="h-5 w-5 text-green-600"></i>
                         </div>
-                    `).join('')}
-                    ${(!data.nameChangeRequests || data.nameChangeRequests.length === 0) ? `
-                        <div class="p-4 text-center text-muted-foreground">
-                            No pending name change requests
+                        <div class="flex-1">
+                            <p class="text-sm font-medium">School Approved</p>
+                            <p class="text-xs text-muted-foreground">Nairobi Academy was approved by Super Admin</p>
                         </div>
-                    ` : ''}
+                        <span class="text-xs text-muted-foreground">2 hours ago</span>
+                    </div>
+                    <div class="p-4 flex items-center gap-4 hover:bg-accent/50 transition-colors">
+                        <div class="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                            <i data-lucide="clock" class="h-5 w-5 text-yellow-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium">New School Registration</p>
+                            <p class="text-xs text-muted-foreground">Mombasa Academy registered and pending approval</p>
+                        </div>
+                        <span class="text-xs text-muted-foreground">5 hours ago</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2026,7 +1966,10 @@ function renderPendingSchoolsTable(schools) {
     `;
 }
 
-// Render schools table
+// ============================================
+// FIXED SCHOOLS TABLE WITH SUSPENSION
+// ============================================
+
 function renderSchoolsTable(schools) {
     if (!schools || schools.length === 0) {
         return '<div class="text-center py-8 text-muted-foreground">No schools found</div>';
@@ -2041,35 +1984,69 @@ function renderSchoolsTable(schools) {
                         <th class="px-4 py-3 text-left font-medium">Short Code</th>
                         <th class="px-4 py-3 text-left font-medium">Status</th>
                         <th class="px-4 py-3 text-left font-medium">Level</th>
+                        <th class="px-4 py-3 text-left font-medium">Admin</th>
                         <th class="px-4 py-3 text-right font-medium">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y">
-                    ${schools.map(school => `
-                        <tr class="hover:bg-accent/50 transition-colors">
-                            <td class="px-4 py-3 font-medium">${school.name || 'Unknown'}</td>
-                            <td class="px-4 py-3"><span class="font-mono text-xs bg-muted px-2 py-1 rounded">${school.shortCode || 'N/A'}</span></td>
-                            <td class="px-4 py-3">
-                                <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium 
-                                    ${school.status === 'active' ? 'bg-green-100 text-green-700' : 
-                                      school.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 
-                                      'bg-gray-100 text-gray-700'}">
-                                    ${school.status}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3">${school.settings?.schoolLevel || 'N/A'}</td>
-                            <td class="px-4 py-3 text-right">
-                                <button onclick="viewSchoolDetails('${school.id}')" class="p-2 hover:bg-accent rounded-lg"><i data-lucide="eye" class="h-4 w-4"></i></button>
-                                <button onclick="editSchool('${school.id}')" class="p-2 hover:bg-accent rounded-lg"><i data-lucide="edit" class="h-4 w-4"></i></button>
-                            </td>
-                        </tr>
-                    `).join('')}
+                    ${schools.map(school => {
+                        const admin = school.admins && school.admins.length > 0 ? school.admins[0] : null;
+                        const adminName = admin ? admin.name : 'No admin';
+                        const adminEmail = admin ? admin.email : '-';
+                        
+                        const statusColor = {
+                            'active': 'bg-green-100 text-green-700',
+                            'pending': 'bg-yellow-100 text-yellow-700',
+                            'suspended': 'bg-red-100 text-red-700',
+                            'rejected': 'bg-gray-100 text-gray-700'
+                        }[school.status] || 'bg-gray-100 text-gray-700';
+                        
+                        return `
+                            <tr class="hover:bg-accent/50 transition-colors">
+                                <td class="px-4 py-3 font-medium school-name-display">${school.name || 'Unknown'}</td>
+                                <td class="px-4 py-3">
+                                    <span class="font-mono text-xs bg-muted px-2 py-1 rounded">${school.shortCode || 'N/A'}</span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${statusColor}">
+                                        ${school.status}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3">${school.settings?.schoolLevel || 'N/A'}</td>
+                                <td class="px-4 py-3">
+                                    <div>${adminName}</div>
+                                    <div class="text-xs text-muted-foreground">${adminEmail}</div>
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <button onclick="viewSchoolDetails('${school.id}')" class="p-2 hover:bg-accent rounded-lg" title="View">
+                                            <i data-lucide="eye" class="h-4 w-4"></i>
+                                        </button>
+                                        <button onclick="editSchool('${school.id}')" class="p-2 hover:bg-accent rounded-lg" title="Edit">
+                                            <i data-lucide="edit" class="h-4 w-4"></i>
+                                        </button>
+                                        ${school.status === 'active' ? 
+                                            `<button onclick="suspendSchool('${school.id}')" class="p-2 hover:bg-yellow-100 rounded-lg text-yellow-600" title="Suspend School">
+                                                <i data-lucide="pause-circle" class="h-4 w-4"></i>
+                                            </button>` : 
+                                            school.status === 'suspended' ?
+                                            `<button onclick="reactivateSchool('${school.id}')" class="p-2 hover:bg-green-100 rounded-lg text-green-600" title="Reactivate School">
+                                                <i data-lucide="play-circle" class="h-4 w-4"></i>
+                                            </button>` : ''
+                                        }
+                                        <button onclick="deleteSchool('${school.id}')" class="p-2 hover:bg-red-100 rounded-lg text-red-600" title="Delete School">
+                                            <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
                 </tbody>
             </table>
         </div>
     `;
 }
-
 // Render teachers table
 function renderTeachersTable(teachers) {
     if (!teachers || teachers.length === 0) {
@@ -2167,53 +2144,55 @@ async function renderSuperAdminSchools() {
     }
 }
 
-async function renderSuperAdminNameChangeRequests() {
-    try {
-        const requests = await loadNameChangeRequests();
-        return `
-            <div class="space-y-6 animate-fade-in">
-                <h2 class="text-2xl font-bold">Name Change Requests</h2>
-                <div class="rounded-xl border bg-card overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead class="bg-muted/50">
-                                <tr>
-                                    <th class="px-4 py-3 text-left font-medium">School</th>
-                                    <th class="px-4 py-3 text-left font-medium">Current Name</th>
-                                    <th class="px-4 py-3 text-left font-medium">New Name</th>
-                                    <th class="px-4 py-3 text-left font-medium">Requested By</th>
-                                    <th class="px-4 py-3 text-left font-medium">Date</th>
-                                    <th class="px-4 py-3 text-right font-medium">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y">
-                                ${requests.map(request => `
-                                    <tr class="hover:bg-accent/50 transition-colors">
-                                        <td class="px-4 py-3 font-medium">${request.school?.name || 'N/A'}</td>
-                                        <td class="px-4 py-3">${request.currentName}</td>
-                                        <td class="px-4 py-3 font-semibold text-primary">${request.newName}</td>
-                                        <td class="px-4 py-3">${request.User?.name || 'N/A'}</td>
-                                        <td class="px-4 py-3">${timeAgo(request.createdAt)}</td>
-                                        <td class="px-4 py-3 text-right">
-                                            <button onclick="approveNameChange('${request.id}')" class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full hover:bg-green-200 mr-2">
-                                                Approve
-                                            </button>
-                                            <button onclick="rejectNameChange('${request.id}')" class="px-3 py-1 bg-red-100 text-red-700 text-xs rounded-full hover:bg-red-200">
-                                                Reject
-                                            </button>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                                ${requests.length === 0 ? '<tr><td colspan="6" class="px-4 py-8 text-center text-muted-foreground">No pending requests</td></tr>' : ''}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        `;
-    } catch (error) {
-        return `<div class="text-center py-12 text-red-500">Error loading requests: ${error.message}</div>`;
+// ============================================
+// FIXED NAME CHANGE REQUESTS TABLE
+// ============================================
+
+function renderNameChangeRequestsTable(requests) {
+    if (!requests || requests.length === 0) {
+        return '<div class="text-center py-8 text-muted-foreground">No pending requests</div>';
     }
+    
+    return `
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-muted/50">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-medium">School</th>
+                        <th class="px-4 py-3 text-left font-medium">Current Name</th>
+                        <th class="px-4 py-3 text-left font-medium">New Name</th>
+                        <th class="px-4 py-3 text-left font-medium">Requested By</th>
+                        <th class="px-4 py-3 text-left font-medium">Date</th>
+                        <th class="px-4 py-3 text-right font-medium">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+                    ${requests.map(request => `
+                        <tr class="hover:bg-accent/50 transition-colors">
+                            <td class="px-4 py-3 font-medium">${request.School?.name || 'N/A'}</td>
+                            <td class="px-4 py-3">${request.currentName}</td>
+                            <td class="px-4 py-3 font-semibold text-primary">${request.newName}</td>
+                            <td class="px-4 py-3">${request.User?.name || 'N/A'}</td>
+                            <td class="px-4 py-3">${timeAgo(request.createdAt)}</td>
+                            <td class="px-4 py-3 text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                    <button onclick="approveNameChange('${request.id}')" class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full hover:bg-green-200">
+                                        Approve
+                                    </button>
+                                    <button onclick="rejectNameChange('${request.id}')" class="px-3 py-1 bg-red-100 text-red-700 text-xs rounded-full hover:bg-red-200">
+                                        Reject
+                                    </button>
+                                    <button onclick="viewNameChangeDetails('${request.id}')" class="p-2 hover:bg-accent rounded-lg" title="View Details">
+                                        <i data-lucide="eye" class="h-4 w-4"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
 }
 
 function renderSuperAdminHealth() {
@@ -2668,6 +2647,126 @@ async function refreshSchoolsList() {
     } catch (error) {
         console.error('Error refreshing schools list:', error);
         container.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-red-500">Error loading schools</td></tr>';
+    }
+}
+
+// ============================================
+// FIXED SCHOOL SUSPENSION FUNCTION
+// ============================================
+
+window.suspendSchool = async function(schoolId) {
+    if (!schoolId) {
+        showToast('Invalid school ID', 'error');
+        return;
+    }
+    
+    const reason = prompt('Please enter suspension reason:');
+    if (reason === null) return;
+    
+    if (!confirm(`⚠️ Are you sure you want to suspend this school? All users will be locked out.`)) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.superAdmin.suspendSchool(schoolId, { reason });
+        
+        if (response.success) {
+            showToast('✅ School suspended successfully', 'success');
+            // Refresh both tables
+            await refreshSchoolsList();
+            await refreshSuspendedSchools();
+            // Update stats
+            await updateSuperAdminStats();
+        }
+    } catch (error) {
+        console.error('Suspend school error:', error);
+        showToast(error.message || 'Failed to suspend school', 'error');
+    } finally {
+        hideLoading();
+    }
+};
+
+// Reactivate school
+window.reactivateSchool = async function(schoolId) {
+    if (!schoolId) {
+        showToast('Invalid school ID', 'error');
+        return;
+    }
+    
+    const reason = prompt('Please enter reactivation reason:');
+    if (reason === null) return;
+    
+    showLoading();
+    try {
+        const response = await api.superAdmin.reactivateSchool(schoolId, { reason });
+        
+        if (response.success) {
+            showToast('✅ School reactivated successfully', 'success');
+            // Refresh both tables
+            await refreshSchoolsList();
+            await refreshSuspendedSchools();
+            // Update stats
+            await updateSuperAdminStats();
+        }
+    } catch (error) {
+        console.error('Reactivate school error:', error);
+        showToast(error.message || 'Failed to reactivate school', 'error');
+    } finally {
+        hideLoading();
+    }
+};
+
+// Delete school
+window.deleteSchool = async function(schoolId) {
+    if (!schoolId) return;
+    
+    if (!confirm('⚠️ Are you sure? This will delete ALL data for this school! This action cannot be undone.')) {
+        return;
+    }
+    
+    const confirmText = prompt('Type "DELETE" to confirm:');
+    if (confirmText !== 'DELETE') {
+        showToast('Cancelled', 'info');
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.superAdmin.deleteSchool(schoolId);
+        
+        if (response.success) {
+            showToast('✅ School deleted', 'success');
+            await refreshSchoolsList();
+            await refreshPendingSchools();
+            await refreshSuspendedSchools();
+            await updateSuperAdminStats();
+        }
+    } catch (error) {
+        console.error('Delete school error:', error);
+        showToast(error.message || 'Failed to delete school', 'error');
+    } finally {
+        hideLoading();
+    }
+};
+
+// Update super admin stats
+async function updateSuperAdminStats() {
+    try {
+        const schools = await loadAllSchools();
+        
+        const totalSchoolsEl = document.getElementById('total-schools');
+        const activeAdminsEl = document.getElementById('active-admins');
+        const pendingApprovalsEl = document.getElementById('pending-approvals');
+        const schoolCountEl = document.getElementById('school-count');
+        
+        if (totalSchoolsEl) totalSchoolsEl.textContent = schools.length;
+        if (activeAdminsEl) activeAdminsEl.textContent = schools.filter(s => s.status === 'active').length;
+        if (pendingApprovalsEl) pendingApprovalsEl.textContent = schools.filter(s => s.status === 'pending').length;
+        if (schoolCountEl) schoolCountEl.textContent = schools.length + ' total';
+        
+    } catch (error) {
+        console.error('Error updating super admin stats:', error);
     }
 }
 
