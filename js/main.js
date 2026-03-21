@@ -2542,6 +2542,228 @@ function renderSuperAdminSettings() {
     `;
 }
 
+// ============================================
+// MISSING: RENDER SUPER ADMIN NAME CHANGE REQUESTS
+// ============================================
+
+async function renderSuperAdminNameChangeRequests() {
+    try {
+        const requests = await loadNameChangeRequests();
+        
+        return `
+            <div class="space-y-6 animate-fade-in">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold">Name Change Requests</h2>
+                    <div class="text-sm text-muted-foreground">
+                        <span class="font-medium">${requests.length}</span> pending requests
+                    </div>
+                </div>
+                
+                <div class="rounded-xl border bg-card overflow-hidden">
+                    ${requests.length > 0 ? `
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-muted/50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left font-medium">School</th>
+                                        <th class="px-4 py-3 text-left font-medium">Current Name</th>
+                                        <th class="px-4 py-3 text-left font-medium">New Name</th>
+                                        <th class="px-4 py-3 text-left font-medium">Requested By</th>
+                                        <th class="px-4 py-3 text-left font-medium">Date</th>
+                                        <th class="px-4 py-3 text-center font-medium">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">
+                                    ${requests.map(request => `
+                                        <tr class="hover:bg-accent/50 transition-colors">
+                                            <td class="px-4 py-3 font-medium">${request.School?.name || 'N/A'}</td>
+                                            <td class="px-4 py-3">
+                                                <span class="text-muted-foreground">${request.currentName}</span>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <span class="font-semibold text-primary">${request.newName}</span>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <div>
+                                                    <p class="font-medium">${request.User?.name || 'N/A'}</p>
+                                                    <p class="text-xs text-muted-foreground">${request.User?.email || ''}</p>
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <div>
+                                                    <p class="text-sm">${formatDate(request.createdAt)}</p>
+                                                    <p class="text-xs text-muted-foreground">${timeAgo(request.createdAt)}</p>
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-3 text-center">
+                                                <div class="flex items-center justify-center gap-2">
+                                                    <button onclick="approveNameChange('${request.id}')" 
+                                                            class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full hover:bg-green-200 transition-colors flex items-center gap-1">
+                                                        <i data-lucide="check" class="h-3 w-3"></i>
+                                                        Approve
+                                                    </button>
+                                                    <button onclick="rejectNameChange('${request.id}')" 
+                                                            class="px-3 py-1 bg-red-100 text-red-700 text-xs rounded-full hover:bg-red-200 transition-colors flex items-center gap-1">
+                                                        <i data-lucide="x" class="h-3 w-3"></i>
+                                                        Reject
+                                                    </button>
+                                                    <button onclick="viewNameChangeDetails('${request.id}')" 
+                                                            class="p-2 hover:bg-accent rounded-lg transition-colors" 
+                                                            title="View Details">
+                                                        <i data-lucide="eye" class="h-4 w-4"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : `
+                        <div class="text-center py-12">
+                            <i data-lucide="file-check" class="h-12 w-12 mx-auto text-muted-foreground mb-3"></i>
+                            <p class="text-muted-foreground">No pending name change requests</p>
+                            <p class="text-xs text-muted-foreground mt-1">When schools request name changes, they will appear here</p>
+                        </div>
+                    `}
+                </div>
+                
+                <!-- Optional: Show approved/rejected history -->
+                <div class="rounded-xl border bg-card">
+                    <div class="p-4 border-b bg-muted/30">
+                        <h3 class="font-semibold">Request History</h3>
+                    </div>
+                    <div class="p-4 text-center text-muted-foreground">
+                        <i data-lucide="history" class="h-8 w-8 mx-auto mb-2 opacity-50"></i>
+                        <p class="text-sm">Recent request history will appear here</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error rendering name change requests:', error);
+        return `
+            <div class="text-center py-12 text-red-500">
+                <i data-lucide="alert-circle" class="h-12 w-12 mx-auto mb-3"></i>
+                <p>Error loading name change requests: ${error.message}</p>
+                <button onclick="refreshNameChangeRequests()" class="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg">Retry</button>
+            </div>
+        `;
+    }
+}
+
+// ============================================
+// VIEW NAME CHANGE DETAILS
+// ============================================
+
+window.viewNameChangeDetails = async function(requestId) {
+    showLoading();
+    try {
+        const requests = await loadNameChangeRequests();
+        const request = requests.find(r => r.id == requestId);
+        
+        if (!request) {
+            showToast('Request not found', 'error');
+            return;
+        }
+        
+        showNameChangeDetailsModal(request);
+    } catch (error) {
+        console.error('Error loading request details:', error);
+        showToast('Failed to load request details', 'error');
+    } finally {
+        hideLoading();
+    }
+};
+
+function showNameChangeDetailsModal(request) {
+    let modal = document.getElementById('name-change-details-modal');
+    
+    if (!modal) {
+        createNameChangeDetailsModal();
+        modal = document.getElementById('name-change-details-modal');
+    }
+    
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) {
+        modalContent.innerHTML = `
+            <div class="space-y-4">
+                <div class="border-b pb-3">
+                    <h3 class="text-lg font-semibold">Name Change Request Details</h3>
+                </div>
+                
+                <div class="grid gap-4">
+                    <div class="p-3 bg-muted/30 rounded-lg">
+                        <p class="text-xs text-muted-foreground">School</p>
+                        <p class="font-medium">${request.School?.name || 'N/A'}</p>
+                        <p class="text-xs text-muted-foreground mt-1">ID: ${request.schoolCode}</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-3 bg-muted/30 rounded-lg">
+                            <p class="text-xs text-muted-foreground">Current Name</p>
+                            <p class="font-medium">${request.currentName}</p>
+                        </div>
+                        <div class="p-3 bg-primary/10 rounded-lg">
+                            <p class="text-xs text-muted-foreground">Requested New Name</p>
+                            <p class="font-semibold text-primary">${request.newName}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3 bg-muted/30 rounded-lg">
+                        <p class="text-xs text-muted-foreground">Requested By</p>
+                        <p class="font-medium">${request.User?.name || 'N/A'}</p>
+                        <p class="text-xs text-muted-foreground">${request.User?.email || ''}</p>
+                    </div>
+                    
+                    <div class="p-3 bg-muted/30 rounded-lg">
+                        <p class="text-xs text-muted-foreground">Reason for Change</p>
+                        <p class="text-sm">${request.reason || 'No reason provided'}</p>
+                    </div>
+                    
+                    <div class="p-3 bg-muted/30 rounded-lg">
+                        <p class="text-xs text-muted-foreground">Requested On</p>
+                        <p class="text-sm">${formatDate(request.createdAt)} (${timeAgo(request.createdAt)})</p>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end gap-2 pt-4 border-t">
+                    <button onclick="closeNameChangeDetailsModal()" class="px-4 py-2 border rounded-lg hover:bg-accent">Close</button>
+                    <button onclick="approveNameChange('${request.id}')" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">Approve</button>
+                    <button onclick="rejectNameChange('${request.id}')" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">Reject</button>
+                </div>
+            </div>
+        `;
+    }
+    
+    modal.classList.remove('hidden');
+    
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+function createNameChangeDetailsModal() {
+    const modalHTML = `
+        <div id="name-change-details-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeNameChangeDetailsModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+                <div class="rounded-2xl border bg-card shadow-2xl animate-fade-in overflow-hidden">
+                    <div class="modal-content p-6">
+                        <!-- Content will be filled dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+window.closeNameChangeDetailsModal = function() {
+    const modal = document.getElementById('name-change-details-modal');
+    if (modal) modal.classList.add('hidden');
+};
+
 // Add this to main.js
 
 // Update admin stats
