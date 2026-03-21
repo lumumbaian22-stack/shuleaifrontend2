@@ -8811,7 +8811,7 @@ async function refreshStudentDashboard() {
     } catch (error) {
         console.error('Error refreshing student dashboard:', error);
     }
-}w
+}
 
 // Refresh teachers list (admin)
 async function refreshTeachersList() {
