@@ -2111,7 +2111,7 @@ function renderTeachersTable(teachers) {
                                     </span>
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    <button onclick="viewTeacher('${teacher.id}')" class="p-2 hover:bg-accent rounded-lg"><i data-lucide="eye" class="h-4 w-4"></i></button>
+                                    <button onclick="viewTeacherDetails('${teacher.id}')" class="p-2 hover:bg-accent rounded-lg"><i data-lucide="eye" class="h-4 w-4"></i></button>
                                     ${isActive ? 
                                         `<button onclick="deactivateTeacher('${teacher.id}', '${user.name}')" class="p-2 hover:bg-yellow-100 rounded-lg text-yellow-600"><i data-lucide="pause-circle" class="h-4 w-4"></i></button>` : 
                                         `<button onclick="activateTeacher('${teacher.id}', '${user.name}')" class="p-2 hover:bg-green-100 rounded-lg text-green-600"><i data-lucide="play-circle" class="h-4 w-4"></i></button>`
@@ -4435,6 +4435,398 @@ function closeStudentDetailsModal() {
     const modal = document.getElementById('student-details-modal');
     if (modal) modal.classList.add('hidden');
 }
+
+// ============================================
+// ENHANCED TEACHER DETAILS VIEW
+// ============================================
+
+// View teacher details with enhanced modal
+window.viewTeacherDetails = async function(teacherId) {
+    showLoading();
+    try {
+        const teachers = await loadAllTeachers();
+        const teacher = teachers.find(t => t.id == teacherId);
+        
+        if (!teacher) {
+            showToast('Teacher not found', 'error');
+            return;
+        }
+        
+        showEnhancedTeacherModal(teacher);
+    } catch (error) {
+        console.error('Error viewing teacher:', error);
+        showToast('Failed to load teacher details', 'error');
+    } finally {
+        hideLoading();
+    }
+};
+
+// Show enhanced teacher modal
+function showEnhancedTeacherModal(teacher) {
+    let modal = document.getElementById('enhanced-teacher-modal');
+    
+    if (!modal) {
+        createEnhancedTeacherModal();
+        modal = document.getElementById('enhanced-teacher-modal');
+    }
+    
+    const user = teacher.User || {};
+    const stats = teacher.statistics || {};
+    const dutyPreferences = teacher.dutyPreferences || {};
+    const subjects = teacher.subjects || [];
+    
+    // Calculate reliability score color
+    const reliability = stats.reliabilityScore || 100;
+    const reliabilityColor = reliability >= 90 ? 'text-green-600' : 
+                             reliability >= 70 ? 'text-yellow-600' : 'text-red-600';
+    const reliabilityBg = reliability >= 90 ? 'bg-green-100' : 
+                          reliability >= 70 ? 'bg-yellow-100' : 'bg-red-100';
+    
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) {
+        modalContent.innerHTML = `
+            <div class="space-y-6">
+                <!-- Header with Profile -->
+                <div class="flex items-center gap-6 pb-6 border-b bg-gradient-to-r from-blue-50 to-purple-50 -m-6 p-6 rounded-t-xl">
+                    <div class="relative">
+                        <div class="h-24 w-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg">
+                            ${getInitials(user.name)}
+                        </div>
+                        <div class="absolute -bottom-2 -right-2 h-8 w-8 rounded-full ${teacher.isActive !== false ? 'bg-green-500' : 'bg-red-500'} border-4 border-white shadow-md"></div>
+                    </div>
+                    <div class="flex-1">
+                        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">${user.name || 'Unknown'}</h2>
+                        <div class="flex items-center gap-3 mt-1">
+                            <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">${teacher.employeeId || 'No ID'}</span>
+                            <span class="px-3 py-1 ${teacher.approvalStatus === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} text-xs rounded-full font-medium">
+                                ${teacher.approvalStatus || 'pending'}
+                            </span>
+                        </div>
+                        <p class="text-sm text-muted-foreground mt-2 flex items-center gap-2">
+                            <i data-lucide="mail" class="h-4 w-4"></i> ${user.email || 'No email'}
+                        </p>
+                        ${user.phone ? `<p class="text-sm text-muted-foreground flex items-center gap-2 mt-1"><i data-lucide="phone" class="h-4 w-4"></i> ${user.phone}</p>` : ''}
+                    </div>
+                    <button onclick="closeTeacherDetailsModal()" class="p-2 hover:bg-white/20 rounded-lg transition-colors">
+                        <i data-lucide="x" class="h-5 w-5"></i>
+                    </button>
+                </div>
+                
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-center">
+                        <i data-lucide="book-open" class="h-6 w-6 mx-auto text-blue-600 mb-2"></i>
+                        <p class="text-2xl font-bold text-blue-600">${subjects.length}</p>
+                        <p class="text-xs text-muted-foreground">Subjects</p>
+                    </div>
+                    <div class="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl text-center">
+                        <i data-lucide="check-circle" class="h-6 w-6 mx-auto text-green-600 mb-2"></i>
+                        <p class="text-2xl font-bold text-green-600">${stats.dutiesCompleted || 0}</p>
+                        <p class="text-xs text-muted-foreground">Duties Completed</p>
+                    </div>
+                    <div class="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl text-center">
+                        <i data-lucide="trending-up" class="h-6 w-6 mx-auto text-purple-600 mb-2"></i>
+                        <p class="text-2xl font-bold text-purple-600">${stats.monthlyDutyCount || 0}</p>
+                        <p class="text-xs text-muted-foreground">Monthly Duties</p>
+                    </div>
+                    <div class="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl text-center">
+                        <i data-lucide="clock" class="h-6 w-6 mx-auto text-amber-600 mb-2"></i>
+                        <p class="text-2xl font-bold text-amber-600">${stats.weeklyDutyCount || 0}</p>
+                        <p class="text-xs text-muted-foreground">Weekly Duties</p>
+                    </div>
+                </div>
+                
+                <!-- Subjects & Class -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="p-4 bg-muted/30 rounded-xl">
+                        <h3 class="font-semibold mb-3 flex items-center gap-2">
+                            <i data-lucide="book" class="h-5 w-5 text-primary"></i>
+                            Subjects Taught
+                        </h3>
+                        <div class="flex flex-wrap gap-2">
+                            ${subjects.length > 0 ? subjects.map(subject => `
+                                <span class="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">${subject}</span>
+                            `).join('') : '<p class="text-sm text-muted-foreground">No subjects assigned</p>'}
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 bg-muted/30 rounded-xl">
+                        <h3 class="font-semibold mb-3 flex items-center gap-2">
+                            <i data-lucide="users" class="h-5 w-5 text-primary"></i>
+                            Class Teacher
+                        </h3>
+                        <p class="text-lg font-medium">${teacher.classTeacher || 'Not assigned'}</p>
+                        ${teacher.department ? `<p class="text-sm text-muted-foreground mt-1">Department: ${teacher.department}</p>` : ''}
+                    </div>
+                </div>
+                
+                <!-- Performance Metrics -->
+                <div class="p-4 bg-muted/30 rounded-xl">
+                    <h3 class="font-semibold mb-4 flex items-center gap-2">
+                        <i data-lucide="activity" class="h-5 w-5 text-primary"></i>
+                        Performance Metrics
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Reliability Score</span>
+                                <span class="font-medium ${reliabilityColor}">${reliability}%</span>
+                            </div>
+                            <div class="w-full h-2 bg-muted rounded-full overflow-hidden">
+                                <div class="h-full rounded-full bg-gradient-to-r from-green-500 to-blue-500 transition-all" style="width: ${reliability}%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Completion Rate</span>
+                                <span class="font-medium">${stats.completionRate || 0}%</span>
+                            </div>
+                            <div class="w-full h-2 bg-muted rounded-full overflow-hidden">
+                                <div class="h-full bg-primary rounded-full transition-all" style="width: ${stats.completionRate || 0}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Duty Preferences -->
+                ${Object.keys(dutyPreferences).length > 0 ? `
+                <div class="p-4 bg-muted/30 rounded-xl">
+                    <h3 class="font-semibold mb-3 flex items-center gap-2">
+                        <i data-lucide="settings" class="h-5 w-5 text-primary"></i>
+                        Duty Preferences
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-xs text-muted-foreground">Preferred Days</p>
+                            <div class="flex flex-wrap gap-1 mt-1">
+                                ${(dutyPreferences.preferredDays || []).map(day => `
+                                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">${day}</span>
+                                `).join('') || '<span class="text-sm">None</span>'}
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-xs text-muted-foreground">Max Duties/Week</p>
+                            <p class="font-medium">${dutyPreferences.maxDutiesPerWeek || 3}</p>
+                        </div>
+                    </div>
+                    ${dutyPreferences.blackoutDates?.length > 0 ? `
+                    <div class="mt-3">
+                        <p class="text-xs text-muted-foreground">Blackout Dates</p>
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            ${dutyPreferences.blackoutDates.map(date => `
+                                <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded">${formatDate(date)}</span>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+                ` : ''}
+                
+                <!-- Action Buttons -->
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button onclick="closeTeacherDetailsModal()" class="px-4 py-2 border rounded-lg hover:bg-accent transition-colors">
+                        Close
+                    </button>
+                    <button onclick="editTeacher('${teacher.id}')" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2">
+                        <i data-lucide="edit" class="h-4 w-4"></i>
+                        Edit Teacher
+                    </button>
+                    ${teacher.isActive !== false ? 
+                        `<button onclick="deactivateTeacher('${teacher.id}', '${user.name}')" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors flex items-center gap-2">
+                            <i data-lucide="pause-circle" class="h-4 w-4"></i>
+                            Deactivate
+                        </button>` : 
+                        `<button onclick="activateTeacher('${teacher.id}', '${user.name}')" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2">
+                            <i data-lucide="play-circle" class="h-4 w-4"></i>
+                            Activate
+                        </button>`
+                    }
+                </div>
+            </div>
+        `;
+    }
+    
+    modal.classList.remove('hidden');
+    
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+// Create enhanced teacher modal
+function createEnhancedTeacherModal() {
+    const modalHTML = `
+        <div id="enhanced-teacher-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeTeacherDetailsModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl p-4">
+                <div class="rounded-2xl border bg-card shadow-2xl animate-fade-in overflow-hidden max-h-[90vh] overflow-y-auto">
+                    <div class="modal-content p-6">
+                        <!-- Content will be filled dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// Close teacher details modal
+window.closeTeacherDetailsModal = function() {
+    const modal = document.getElementById('enhanced-teacher-modal');
+    if (modal) modal.classList.add('hidden');
+};
+
+// Edit teacher function
+window.editTeacher = async function(teacherId) {
+    showLoading();
+    try {
+        const teachers = await loadAllTeachers();
+        const teacher = teachers.find(t => t.id == teacherId);
+        
+        if (!teacher) {
+            showToast('Teacher not found', 'error');
+            return;
+        }
+        
+        showEditTeacherModal(teacher);
+    } catch (error) {
+        showToast('Failed to load teacher data', 'error');
+    } finally {
+        hideLoading();
+    }
+};
+
+// Show edit teacher modal
+function showEditTeacherModal(teacher) {
+    let modal = document.getElementById('edit-teacher-modal');
+    
+    if (!modal) {
+        createEditTeacherModal();
+        modal = document.getElementById('edit-teacher-modal');
+    }
+    
+    const user = teacher.User || {};
+    
+    document.getElementById('edit-teacher-id').value = teacher.id;
+    document.getElementById('edit-teacher-name').value = user.name || '';
+    document.getElementById('edit-teacher-email').value = user.email || '';
+    document.getElementById('edit-teacher-phone').value = user.phone || '';
+    document.getElementById('edit-teacher-subjects').value = (teacher.subjects || []).join(', ');
+    document.getElementById('edit-teacher-department').value = teacher.department || 'general';
+    document.getElementById('edit-teacher-class').value = teacher.classTeacher || '';
+    document.getElementById('edit-teacher-qualification').value = teacher.qualification || '';
+    
+    modal.classList.remove('hidden');
+}
+
+// Create edit teacher modal
+function createEditTeacherModal() {
+    const modalHTML = `
+        <div id="edit-teacher-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeEditTeacherModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+                <div class="rounded-2xl border bg-card shadow-2xl animate-fade-in">
+                    <div class="bg-gradient-to-r from-primary/10 to-purple-600/10 px-6 py-4 border-b rounded-t-2xl">
+                        <h3 class="text-xl font-semibold">Edit Teacher</h3>
+                    </div>
+                    <div class="p-6">
+                        <input type="hidden" id="edit-teacher-id">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Full Name</label>
+                                <input type="text" id="edit-teacher-name" class="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Email</label>
+                                <input type="email" id="edit-teacher-email" class="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Phone</label>
+                                <input type="tel" id="edit-teacher-phone" class="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Subjects (comma separated)</label>
+                                <input type="text" id="edit-teacher-subjects" class="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Department</label>
+                                <select id="edit-teacher-department" class="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
+                                    <option value="mathematics">Mathematics</option>
+                                    <option value="science">Science</option>
+                                    <option value="languages">Languages</option>
+                                    <option value="humanities">Humanities</option>
+                                    <option value="technical">Technical</option>
+                                    <option value="sports">Sports</option>
+                                    <option value="general">General</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Class Teacher (if applicable)</label>
+                                <input type="text" id="edit-teacher-class" placeholder="e.g., Grade 10A" class="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Qualification</label>
+                                <input type="text" id="edit-teacher-qualification" class="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
+                            </div>
+                        </div>
+                        <div class="flex justify-end gap-3 mt-6">
+                            <button onclick="closeEditTeacherModal()" class="px-4 py-2 border rounded-lg hover:bg-accent transition-colors">Cancel</button>
+                            <button onclick="handleUpdateTeacher()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">Update Teacher</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// Close edit teacher modal
+window.closeEditTeacherModal = function() {
+    const modal = document.getElementById('edit-teacher-modal');
+    if (modal) modal.classList.add('hidden');
+};
+
+// Handle update teacher
+window.handleUpdateTeacher = async function() {
+    const teacherId = document.getElementById('edit-teacher-id')?.value;
+    const name = document.getElementById('edit-teacher-name')?.value;
+    const email = document.getElementById('edit-teacher-email')?.value;
+    const phone = document.getElementById('edit-teacher-phone')?.value;
+    const subjects = document.getElementById('edit-teacher-subjects')?.value;
+    const department = document.getElementById('edit-teacher-department')?.value;
+    const classTeacher = document.getElementById('edit-teacher-class')?.value;
+    const qualification = document.getElementById('edit-teacher-qualification')?.value;
+    
+    if (!teacherId) {
+        showToast('Teacher ID not found', 'error');
+        return;
+    }
+    
+    showLoading();
+    try {
+        // Update teacher via API
+        const response = await api.admin.updateTeacher(teacherId, {
+            name,
+            email,
+            phone,
+            subjects: subjects ? subjects.split(',').map(s => s.trim()) : [],
+            department,
+            classTeacher,
+            qualification
+        });
+        
+        if (response.success) {
+            showToast('✅ Teacher updated successfully', 'success');
+            closeEditTeacherModal();
+            await refreshTeachersList();
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to update teacher', 'error');
+    } finally {
+        hideLoading();
+    }
+};
 
 // ============================================
 // SETTINGS SECTION
@@ -7795,140 +8187,441 @@ async function handleChangePassword() {
 // ADMIN CALENDAR SECTION - ADD THIS FUNCTION
 // ============================================
 
+// ============================================
+// ENHANCED BEAUTIFUL CALENDAR
+// ============================================
+
+// Calendar state
+let calendarState = {
+    currentDate: new Date(),
+    viewMode: 'month',
+    selectedDate: null
+};
+
+// Enhanced calendar colors
+const calendarColors = [
+    { bg: 'bg-blue-100 dark:bg-blue-900/30', border: 'border-blue-500', text: 'text-blue-700', dot: 'bg-blue-500' },
+    { bg: 'bg-green-100 dark:bg-green-900/30', border: 'border-green-500', text: 'text-green-700', dot: 'bg-green-500' },
+    { bg: 'bg-purple-100 dark:bg-purple-900/30', border: 'border-purple-500', text: 'text-purple-700', dot: 'bg-purple-500' },
+    { bg: 'bg-amber-100 dark:bg-amber-900/30', border: 'border-amber-500', text: 'text-amber-700', dot: 'bg-amber-500' },
+    { bg: 'bg-pink-100 dark:bg-pink-900/30', border: 'border-pink-500', text: 'text-pink-700', dot: 'bg-pink-500' },
+    { bg: 'bg-indigo-100 dark:bg-indigo-900/30', border: 'border-indigo-500', text: 'text-indigo-700', dot: 'bg-indigo-500' }
+];
+
+// Enhanced calendar render
 function renderAdminCalendar() {
-    // Get events from localStorage
     const events = loadCalendarEvents();
-    const today = new Date();
-    const currentMonth = today.toLocaleString('default', { month: 'long' });
-    const currentYear = today.getFullYear();
+    const year = calendarState.currentDate.getFullYear();
+    const month = calendarState.currentDate.getMonth();
     
-    // Get upcoming events (next 7 days)
-    const nextWeek = new Date();
-    nextWeek.setDate(today.getDate() + 7);
-    const upcomingEvents = events.filter(e => {
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
+    const currentMonth = monthNames[month];
+    const currentYear = year;
+    
+    // Get first day of month and total days
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+    
+    let calendarDays = [];
+    
+    // Previous month days
+    for (let i = firstDay - 1; i >= 0; i--) {
+        const day = daysInPrevMonth - i;
+        const date = new Date(year, month - 1, day);
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayEvents = events.filter(e => e.date === dateStr);
+        
+        calendarDays.push(renderEnhancedCalendarDay({
+            dayNumber: day,
+            isCurrentMonth: false,
+            isToday: false,
+            events: dayEvents,
+            date: date,
+            dateStr: dateStr
+        }));
+    }
+    
+    // Current month days
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const date = new Date(year, month, day);
+        const dayEvents = events.filter(e => e.date === dateStr);
+        const isToday = date.toDateString() === new Date().toDateString();
+        
+        calendarDays.push(renderEnhancedCalendarDay({
+            dayNumber: day,
+            isCurrentMonth: true,
+            isToday: isToday,
+            events: dayEvents,
+            date: date,
+            dateStr: dateStr
+        }));
+    }
+    
+    // Next month days (to fill grid)
+    const totalCells = calendarDays.length;
+    const remainingCells = 42 - totalCells;
+    for (let day = 1; day <= remainingCells; day++) {
+        const dateStr = `${year}-${String(month + 2).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayEvents = events.filter(e => e.date === dateStr);
+        
+        calendarDays.push(renderEnhancedCalendarDay({
+            dayNumber: day,
+            isCurrentMonth: false,
+            isToday: false,
+            events: dayEvents,
+            date: new Date(year, month + 1, day),
+            dateStr: dateStr
+        }));
+    }
+    
+    // Get upcoming events
+    const upcomingEvents = getUpcomingEvents(events, 8);
+    
+    // Get stats
+    const totalEvents = events.length;
+    const thisMonthEvents = events.filter(e => {
         const eventDate = new Date(e.date);
-        return eventDate >= today && eventDate <= nextWeek;
-    }).sort((a, b) => new Date(a.date) - new Date(b.date));
+        return eventDate.getMonth() === month && eventDate.getFullYear() === year;
+    }).length;
     
     return `
         <div class="space-y-6 animate-fade-in">
-            <!-- Calendar Header -->
-            <div class="flex justify-between items-center">
-                <h2 class="text-2xl font-bold">School Calendar</h2>
-                <button onclick="showAddEventModal()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
-                    <i data-lucide="plus" class="h-4 w-4"></i>
-                    Add Event
-                </button>
-            </div>
-            
-            <!-- Calendar Grid -->
-            <div class="rounded-xl border bg-card overflow-hidden">
-                <div class="p-4 border-b bg-muted/30">
-                    <h3 class="font-semibold text-center">${currentMonth} ${currentYear}</h3>
-                </div>
-                <div class="grid grid-cols-7 divide-x divide-y">
-                    ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => `
-                        <div class="p-3 text-center font-semibold text-sm bg-muted/20">${day}</div>
-                    `).join('')}
-                    ${renderCalendarDays(events)}
+            <!-- Header with gradient -->
+            <div class="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white shadow-xl">
+                <div class="absolute right-0 top-0 -mt-10 -mr-10 h-40 w-40 rounded-full bg-white/10"></div>
+                <div class="absolute bottom-0 left-0 -mb-10 -ml-10 h-40 w-40 rounded-full bg-black/10"></div>
+                <div class="relative z-10">
+                    <h2 class="text-4xl font-bold">School Calendar</h2>
+                    <p class="mt-2 text-white/80">Manage your school events and schedules</p>
                 </div>
             </div>
             
-            <!-- Upcoming Events -->
-            <div class="rounded-xl border bg-card">
-                <div class="p-4 border-b">
-                    <h3 class="font-semibold">Upcoming Events (Next 7 Days)</h3>
+            <!-- Navigation Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-card p-4 shadow-sm border">
+                <div class="flex items-center gap-3">
+                    <button onclick="calendarChangeMonth(-1)" class="flex h-10 w-10 items-center justify-center rounded-lg bg-muted hover:bg-primary hover:text-primary-foreground transition-all">
+                        <i data-lucide="chevron-left" class="h-5 w-5"></i>
+                    </button>
+                    <button onclick="calendarGoToToday()" class="h-10 px-4 rounded-lg bg-muted hover:bg-primary hover:text-primary-foreground transition-all font-medium">
+                        Today
+                    </button>
+                    <button onclick="calendarChangeMonth(1)" class="flex h-10 w-10 items-center justify-center rounded-lg bg-muted hover:bg-primary hover:text-primary-foreground transition-all">
+                        <i data-lucide="chevron-right" class="h-5 w-5"></i>
+                    </button>
+                    <h3 class="ml-2 text-2xl font-semibold">${currentMonth} ${currentYear}</h3>
                 </div>
-                <div class="divide-y">
-                    ${upcomingEvents.length > 0 ? upcomingEvents.map(event => `
-                        <div class="p-4 flex justify-between items-center hover:bg-accent/50 transition-colors">
-                            <div>
-                                <p class="font-medium">${event.title}</p>
-                                <p class="text-sm text-muted-foreground">${formatDate(event.date)}${event.time ? ` at ${event.time}` : ''}</p>
-                                ${event.location ? `<p class="text-xs text-muted-foreground mt-1">📍 ${event.location}</p>` : ''}
+                
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="flex items-center gap-1"><span class="h-3 w-3 rounded-full bg-blue-500"></span> Event</span>
+                        <span class="flex items-center gap-1"><span class="h-3 w-3 rounded-full bg-green-500"></span> Today</span>
+                    </div>
+                    <button onclick="showAddEventModal()" class="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90 transition-all shadow-md">
+                        <i data-lucide="plus" class="h-4 w-4"></i>
+                        <span>Add Event</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Main Calendar Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <!-- Calendar Grid - 3/4 width -->
+                <div class="lg:col-span-3 rounded-xl bg-card border shadow-lg overflow-hidden">
+                    <!-- Weekday headers -->
+                    <div class="grid grid-cols-7 bg-gradient-to-r from-primary/5 to-purple-500/5 border-b">
+                        ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => `
+                            <div class="py-4 text-center font-semibold ${index === 0 ? 'text-red-500' : index === 6 ? 'text-red-500' : 'text-foreground'}">
+                                ${day}
                             </div>
-                            <button onclick="deleteEvent('${event.id}')" class="p-2 hover:bg-red-100 rounded-lg text-red-600">
-                                <i data-lucide="trash-2" class="h-4 w-4"></i>
-                            </button>
+                        `).join('')}
+                    </div>
+                    
+                    <!-- Calendar days -->
+                    <div class="grid grid-cols-7 divide-x divide-y">
+                        ${calendarDays.join('')}
+                    </div>
+                </div>
+                
+                <!-- Sidebar - 1/4 width -->
+                <div class="lg:col-span-1 space-y-6">
+                    <!-- Mini Calendar -->
+                    <div class="rounded-xl bg-card border shadow-lg p-4">
+                        <h3 class="font-semibold mb-4 flex items-center gap-2 text-primary">
+                            <i data-lucide="calendar" class="h-5 w-5"></i>
+                            ${monthNames[new Date().getMonth()]}
+                        </h3>
+                        ${renderMiniCalendar()}
+                    </div>
+                    
+                    <!-- Upcoming Events -->
+                    <div class="rounded-xl bg-card border shadow-lg p-4">
+                        <h3 class="font-semibold mb-4 flex items-center gap-2 text-primary">
+                            <i data-lucide="calendar-clock" class="h-5 w-5"></i>
+                            Upcoming Events
+                        </h3>
+                        <div class="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                            ${upcomingEvents.length > 0 ? 
+                                upcomingEvents.map(event => renderEnhancedEventCard(event)).join('') 
+                                : renderEmptyState('No upcoming events')}
                         </div>
-                    `).join('') : `
-                        <div class="p-8 text-center text-muted-foreground">
-                            <i data-lucide="calendar" class="h-12 w-12 mx-auto mb-3 opacity-50"></i>
-                            <p>No upcoming events</p>
-                            <button onclick="showAddEventModal()" class="mt-3 text-sm text-primary hover:underline">Add your first event</button>
+                    </div>
+                    
+                    <!-- Quick Stats -->
+                    <div class="rounded-xl bg-card border shadow-lg p-4">
+                        <h3 class="font-semibold mb-4 flex items-center gap-2 text-primary">
+                            <i data-lucide="bar-chart-2" class="h-5 w-5"></i>
+                            Overview
+                        </h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            ${renderStatCard('Total Events', totalEvents, 'bg-blue-100', 'text-blue-600', 'calendar')}
+                            ${renderStatCard('This Month', thisMonthEvents, 'bg-green-100', 'text-green-600', 'trending-up')}
+                            ${renderStatCard('Today', events.filter(e => isToday(e.date)).length, 'bg-amber-100', 'text-amber-600', 'sun')}
+                            ${renderStatCard('This Week', events.filter(e => isThisWeek(e.date)).length, 'bg-purple-100', 'text-purple-600', 'calendar-check')}
                         </div>
-                    `}
+                    </div>
                 </div>
             </div>
         </div>
     `;
 }
 
-// Helper function to render calendar days
-function renderCalendarDays(events) {
+// Render enhanced calendar day
+function renderEnhancedCalendarDay(day) {
+    const hasEvents = day.events.length > 0;
+    const isWeekend = day.date.getDay() === 0 || day.date.getDay() === 6;
+    
+    // Get random color for events
+    const eventColor = hasEvents ? calendarColors[day.events[0]?.title?.length % calendarColors.length] : null;
+    
+    return `
+        <div class="aspect-square p-2 ${!day.isCurrentMonth ? 'bg-muted/30' : 'bg-card'} 
+                    ${day.isCurrentMonth ? 'hover:bg-accent/50' : ''} transition-all duration-200 cursor-pointer relative group 
+                    border-2 ${day.isToday ? 'border-primary shadow-lg ring-2 ring-primary/20' : 'border-transparent'}"
+             onclick="showDayDetails('${day.dateStr}')">
+            
+            <!-- Day number with special styling for today -->
+            <div class="flex justify-between items-start">
+                <span class="text-sm font-medium ${!day.isCurrentMonth ? 'text-muted-foreground' : ''} 
+                             ${day.isToday ? 'bg-primary text-primary-foreground w-7 h-7 flex items-center justify-center rounded-full shadow-sm' : ''}">
+                    ${day.dayNumber}
+                </span>
+                
+                <!-- Event indicators -->
+                ${hasEvents ? `
+                    <div class="flex gap-0.5">
+                        ${day.events.slice(0, 3).map((e, i) => {
+                            const colors = ['bg-pink-500', 'bg-blue-500', 'bg-green-500', 'bg-purple-500'];
+                            return `<span class="w-2 h-2 rounded-full ${colors[i % colors.length]} animate-pulse"></span>`;
+                        }).join('')}
+                        ${day.events.length > 3 ? '<span class="text-xs font-bold text-primary">+</span>' : ''}
+                    </div>
+                ` : ''}
+            </div>
+            
+            <!-- Event preview (max 2 events) -->
+            ${hasEvents ? `
+                <div class="mt-1 space-y-0.5">
+                    ${day.events.slice(0, 2).map(event => `
+                        <div class="text-[10px] truncate ${eventColor?.text || 'text-primary'} font-medium leading-tight">
+                            • ${event.title}
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
+            
+            <!-- Event count badge -->
+            ${hasEvents && day.events.length > 2 ? `
+                <div class="absolute -top-2 -right-2 w-5 h-5 bg-primary text-white text-xs rounded-full flex items-center justify-center font-bold shadow-lg animate-bounce">
+                    ${day.events.length}
+                </div>
+            ` : ''}
+            
+            <!-- Hover preview tooltip -->
+            <div class="absolute z-20 bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-popover border shadow-xl rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none">
+                <p class="text-xs font-semibold border-b pb-1 mb-2">
+                    ${day.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </p>
+                ${hasEvents ? `
+                    <div class="space-y-1 max-h-32 overflow-y-auto">
+                        ${day.events.slice(0, 4).map(e => `
+                            <div class="text-xs flex items-center gap-1 py-0.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
+                                <span class="truncate">${e.title}</span>
+                            </div>
+                        `).join('')}
+                        ${day.events.length > 4 ? `<p class="text-xs text-primary mt-1">+${day.events.length - 4} more...</p>` : ''}
+                    </div>
+                ` : '<p class="text-xs text-muted-foreground">No events scheduled</p>'}
+            </div>
+        </div>
+    `;
+}
+
+// Render enhanced event card
+function renderEnhancedEventCard(event) {
+    const eventDate = new Date(event.date);
+    const isToday = eventDate.toDateString() === new Date().toDateString();
+    const isTomorrow = new Date(eventDate.setDate(eventDate.getDate() - 1)).toDateString() === new Date().toDateString();
+    
+    let dateLabel = formatDate(event.date);
+    if (isToday) dateLabel = 'Today';
+    else if (isTomorrow) dateLabel = 'Tomorrow';
+    
+    const colors = [
+        { bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-l-blue-500', text: 'text-blue-700', icon: 'text-blue-500' },
+        { bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-l-green-500', text: 'text-green-700', icon: 'text-green-500' },
+        { bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-l-purple-500', text: 'text-purple-700', icon: 'text-purple-500' },
+        { bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-l-amber-500', text: 'text-amber-700', icon: 'text-amber-500' },
+        { bg: 'bg-pink-50 dark:bg-pink-900/20', border: 'border-l-pink-500', text: 'text-pink-700', icon: 'text-pink-500' }
+    ];
+    const colorIndex = event.title.length % colors.length;
+    const color = colors[colorIndex];
+    
+    return `
+        <div class="relative group overflow-hidden rounded-lg border-l-4 ${color.border} ${color.bg} hover:shadow-md transition-all p-3 cursor-pointer" onclick="showDayDetails('${event.date}')">
+            <div class="flex justify-between items-start">
+                <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-sm truncate">${event.title}</p>
+                    <div class="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                        <span class="flex items-center gap-1">
+                            <i data-lucide="calendar" class="h-3 w-3 ${color.icon}"></i>
+                            ${dateLabel}
+                        </span>
+                        ${event.time ? `
+                            <span class="flex items-center gap-1">
+                                <i data-lucide="clock" class="h-3 w-3 ${color.icon}"></i>
+                                ${event.time}
+                            </span>
+                        ` : ''}
+                    </div>
+                    ${event.description ? `
+                        <p class="text-xs text-muted-foreground mt-2 line-clamp-2">${event.description.substring(0, 80)}${event.description.length > 80 ? '...' : ''}</p>
+                    ` : ''}
+                </div>
+                <button onclick="event.stopPropagation(); deleteEvent('${event.id}')" class="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded-lg text-red-600 transition-all">
+                    <i data-lucide="trash-2" class="h-3 w-3"></i>
+                </button>
+            </div>
+            ${event.location ? `
+                <div class="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+                    <i data-lucide="map-pin" class="h-3 w-3 ${color.icon}"></i>
+                    <span class="truncate">${event.location}</span>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+// Render mini calendar
+function renderMiniCalendar() {
     const today = new Date();
     const year = today.getFullYear();
     const month = today.getMonth();
+    
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const daysInPrevMonth = new Date(year, month, 0).getDate();
     
     let days = [];
     
-    // Previous month days
-    for (let i = firstDay - 1; i >= 0; i--) {
-        const day = daysInPrevMonth - i;
-        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const dayEvents = events.filter(e => e.date === dateStr);
+    // Empty cells
+    for (let i = 0; i < firstDay; i++) {
+        days.push('<div class="aspect-square"></div>');
+    }
+    
+    // Days of month
+    for (let d = 1; d <= daysInMonth; d++) {
+        const isToday = d === today.getDate();
         days.push(`
-            <div class="p-3 min-h-[80px] bg-muted/20">
-                <span class="text-xs text-muted-foreground">${day}</span>
-                ${dayEvents.length > 0 ? `
-                    <div class="mt-1">
-                        ${dayEvents.slice(0, 2).map(e => `
-                            <div class="text-[10px] truncate bg-primary/10 text-primary rounded px-1 py-0.5 mt-0.5">${e.title}</div>
-                        `).join('')}
-                        ${dayEvents.length > 2 ? `<div class="text-[10px] text-muted-foreground mt-0.5">+${dayEvents.length - 2} more</div>` : ''}
-                    </div>
-                ` : ''}
+            <div class="aspect-square flex items-center justify-center">
+                <button onclick="calendarGoToDate(${year}, ${month}, ${d})" 
+                    class="w-8 h-8 text-sm rounded-full flex items-center justify-center transition-all
+                    ${isToday ? 'bg-primary text-primary-foreground font-bold shadow-md' : 'hover:bg-accent'}">
+                    ${d}
+                </button>
             </div>
         `);
     }
     
-    // Current month days
-    for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const dayEvents = events.filter(e => e.date === dateStr);
-        const isToday = day === today.getDate() && month === today.getMonth();
-        
-        days.push(`
-            <div class="p-3 min-h-[80px] ${isToday ? 'bg-primary/5 border-l-2 border-primary' : 'hover:bg-accent/30'} transition-colors cursor-pointer" onclick="showDayDetails('${dateStr}')">
-                <span class="text-sm font-medium ${isToday ? 'text-primary' : ''}">${day}</span>
-                ${dayEvents.length > 0 ? `
-                    <div class="mt-1">
-                        ${dayEvents.slice(0, 2).map(e => `
-                            <div class="text-[10px] truncate bg-primary/10 text-primary rounded px-1 py-0.5 mt-0.5">${e.title}</div>
-                        `).join('')}
-                        ${dayEvents.length > 2 ? `<div class="text-[10px] text-muted-foreground mt-0.5">+${dayEvents.length - 2} more</div>` : ''}
-                    </div>
-                ` : ''}
-            </div>
-        `);
-    }
-    
-    // Next month days (to fill grid)
-    const totalCells = days.length;
-    const remainingCells = 42 - totalCells;
-    for (let day = 1; day <= remainingCells; day++) {
-        days.push(`
-            <div class="p-3 min-h-[80px] bg-muted/20">
-                <span class="text-xs text-muted-foreground">${day}</span>
-            </div>
-        `);
-    }
-    
-    return days.join('');
+    return `
+        <div class="grid grid-cols-7 gap-1 text-center">
+            ${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => `
+                <div class="text-xs font-medium text-muted-foreground py-1">${day}</div>
+            `).join('')}
+            ${days.join('')}
+        </div>
+    `;
 }
+
+// Render stat card
+function renderStatCard(label, value, bgColor, textColor, icon) {
+    return `
+        <div class="p-3 ${bgColor} rounded-xl hover:shadow-lg transition-all transform hover:-translate-y-1">
+            <div class="flex flex-col items-center text-center">
+                <i data-lucide="${icon}" class="h-5 w-5 ${textColor} mb-1"></i>
+                <p class="text-xl font-bold ${textColor}">${value}</p>
+                <p class="text-xs text-muted-foreground mt-0.5">${label}</p>
+            </div>
+        </div>
+    `;
+}
+
+// Render empty state
+function renderEmptyState(message) {
+    return `
+        <div class="text-center py-8">
+            <i data-lucide="calendar-x" class="h-12 w-12 mx-auto text-muted-foreground mb-3"></i>
+            <p class="text-sm text-muted-foreground">${message}</p>
+        </div>
+    `;
+}
+
+// Get upcoming events
+function getUpcomingEvents(events, limit = 10) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return events
+        .filter(e => new Date(e.date) >= today)
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .slice(0, limit);
+}
+
+// Helper functions
+function isToday(dateString) {
+    const today = new Date();
+    const date = new Date(dateString);
+    return date.toDateString() === today.toDateString();
+}
+
+function isThisWeek(dateString) {
+    const date = new Date(dateString);
+    const today = new Date();
+    const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    return date >= startOfWeek && date <= endOfWeek;
+}
+
+// Calendar navigation functions
+window.calendarChangeMonth = function(direction) {
+    calendarState.currentDate.setMonth(calendarState.currentDate.getMonth() + direction);
+    showDashboardSection('calendar');
+};
+
+window.calendarGoToToday = function() {
+    calendarState.currentDate = new Date();
+    showDashboardSection('calendar');
+};
+
+window.calendarGoToDate = function(year, month, day) {
+    calendarState.currentDate = new Date(year, month, day);
+    showDashboardSection('calendar');
+};
 
 // ============ CROSS-TAB EVENT LISTENERS ============
 
