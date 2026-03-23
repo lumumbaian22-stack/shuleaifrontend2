@@ -409,6 +409,52 @@ const teacherAPI = {
         apiRequest(`/api/teacher/students/${studentId}`, {
             method: 'DELETE'
         }),
+    
+    getMyAssignments: () => apiRequest('/api/teacher/my-assignments'),
+    
+    getClassStudentsForSubject: (classId, subject) => 
+        apiRequest(`/api/teacher/class-students?classId=${classId}&subject=${encodeURIComponent(subject)}`),
+    
+    getTasks: () => apiRequest('/api/teacher/tasks'),
+    
+    createTask: (data) => apiRequest('/api/teacher/tasks', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
+    
+    updateTask: (taskId, data) => apiRequest(`/api/teacher/tasks/${taskId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+    }),
+    
+    sendGroupMessage: (data) => apiRequest('/api/teacher/group-message', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
+    
+    sendPrivateMessage: (data) => apiRequest('/api/teacher/private-message', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
+    
+    getStaffMembers: () => apiRequest('/api/teacher/staff-members')
+};
+
+// Add to adminAPI object
+const adminAPI = {
+    // ... existing methods ...
+    
+    assignTeacherToSubject: (data) => apiRequest('/api/admin/assign-teacher-to-subject', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
+    
+    getSubjectAssignments: () => apiRequest('/api/admin/subject-assignments'),
+    
+    removeSubjectAssignment: (assignmentId) => 
+        apiRequest(`/api/admin/subject-assignments/${assignmentId}`, {
+            method: 'DELETE'
+        })
 };
 
 // ============ PARENT ENDPOINTS ============
