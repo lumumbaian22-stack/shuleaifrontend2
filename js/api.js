@@ -602,15 +602,14 @@ async function uploadFile(endpoint, file, onProgress) {
         xhr.send(formData);
     });
 
-    const helpAPI = {
-        getArticles: (role) => apiRequest(`/api/help/articles/${role}`),
-        searchArticles: (query, role) => apiRequest('/api/help/search', {
-            method: 'POST',
-            body: JSON.stringify({ query, role })
-        }),
-        getArticle: (articleId, role) => apiRequest(`/api/help/articles/${role}/${articleId}`)
-    };
-}
+const helpAPI = {
+  getArticles: (role) => apiRequest(`/api/help/articles/${role}`),
+  searchArticles: (query, role) => apiRequest('/api/help/search', {
+    method: 'POST',
+    body: JSON.stringify({ query, role })
+  }),
+  getArticle: (articleId, role) => apiRequest(`/api/help/articles/${role}/${articleId}`)
+};
 
 // ============ SINGLE EXPORT STATEMENT ============
 window.api = {
