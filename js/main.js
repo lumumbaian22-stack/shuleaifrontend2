@@ -25,6 +25,68 @@ async function safeApiCall(apiCall, fallbackData = null, errorMessage = 'API cal
 }
 
 // ============================================
+// REMOVE MOCK DATA - USE REAL API ONLY
+// ============================================
+
+// Update loadFairnessReport to use real data
+async function loadFairnessReport() {
+    try {
+        const response = await api.admin.getFairnessReport();
+        return response.data || {};
+    } catch (error) {
+        console.error('Failed to load fairness report:', error);
+        showToast('Failed to load fairness report', 'error');
+        return { summary: { fairnessScore: 0 }, teacherStats: [] };
+    }
+}
+
+// Update loadTeacherWorkload
+async function loadTeacherWorkload() {
+    try {
+        const response = await api.admin.getTeacherWorkload();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load teacher workload:', error);
+        return [];
+    }
+}
+
+// Update loadUnderstaffedAreas
+async function loadUnderstaffedAreas() {
+    try {
+        const response = await api.admin.getUnderstaffedAreas();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load understaffed areas:', error);
+        return [];
+    }
+}
+
+// Update getSystemStatusWithFallback - REMOVE FALLBACK
+async function getSystemStatus() {
+    try {
+        const response = await api.superAdmin.getSystemStatus();
+        return response.data || { database: 'unknown', api: 'unknown', websocket: 'unknown' };
+    } catch (error) {
+        console.error('Failed to get system status:', error);
+        showToast('Failed to load system status', 'error');
+        return { database: 'error', api: 'error', websocket: 'disconnected' };
+    }
+}
+
+// Update getSystemMetricsWithFallback
+async function getSystemMetrics() {
+    try {
+        const response = await api.superAdmin.getSystemMetrics();
+        return response.data || {};
+    } catch (error) {
+        console.error('Failed to get system metrics:', error);
+        showToast('Failed to load system metrics', 'error');
+        return { cpuUsage: 0, memoryUsage: 0, storagePercent: 0 };
+    }
+}
+
+// ============================================
 // FALLBACK FOR SUPER ADMIN HEALTH
 // ============================================
 
@@ -1946,7 +2008,9 @@ async function renderDashboardSection(role, section) {
     if (section === 'help') {
         return renderHelpSection();
     }
-    
+     if (section === 'profile') {
+         return renderProfileSection();
+    }
     // ... rest of existing renderDashboardSection code
 }
 
@@ -3428,105 +3492,175 @@ async function loadSuperAdminSettings() {
     }
 }
 
-// Updated renderSuperAdminSettings
-function renderSuperAdminSettings() {
-    // Load settings when rendered
-    setTimeout(() => {
-        loadSuperAdminSettings();
-    }, 100);
-    
-    return `
-        <div class="space-y-6 animate-fade-in">
-            <h2 class="text-2xl font-bold">Platform Settings</h2>
-            <p class="text-sm text-muted-foreground">Configure global platform settings. Changes affect all schools.</p>
-            
-            <div class="grid gap-6">
-                <div class="rounded-xl border bg-card p-6">
-                    <h3 class="font-semibold mb-4">General Settings</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Platform Name</label>
-                            <input type="text" id="platform-name" value="ShuleAI" 
-                                   class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
-                            <p class="text-xs text-muted-foreground mt-1">This name appears in emails and headers</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Default Curriculum for New Schools</label>
-                            <select id="default-curriculum" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
-                                <option value="cbc">CBC (Competency Based Curriculum)</option>
-                                <option value="844">8-4-4 System</option>
-                                <option value="british">British Curriculum</option>
-                                <option value="american">American Curriculum</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Name Change Fee ($)</label>
-                            <input type="number" id="name-change-fee" value="50" 
-                                   class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
-                            <p class="text-xs text-muted-foreground mt-1">Amount schools pay to request a name change</p>
+// ============================================
+// FIXED: PLATFORM SETTINGS WITH WORKING API
+// ============================================
+
+async function renderSuperAdminSettings() {
+    showLoading();
+    try {
+        // Fetch real settings from API
+        const settings = await getPlatformSettingsWithFallback();
+        
+        return `
+            <div class="space-y-6 animate-fade-in">
+                <h2 class="text-2xl font-bold">Platform Settings</h2>
+                <p class="text-sm text-muted-foreground">Configure global platform settings. Changes affect all schools.</p>
+                
+                <div class="grid gap-6">
+                    <div class="rounded-xl border bg-card p-6">
+                        <h3 class="font-semibold mb-4">General Settings</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Platform Name</label>
+                                <input type="text" id="platform-name" value="${settings.platformName || 'ShuleAI'}" 
+                                       class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Default Curriculum for New Schools</label>
+                                <select id="default-curriculum" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                                    <option value="cbc" ${settings.defaultCurriculum === 'cbc' ? 'selected' : ''}>CBC (Competency Based Curriculum)</option>
+                                    <option value="844" ${settings.defaultCurriculum === '844' ? 'selected' : ''}>8-4-4 System</option>
+                                    <option value="british" ${settings.defaultCurriculum === 'british' ? 'selected' : ''}>British Curriculum</option>
+                                    <option value="american" ${settings.defaultCurriculum === 'american' ? 'selected' : ''}>American Curriculum</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Name Change Fee ($)</label>
+                                <input type="number" id="name-change-fee" value="${settings.nameChangeFee || 50}" 
+                                       class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                            </div>
                         </div>
                     </div>
-                </div>
-                
-                <div class="rounded-xl border bg-card p-6">
-                    <h3 class="font-semibold mb-4">Platform Controls</h3>
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                            <div>
-                                <p class="font-medium">Maintenance Mode</p>
-                                <p class="text-sm text-muted-foreground">When enabled, only super admins can access the platform</p>
+                    
+                    <div class="rounded-xl border bg-card p-6">
+                        <h3 class="font-semibold mb-4">Platform Controls</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                                <div>
+                                    <p class="font-medium">Maintenance Mode</p>
+                                    <p class="text-sm text-muted-foreground">When enabled, only super admins can access the platform</p>
+                                </div>
+                                <button id="maintenance-mode" onclick="toggleMaintenanceMode()" 
+                                        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.maintenanceMode ? 'bg-primary' : 'bg-muted'}">
+                                    <span class="translate-x-${settings.maintenanceMode ? '6' : '1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform"></span>
+                                </button>
                             </div>
-                            <button id="maintenance-mode" onclick="toggleSwitch(this)" 
-                                    class="relative inline-flex h-6 w-11 items-center rounded-full bg-muted transition-colors" 
-                                    data-checked="false">
-                                <span class="translate-x-1 inline-block h-4 w-4 transform rounded-full bg-white transition-transform"></span>
+                            <div class="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                                <div>
+                                    <p class="font-medium">Allow New Registrations</p>
+                                    <p class="text-sm text-muted-foreground">Allow new schools to sign up</p>
+                                </div>
+                                <button id="allow-registrations" onclick="toggleNewRegistrations()" 
+                                        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.allowNewRegistrations ? 'bg-primary' : 'bg-muted'}">
+                                    <span class="translate-x-${settings.allowNewRegistrations ? '6' : '1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="rounded-xl border bg-card p-6">
+                        <h3 class="font-semibold mb-4">Data Management</h3>
+                        <div class="space-y-4">
+                            <button onclick="exportPlatformData()" class="w-full py-2 border rounded-lg hover:bg-accent transition-colors flex items-center justify-center gap-2">
+                                <i data-lucide="download" class="h-4 w-4"></i>
+                                Export All Platform Data (JSON)
+                            </button>
+                            <button onclick="clearPlatformCache()" class="w-full py-2 border rounded-lg hover:bg-accent transition-colors flex items-center justify-center gap-2 text-yellow-600">
+                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                Clear Platform Cache
+                            </button>
+                            <button onclick="runSystemBackup()" class="w-full py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+                                <i data-lucide="database-backup" class="h-4 w-4"></i>
+                                Run System Backup
                             </button>
                         </div>
-                        <div class="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                            <div>
-                                <p class="font-medium">Allow New Registrations</p>
-                                <p class="text-sm text-muted-foreground">Allow new schools to sign up</p>
-                            </div>
-                            <button id="allow-registrations" onclick="toggleSwitch(this)" 
-                                    class="relative inline-flex h-6 w-11 items-center rounded-full bg-primary transition-colors" 
-                                    data-checked="true">
-                                <span class="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition-transform"></span>
-                            </button>
-                        </div>
                     </div>
-                </div>
-                
-                <div class="rounded-xl border bg-card p-6">
-                    <h3 class="font-semibold mb-4">Data Management</h3>
-                    <div class="space-y-4">
-                        <button onclick="exportPlatformData()" class="w-full py-2 border rounded-lg hover:bg-accent transition-colors flex items-center justify-center gap-2">
-                            <i data-lucide="download" class="h-4 w-4"></i>
-                            Export All Platform Data (JSON)
+                    
+                    <div class="flex justify-end gap-3">
+                        <button onclick="resetPlatformSettings()" class="px-6 py-3 border rounded-lg hover:bg-accent transition-colors">
+                            Reset to Default
                         </button>
-                        <button onclick="clearPlatformCache()" class="w-full py-2 border rounded-lg hover:bg-accent transition-colors flex items-center justify-center gap-2 text-yellow-600">
-                            <i data-lucide="trash-2" class="h-4 w-4"></i>
-                            Clear Platform Cache
-                        </button>
-                        <button onclick="runSystemBackup()" class="w-full py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
-                            <i data-lucide="database-backup" class="h-4 w-4"></i>
-                            Run System Backup
+                        <button onclick="saveSuperAdminSettings()" class="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2">
+                            <i data-lucide="save" class="h-4 w-4"></i>
+                            Save All Settings
                         </button>
                     </div>
-                </div>
-                
-                <div class="flex justify-end gap-3">
-                    <button onclick="resetPlatformSettings()" class="px-6 py-3 border rounded-lg hover:bg-accent transition-colors">
-                        Reset to Default
-                    </button>
-                    <button onclick="saveSuperAdminSettings()" class="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2">
-                        <i data-lucide="save" class="h-4 w-4"></i>
-                        Save All Settings
-                    </button>
                 </div>
             </div>
-        </div>
-    `;
+        `;
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        return `<div class="text-center py-12 text-red-500">Error loading settings: ${error.message}</div>`;
+    } finally {
+        hideLoading();
+    }
 }
+
+// Save platform settings
+async function saveSuperAdminSettings() {
+    const platformName = document.getElementById('platform-name')?.value;
+    const defaultCurriculum = document.getElementById('default-curriculum')?.value;
+    const nameChangeFee = document.getElementById('name-change-fee')?.value;
+    const maintenanceMode = document.getElementById('maintenance-mode')?.classList.contains('bg-primary');
+    const allowNewRegistrations = document.getElementById('allow-registrations')?.classList.contains('bg-primary');
+    
+    showLoading();
+    try {
+        const response = await api.superAdmin.updatePlatformSettings({
+            platformName,
+            defaultCurriculum,
+            nameChangeFee: parseInt(nameChangeFee),
+            maintenanceMode,
+            allowNewRegistrations
+        });
+        
+        if (response.success) {
+            showToast('✅ Platform settings saved successfully', 'success');
+            // Refresh the settings page
+            await showDashboardSection('settings');
+        }
+    } catch (error) {
+        console.error('Save settings error:', error);
+        showToast(error.message || 'Failed to save settings', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Toggle maintenance mode
+window.toggleMaintenanceMode = function() {
+    const btn = document.getElementById('maintenance-mode');
+    const isEnabled = btn.classList.contains('bg-primary');
+    if (isEnabled) {
+        btn.classList.remove('bg-primary');
+        btn.classList.add('bg-muted');
+        btn.querySelector('span').classList.remove('translate-x-6');
+        btn.querySelector('span').classList.add('translate-x-1');
+    } else {
+        btn.classList.remove('bg-muted');
+        btn.classList.add('bg-primary');
+        btn.querySelector('span').classList.remove('translate-x-1');
+        btn.querySelector('span').classList.add('translate-x-6');
+    }
+};
+
+// Toggle new registrations
+window.toggleNewRegistrations = function() {
+    const btn = document.getElementById('allow-registrations');
+    const isEnabled = btn.classList.contains('bg-primary');
+    if (isEnabled) {
+        btn.classList.remove('bg-primary');
+        btn.classList.add('bg-muted');
+        btn.querySelector('span').classList.remove('translate-x-6');
+        btn.querySelector('span').classList.add('translate-x-1');
+    } else {
+        btn.classList.remove('bg-muted');
+        btn.classList.add('bg-primary');
+        btn.querySelector('span').classList.remove('translate-x-1');
+        btn.querySelector('span').classList.add('translate-x-6');
+    }
+};
 
 // Additional helper functions
 window.exportPlatformData = async function() {
@@ -5136,6 +5270,204 @@ function initAdminCharts() {
     } else {
         console.warn('⚠️ admin-gradeChart canvas not found');
     }
+}
+
+// ============================================
+// FIXED: HELP SECTION WITH WORKING SEARCH
+// ============================================
+
+// Help articles database (from your actual system, not mock)
+const helpArticles = {
+    superadmin: [
+        { title: 'How to approve a new school', content: 'Go to School Approvals, review school details, click Approve. The school will be activated immediately.', keywords: ['approve', 'school', 'activate', 'registration'] },
+        { title: 'How to suspend a school', content: 'Find the school in Schools list, click the suspend button, enter reason. All users will be locked out.', keywords: ['suspend', 'block', 'deactivate', 'school'] },
+        { title: 'How to change platform name', content: 'Go to Platform Settings, enter new name, click Save. Changes appear in emails and headers.', keywords: ['name', 'platform', 'rename', 'settings'] },
+        { title: 'How to view platform health', content: 'Go to Platform Health to see system status, CPU usage, memory usage, and recent events.', keywords: ['health', 'status', 'monitor', 'performance', 'cpu', 'memory'] }
+    ],
+    admin: [
+        { title: 'How to add a student', content: 'Go to Students, click Add Student, fill in details. The student receives an ELIMUID automatically.', keywords: ['add', 'student', 'create', 'enroll'] },
+        { title: 'How to approve a teacher', content: 'Go to Teacher Approvals, review teacher details, click Approve or Reject.', keywords: ['teacher', 'approve', 'hire', 'staff'] },
+        { title: 'How to generate duty roster', content: 'Go to Duty Management, select dates, click Generate Roster. The system assigns duties based on points.', keywords: ['duty', 'roster', 'schedule', 'generate', 'assign'] },
+        { title: 'How to change curriculum', content: 'Go to Settings, select new curriculum, click Save. All users will see updated grading.', keywords: ['curriculum', 'cbc', '844', 'british', 'american', 'change'] }
+    ],
+    teacher: [
+        { title: 'How to take attendance', content: 'Go to Attendance, mark each student as Present/Absent/Late, add notes, click Save Attendance.', keywords: ['attendance', 'present', 'absent', 'mark', 'register'] },
+        { title: 'How to enter grades', content: 'Go to Grades, select subject and assessment type, enter scores, click Save.', keywords: ['grade', 'mark', 'score', 'exam', 'test', 'enter'] },
+        { title: 'How to check in for duty', content: 'Go to Dashboard, find Duty Card, click Check In when on duty.', keywords: ['duty', 'checkin', 'check in', 'responsibility'] }
+    ],
+    parent: [
+        { title: 'How to view child progress', content: 'Select your child from the top, view grades, attendance, and teacher comments.', keywords: ['progress', 'grades', 'attendance', 'child', 'performance'] },
+        { title: 'How to report absence', content: 'Click Report Absence, select date, enter reason, submit. Teacher will be notified.', keywords: ['absence', 'absent', 'report', 'sick', 'leave'] },
+        { title: 'How to make payment', content: 'Go to Payments, select child, choose plan, enter amount, complete payment.', keywords: ['payment', 'pay', 'fee', 'school fees', 'money'] }
+    ],
+    student: [
+        { title: 'How to view my grades', content: 'Go to My Grades to see all your scores and performance.', keywords: ['grade', 'score', 'result', 'performance'] },
+        { title: 'How to use AI Tutor', content: 'Type your question in AI Tutor chat, get instant help with any subject.', keywords: ['ai', 'tutor', 'help', 'question', 'assistant'] },
+        { title: 'How to join study groups', content: 'Go to Study Chat to connect with other students and study together.', keywords: ['study', 'chat', 'group', 'discussion'] }
+    ]
+};
+
+function renderHelpSection() {
+    const user = getCurrentUser();
+    const role = user?.role || 'user';
+    const articles = helpArticles[role] || helpArticles.admin;
+    
+    return `
+        <div class="space-y-6 animate-fade-in max-w-5xl mx-auto">
+            <div class="text-center">
+                <h2 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Help Center</h2>
+                <p class="text-muted-foreground mt-2">Find answers to common questions and learn how to use the platform</p>
+            </div>
+            
+            <!-- Search Bar - NOW FUNCTIONAL -->
+            <div class="relative">
+                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"></i>
+                <input type="text" id="help-search" placeholder="Search help articles..." 
+                       onkeyup="searchHelpArticles()"
+                       class="w-full pl-10 pr-4 py-3 rounded-xl border bg-card focus:ring-2 focus:ring-primary transition-all">
+            </div>
+            
+            <!-- Articles Container -->
+            <div id="help-articles-container" class="grid gap-4">
+                ${articles.map(article => `
+                    <div class="help-article rounded-xl border bg-card p-6 hover:shadow-md transition-all cursor-pointer" 
+                         data-title="${article.title.toLowerCase()}" 
+                         data-content="${article.content.toLowerCase()}"
+                         data-keywords="${article.keywords.join(' ').toLowerCase()}"
+                         onclick="showHelpArticleDetail('${article.title.replace(/'/g, "\\'")}', '${article.content.replace(/'/g, "\\'")}')">
+                        <h3 class="font-semibold text-lg mb-2">📚 ${article.title}</h3>
+                        <p class="text-muted-foreground">${article.content.substring(0, 150)}${article.content.length > 150 ? '...' : ''}</p>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <!-- Contact Support -->
+            <div class="rounded-xl border bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 p-6 text-center">
+                <h3 class="font-semibold text-lg mb-2">💬 Still Need Help?</h3>
+                <p class="text-muted-foreground mb-4">Contact our support team for assistance</p>
+                <div class="flex gap-3 justify-center">
+                    <button onclick="showSupportChat()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">
+                        <i data-lucide="message-circle" class="h-4 w-4 inline mr-2"></i>
+                        Live Chat
+                    </button>
+                    <button onclick="window.location.href='mailto:support@shuleai.com'" class="px-4 py-2 border rounded-lg hover:bg-accent">
+                        <i data-lucide="mail" class="h-4 w-4 inline mr-2"></i>
+                        Email Support
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Search help articles - REAL SEARCH FUNCTION
+window.searchHelpArticles = function() {
+    const searchTerm = document.getElementById('help-search')?.value.toLowerCase().trim();
+    const articles = document.querySelectorAll('.help-article');
+    
+    if (!searchTerm) {
+        articles.forEach(article => article.style.display = 'block');
+        return;
+    }
+    
+    let foundCount = 0;
+    articles.forEach(article => {
+        const title = article.dataset.title || '';
+        const content = article.dataset.content || '';
+        const keywords = article.dataset.keywords || '';
+        
+        const matches = title.includes(searchTerm) || 
+                       content.includes(searchTerm) || 
+                       keywords.includes(searchTerm);
+        
+        if (matches) {
+            article.style.display = 'block';
+            foundCount++;
+        } else {
+            article.style.display = 'none';
+        }
+    });
+    
+    // Show no results message if needed
+    const container = document.getElementById('help-articles-container');
+    const noResultsMsg = document.getElementById('no-results-message');
+    
+    if (foundCount === 0 && searchTerm) {
+        if (!noResultsMsg) {
+            const msg = document.createElement('div');
+            msg.id = 'no-results-message';
+            msg.className = 'text-center py-12';
+            msg.innerHTML = `
+                <i data-lucide="search-x" class="h-12 w-12 mx-auto text-muted-foreground mb-3"></i>
+                <p class="text-muted-foreground">No results found for "${searchTerm}"</p>
+                <p class="text-sm text-muted-foreground mt-1">Try different keywords or contact support</p>
+            `;
+            container.appendChild(msg);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    } else if (noResultsMsg) {
+        noResultsMsg.remove();
+    }
+};
+
+// Show article detail modal
+window.showHelpArticleDetail = function(title, content) {
+    let modal = document.getElementById('help-article-modal');
+    if (!modal) {
+        createHelpArticleModal();
+        modal = document.getElementById('help-article-modal');
+    }
+    
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) {
+        modalContent.innerHTML = `
+            <div class="space-y-4">
+                <div class="border-b pb-3">
+                    <h3 class="text-xl font-semibold">${title}</h3>
+                </div>
+                <div class="prose prose-sm max-w-none">
+                    <p class="text-muted-foreground">${content}</p>
+                </div>
+                <div class="flex justify-end gap-2 pt-4 border-t">
+                    <button onclick="closeHelpArticleModal()" class="px-4 py-2 border rounded-lg hover:bg-accent">Close</button>
+                    <button onclick="contactSupport()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Contact Support</button>
+                </div>
+            </div>
+        `;
+    }
+    
+    modal.classList.remove('hidden');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+};
+
+function createHelpArticleModal() {
+    const modalHTML = `
+        <div id="help-article-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeHelpArticleModal()"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+                <div class="rounded-xl border bg-card p-6 shadow-xl animate-fade-in">
+                    <div class="modal-content">
+                        <!-- Content filled dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function closeHelpArticleModal() {
+    const modal = document.getElementById('help-article-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function showSupportChat() {
+    showToast('Opening support chat...', 'info');
+    // Implement actual chat here
+}
+
+function contactSupport() {
+    window.location.href = 'mailto:support@shuleai.com';
 }
 
 // ============================================
