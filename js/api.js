@@ -295,7 +295,21 @@ const adminAPI = {
             method: 'PUT',
             body: JSON.stringify(data)
         }),
+
+    // Add to adminAPI object
+    assignTeacherToSubject: (data) => apiRequest('/api/admin/assign-teacher-to-subject', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
     
+    getSubjectAssignments: () => apiRequest('/api/admin/subject-assignments'),
+    
+    removeSubjectAssignment: (assignmentId) => 
+        apiRequest(`/api/admin/subject-assignments/${assignmentId}`, {
+            method: 'DELETE'
+        })
+};
+
     deleteClass: (classId) => 
         apiRequest(`/api/admin/classes/${classId}`, {
             method: 'DELETE'
