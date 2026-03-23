@@ -572,6 +572,16 @@ const notificationsAPI = {
     })
 };
 
+// ============ HELP ENDPOINTS (NEW) ============
+const helpAPI = {
+    getArticles: (role) => apiRequest(`/api/help/articles/${role}`),
+    searchArticles: (query, role) => apiRequest('/api/help/search', {
+        method: 'POST',
+        body: JSON.stringify({ query, role })
+    }),
+    getArticle: (articleId, role) => apiRequest(`/api/help/articles/${role}/${articleId}`)
+};
+
 // File upload helper
 async function uploadFile(endpoint, file, onProgress) {
     const formData = new FormData();
@@ -601,15 +611,7 @@ async function uploadFile(endpoint, file, onProgress) {
         xhr.setRequestHeader('Authorization', `Bearer ${authToken}`);
         xhr.send(formData);
     });
-
-const helpAPI = {
-  getArticles: (role) => apiRequest(`/api/help/articles/${role}`),
-  searchArticles: (query, role) => apiRequest('/api/help/search', {
-    method: 'POST',
-    body: JSON.stringify({ query, role })
-  }),
-  getArticle: (articleId, role) => apiRequest(`/api/help/articles/${role}/${articleId}`)
-};
+}
 
 // ============ SINGLE EXPORT STATEMENT ============
 window.api = {
@@ -625,8 +627,8 @@ window.api = {
     public: publicAPI,
     school: schoolAPI,
     help: helpAPI,
-    user: userAPI,           // NEW
-    notifications: notificationsAPI  // NEW
+    user: userAPI,
+    notifications: notificationsAPI
 };
 
 // Legacy support
@@ -639,3 +641,4 @@ console.log('📊 Available APIs:', Object.keys(window.api).join(', '));
 console.log('📊 Super Admin APIs:', Object.keys(window.api.superAdmin).join(', '));
 console.log('📊 User APIs:', Object.keys(window.api.user).join(', '));
 console.log('📊 Notifications APIs:', Object.keys(window.api.notifications).join(', '));
+console.log('📊 Help APIs:', Object.keys(window.api.help).join(', '));
