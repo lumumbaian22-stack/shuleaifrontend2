@@ -610,6 +610,218 @@ function formatDate(dateString) {
     });
 }
 
+// ============ TEACHER SUBJECT ASSIGNMENT FUNCTIONS ============
+
+async function loadTeachersForAssignment() {
+    try {
+        const response = await api.admin.getTeachers();
+        const teachers = response.data || [];
+        const select = document.getElementById('assign-teacher-select');
+        
+        if (select) {
+            select.innerHTML = '<option value="">Select a teacher...</option>' +
+                teachers.map(t => `
+                    <option value="${t.id}" data-name="${t.User?.name}">
+                        ${t.User?.name} (${t.subjects?.join(', ') || 'No subjects'})
+                    </option>
+                `).join('');
+        }
+    } catch (error) {
+        console.error('Failed to load teachers:', error);
+        showToast('Failed to load teachers', 'error');
+    }
+}
+
+async function loadClassesForAssignment() {
+    try {
+        const response = await api.admin.getClasses();
+        const classes = response.data || [];
+        const select = document.getElementById('assign-class-select');
+        
+        if (select) {
+            select.innerHTML = '<option value="">Select a class...</option>' +
+                classes.map(c => `
+                    <option value="${c.id}" data-grade="${c.grade}" data-name="${c.name}">
+                        ${c.name} (Grade ${c.grade})
+                    </option>
+                `).join('');
+        }
+    } catch (error) {
+        console.error('Failed to load classes:', error);
+        showToast('Failed to load classes', 'error');
+    }
+}
+
+async function loadSubjectsForAssignment() {
+    try {
+        const curriculum = schoolSettings?.curriculum || 'cbc';
+        const schoolLevel = schoolSettings?.schoolLevel || 'secondary';
+        
+        // Get subjects from curriculum
+        let subjects = [];
+        
+        if (curriculum === 'cbc') {
+            subjects = schoolLevel === 'primary' 
+                ? ['Mathematics', 'English', 'Kiswahili', 'Science', 'Social Studies', 'CRE/IRE', 'Physical Education', 'Art & Craft', 'Music']
+                : ['Mathematics', 'English', 'Kiswahili', 'Biology', 'Chemistry', 'Physics', 'History', 'Geography', 'CRE/IRE', 'Business Studies', 'Agriculture', 'Computer Studies'];
+        } else if (curriculum === '844') {
+            subjects = schoolLevel === 'primary'
+                ? ['Mathematics', 'English', 'Kiswahili', 'Science', 'Social Studies', 'CRE/IRE', 'Physical Education']
+                : ['Mathematics', 'English', 'Kiswahili', 'Biology', 'Chemistry', 'Physics', 'History', 'Geography', 'CRE/IRE', 'Business Studies', 'Agriculture', 'Computer Studies'];
+        } else if (curriculum === 'british') {
+            subjects = schoolLevel === 'primary'
+                ? ['English', 'Mathematics', 'Science', 'History', 'Geography', 'Art', 'Music', 'Physical Education']
+                : ['English Literature', 'English Language', 'Mathematics', 'Biology', 'Chemistry', 'Physics', 'History', 'Geography', 'French', 'Spanish', 'Computer Science', 'Business Studies', 'Economics', 'Art & Design', 'Music', 'Physical Education'];
+        } else if (curriculum === 'american') {
+            subjects = schoolLevel === 'primary'
+                ? ['English Language Arts', 'Mathematics', 'Science', 'Social Studies', 'Art', 'Music', 'Physical Education']
+                : ['English', 'Mathematics', 'Biology', 'Chemistry', 'Physics', 'History', 'Geography', 'Spanish', 'French', 'Computer Science', 'Business', 'Economics', 'Art', 'Music', 'Physical Education'];
+        }
+        
+        // Add custom subjects
+        const customSubjects = schoolSettings?.customSubjects || [];
+        const allSubjects = [...subjects, ...customSubjects];
+        
+        const select = document.getElementById('assign-subject-select');
+        if (select) {
+            select.innerHTML = '<option value="">Select a subject...</option>' +
+                allSubjects.map(s => `
+                    <option value="${s}">${s}</option>
+                `).join('');
+        }
+    } catch (error) {
+        console.error('Failed to load subjects:', error);
+        // Fallback subjects
+        const select = document.getElementById('assign-subject-select');
+        if (select) {
+            select.innerHTML = '<option value="">Select a subject...</option>' +
+                ['Mathematics', 'English', 'Kiswahili', 'Science', 'Biology', 'Chemistry', 'Physics', 'History', 'Geography'].map(s => `
+                    <option value="${s}">${s}</option>
+                `).join('');
+        }
+    }
+}
+
+async function assignTeacherToSubject() {
+    const teacherId = document.getElementById('assign-teacher-select')?.value;
+    const classId = document.getElementById('assign-class-select')?.value;
+    const subject = document.getElementById('assign-subject-select')?.value;
+    const roleRadio = document.querySelector('input[name="teacher-role"]:checked');
+    const isClassTeacher = roleRadio?.value === 'class_teacher';
+    
+    if (!teacherId || !classId || !subject) {
+        showToast('Please select teacher, class, and subject', 'error');
+        return;
+    }
+    
+    // Get teacher name for success message
+    const teacherSelect = document.getElementById('assign-teacher-select');
+    const teacherName = teacherSelect.options[teacherSelect.selectedIndex]?.getAttribute('data-name') || 'Teacher';
+    
+    const classSelect = document.getElementById('assign-class-select');
+    const className = classSelect.options[classSelect.selectedIndex]?.getAttribute('data-name') || 'Class';
+    
+    showLoading();
+    try {
+        const response = await api.admin.assignTeacherToSubject({
+            teacherId: parseInt(teacherId),
+            classId: parseInt(classId),
+            subject: subject,
+            isClassTeacher: isClassTeacher
+        });
+        
+        if (response.success) {
+            const roleText = isClassTeacher ? 'Class Teacher' : 'Subject Teacher';
+            showToast(`✅ ${teacherName} assigned as ${roleText} for ${subject} in ${className}`, 'success');
+            
+            // Clear selection
+            document.getElementById('assign-teacher-select').value = '';
+            document.getElementById('assign-class-select').value = '';
+            document.getElementById('assign-subject-select').value = '';
+            document.querySelector('input[name="teacher-role"][value="subject"]').checked = true;
+            
+            // Refresh the assignments list
+            await refreshSubjectAssignments();
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to assign teacher', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+async function refreshSubjectAssignments() {
+    const tbody = document.getElementById('subject-assignments-tbody');
+    if (!tbody) return;
+    
+    try {
+        const response = await api.admin.getSubjectAssignments();
+        const assignments = response.data || [];
+        
+        if (assignments.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-muted-foreground">No assignments yet. Use the form above to assign teachers.</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = assignments.map(ass => `
+            <tr class="hover:bg-accent/50 transition-colors">
+                <td class="px-4 py-3 font-medium">${escapeHtml(ass.teacherName)}</td>
+                <td class="px-4 py-3">${escapeHtml(ass.className)} (${escapeHtml(ass.classGrade)})</td>
+                <td class="px-4 py-3">
+                    <span class="px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
+                        ${escapeHtml(ass.subject)}
+                    </span>
+                </td>
+                <td class="px-4 py-3">
+                    <span class="px-2 py-1 rounded-full text-xs font-medium ${ass.isClassTeacher ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">
+                        ${ass.isClassTeacher ? '🏫 Class Teacher' : '📚 Subject Teacher'}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                    <button onclick="removeSubjectAssignment(${ass.id})" 
+                            class="p-2 hover:bg-red-100 rounded-lg text-red-600 transition-colors"
+                            title="Remove Assignment">
+                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+        
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        
+    } catch (error) {
+        console.error('Failed to load assignments:', error);
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-red-500">Failed to load assignments</td></tr>';
+    }
+}
+
+async function removeSubjectAssignment(assignmentId) {
+    if (!confirm('Are you sure you want to remove this teacher from this subject?')) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.admin.removeSubjectAssignment(assignmentId);
+        
+        if (response.success) {
+            showToast('✅ Assignment removed successfully', 'success');
+            await refreshSubjectAssignments();
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to remove assignment', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // ==================== EXPORT ALL FUNCTIONS ====================
 
 window.loadPendingTeachers = loadPendingTeachers;
