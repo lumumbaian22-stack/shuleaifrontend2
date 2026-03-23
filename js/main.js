@@ -2302,16 +2302,31 @@ async function showDashboard(role) {
     }
 }
 
+// Add to main.js - Settings load on dashboard load
 async function loadSchoolSettings() {
     try {
-        const school = getCurrentSchool();
-        if (school) {
-            schoolSettings = school.settings || {};
-            customSubjects = schoolSettings.customSubjects || [];
-            localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings));
+        const response = await api.admin.getSchoolSettings();
+        if (response && response.success) {
+            window.schoolSettings = response.data;
+            window.customSubjects = response.data.customSubjects || [];
+            localStorage.setItem('schoolSettings', JSON.stringify(response.data));
+            
+            // Dispatch event for other components
+            window.dispatchEvent(new CustomEvent('settings-loaded', { 
+                detail: response.data 
+            }));
+            
+            return response.data;
         }
     } catch (error) {
-        console.log('Using default school settings');
+        console.error('Failed to load settings:', error);
+        // Use cached settings
+        const cached = localStorage.getItem('schoolSettings');
+        if (cached) {
+            window.schoolSettings = JSON.parse(cached);
+            window.customSubjects = window.schoolSettings.customSubjects || [];
+        }
+        return window.schoolSettings;
     }
 }
 
