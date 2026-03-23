@@ -13,13 +13,19 @@ let clickCount = 0;
 // FALLBACK FUNCTIONS - For missing backend endpoints
 // ============================================
 
-// Safe API call with fallback data
+// Update safeApiCall in main.js to show real errors instead of mocking
 async function safeApiCall(apiCall, fallbackData = null, errorMessage = 'API call failed') {
     try {
         const response = await apiCall();
         return response.data || fallbackData;
     } catch (error) {
         console.warn(`${errorMessage}:`, error.message);
+        // Don't return fallback mock data - show error
+        if (error.message.includes('404') || error.message.includes('Route not found')) {
+            console.error(`❌ Endpoint not found: ${errorMessage}`);
+            // Return empty array instead of mock data
+            return Array.isArray(fallbackData) ? [] : {};
+        }
         return fallbackData;
     }
 }
