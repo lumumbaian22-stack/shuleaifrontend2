@@ -307,8 +307,7 @@ const adminAPI = {
     removeSubjectAssignment: (assignmentId) => 
         apiRequest(`/api/admin/subject-assignments/${assignmentId}`, {
             method: 'DELETE'
-        })
-};
+        }),
 
     deleteClass: (classId) => 
         apiRequest(`/api/admin/classes/${classId}`, {
