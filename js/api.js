@@ -601,6 +601,15 @@ async function uploadFile(endpoint, file, onProgress) {
         xhr.setRequestHeader('Authorization', `Bearer ${authToken}`);
         xhr.send(formData);
     });
+
+    const helpAPI = {
+        getArticles: (role) => apiRequest(`/api/help/articles/${role}`),
+        searchArticles: (query, role) => apiRequest('/api/help/search', {
+            method: 'POST',
+            body: JSON.stringify({ query, role })
+        }),
+        getArticle: (articleId, role) => apiRequest(`/api/help/articles/${role}/${articleId}`)
+    };
 }
 
 // ============ SINGLE EXPORT STATEMENT ============
@@ -616,6 +625,7 @@ window.api = {
     upload: uploadAPI,
     public: publicAPI,
     school: schoolAPI,
+    help: helpAPI,
     user: userAPI,           // NEW
     notifications: notificationsAPI  // NEW
 };
