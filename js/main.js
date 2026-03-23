@@ -4084,13 +4084,10 @@ async function updateAdminStats() {
 function renderAdminDashboard() {
     const school = getCurrentSchool();
     const data = dashboardData || {};
-    const curriculum = schoolSettings.curriculum || 'cbc';
-    const schoolLevel = schoolSettings.schoolLevel || 'secondary';
-    const curriculumInfo = CURRICULUMS[curriculum];
     
     return `
         <div class="space-y-6 animate-fade-in">
-            <!-- School Profile Card (keep existing) -->
+            <!-- School Profile Card -->
             <div class="rounded-xl border bg-card p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 card-hover">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
@@ -4112,7 +4109,7 @@ function renderAdminDashboard() {
                 </div>
             </div>
 
-            <!-- Stats Grid (keep existing) -->
+            <!-- Stats Grid -->
             <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div class="rounded-xl border bg-card p-6 card-hover">
                     <div class="flex items-center justify-between">
@@ -4167,8 +4164,8 @@ function renderAdminDashboard() {
                 </div>
             </div>
 
-            <!-- Quick Actions (keep existing) -->
-            <div class="grid gap-4 md:grid-cols-3">
+            <!-- Quick Action Buttons -->
+            <div class="grid gap-4 md:grid-cols-4">
                 <button onclick="showDashboardSection('teacher-approvals')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
                     <i data-lucide="user-plus" class="h-8 w-8 text-blue-600 mb-3"></i>
                     <h4 class="font-semibold">Teacher Approvals</h4>
@@ -4182,14 +4179,19 @@ function renderAdminDashboard() {
                     <p class="text-sm text-muted-foreground">View and manage all students</p>
                 </button>
                 
+                <button onclick="showDashboardSection('classes')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
+                    <i data-lucide="book-open" class="h-8 w-8 text-purple-600 mb-3"></i>
+                    <h4 class="font-semibold">Class Management</h4>
+                    <p class="text-sm text-muted-foreground">Create and manage classes</p>
+                </button>
+                
                 <button onclick="showDashboardSection('settings')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
-                    <i data-lucide="settings" class="h-8 w-8 text-purple-600 mb-3"></i>
+                    <i data-lucide="settings" class="h-8 w-8 text-orange-600 mb-3"></i>
                     <h4 class="font-semibold">School Settings</h4>
                     <p class="text-sm text-muted-foreground">Configure curriculum and subjects</p>
                 </button>
             </div>
 
-            <!-- ============ ADD THIS NEW SECTION ============ -->
             <!-- Teacher Subject Assignment Section -->
             <div class="rounded-xl border bg-card overflow-hidden" id="subject-assignment-section">
                 <div class="p-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700">
@@ -4266,54 +4268,25 @@ function renderAdminDashboard() {
                     </div>
                 </div>
             </div>
-            <!-- ============ END NEW SECTION ============ -->
 
-            <!-- Student Management Table (keep existing) -->
-            <div class="rounded-xl border bg-card overflow-hidden">
-                <div class="p-4 border-b flex justify-between items-center">
-                    <h3 class="font-semibold">Student Management</h3>
-                    <button onclick="refreshAdminStudentList()" class="px-3 py-1 border rounded-lg text-sm hover:bg-accent">Refresh</button>
+            <!-- Charts Row -->
+            <div class="grid gap-4 lg:grid-cols-2">
+                <div class="rounded-xl border bg-card p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-semibold">Enrollment Trends</h3>
+                    </div>
+                    <div class="chart-container h-64">
+                        <canvas id="admin-enrollmentChart"></canvas>
+                    </div>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead class="bg-muted/50">
-                            <tr>
-                                <th class="px-4 py-3 text-left font-medium">Student</th>
-                                <th class="px-4 py-3 text-left font-medium">ELIMUID</th>
-                                <th class="px-4 py-3 text-left font-medium">Grade</th>
-                                <th class="px-4 py-3 text-left font-medium">Status</th>
-                                <th class="px-4 py-3 text-left font-medium">Parent(s)</th>
-                                <th class="px-4 py-3 text-right font-medium">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="admin-students-table-body" class="divide-y">
-                            <tr><td colspan="6" class="px-4 py-8 text-center text-muted-foreground">Loading students...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Pending Teachers Table (keep existing) -->
-            <div class="rounded-xl border bg-card overflow-hidden">
-                <div class="p-4 border-b flex justify-between items-center">
-                    <h3 class="font-semibold">Pending Teacher Approvals</h3>
-                    <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full" id="pending-count">0</span>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead class="bg-muted/50">
-                            <tr>
-                                <th class="px-4 py-3 text-left font-medium">Teacher</th>
-                                <th class="px-4 py-3 text-left font-medium">Email</th>
-                                <th class="px-4 py-3 text-left font-medium">Subjects</th>
-                                <th class="px-4 py-3 text-left font-medium">Applied</th>
-                                <th class="px-4 py-3 text-right font-medium">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pending-teachers-table">
-                            <tr><td colspan="5" class="px-4 py-8 text-center text-muted-foreground">No pending approvals</td></tr>
-                        </tbody>
-                    </table>
+                
+                <div class="rounded-xl border bg-card p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-semibold">Grade Distribution</h3>
+                    </div>
+                    <div class="chart-container h-64">
+                        <canvas id="admin-gradeChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
