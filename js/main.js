@@ -4081,26 +4081,28 @@ async function updateAdminStats() {
 // MISSING FUNCTION FIXES - Add to main.js
 // ============================================
 
-// Render Admin Dashboard
 function renderAdminDashboard() {
     const school = getCurrentSchool();
     const data = dashboardData || {};
+    const curriculum = schoolSettings.curriculum || 'cbc';
+    const schoolLevel = schoolSettings.schoolLevel || 'secondary';
+    const curriculumInfo = CURRICULUMS[curriculum];
     
     return `
         <div class="space-y-6 animate-fade-in">
-            <!-- School Profile Card -->
+            <!-- School Profile Card (keep existing) -->
             <div class="rounded-xl border bg-card p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 card-hover">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <div class="flex items-center gap-3 mb-2">
-                            <h2 class="text-2xl font-bold" id="school-name">${school?.name || 'Your School'}</h2>
+                            <h2 class="text-2xl font-bold">${school?.name || 'Your School'}</h2>
                             <span class="px-3 py-1 ${school?.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} text-xs rounded-full">
                                 ${school?.status || 'pending'}
                             </span>
                         </div>
                         <div class="flex items-center gap-4">
-                            <p class="text-sm"><span class="font-mono bg-muted px-2 py-1 rounded">School ID: ${school?.schoolId || 'N/A'}</span></p>
-                            <button onclick="showNameChangeModal()" class="text-sm text-primary hover:underline">Change School Name</button>
+                            <p class="text-sm"><span class="font-mono bg-muted px-2 py-1 rounded">Short Code: ${school?.shortCode || 'SHL-XXXXX'}</span></p>
+                            <button onclick="showNameChangeModal()" class="text-sm text-primary hover:underline">Change School Name ($50)</button>
                         </div>
                     </div>
                     <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
@@ -4109,14 +4111,14 @@ function renderAdminDashboard() {
                     </div>
                 </div>
             </div>
-            
-            <!-- Stats Grid -->
+
+            <!-- Stats Grid (keep existing) -->
             <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div class="rounded-xl border bg-card p-6 card-hover">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm font-medium text-muted-foreground">Total Students</p>
-                            <h3 class="text-2xl font-bold mt-1" id="total-students">${data.students?.length || 0}</h3>
+                            <h3 class="text-2xl font-bold mt-1">${data.students?.length || 0}</h3>
                         </div>
                         <div class="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
                             <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
@@ -4128,10 +4130,10 @@ function renderAdminDashboard() {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm font-medium text-muted-foreground">Teachers</p>
-                            <h3 class="text-2xl font-bold mt-1" id="total-teachers">${data.teachers?.length || 0}</h3>
+                            <h3 class="text-2xl font-bold mt-1">${data.teachers?.length || 0}</h3>
                             <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
                                 <i data-lucide="trending-up" class="h-3 w-3"></i>
-                                <span id="pending-teachers">${data.pendingTeachers?.length || 0}</span> pending approval
+                                +${data.pendingTeachers?.length || 0} pending approval
                             </p>
                         </div>
                         <div class="h-12 w-12 rounded-lg bg-violet-100 flex items-center justify-center">
@@ -4144,7 +4146,7 @@ function renderAdminDashboard() {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm font-medium text-muted-foreground">Classes</p>
-                            <h3 class="text-2xl font-bold mt-1" id="total-classes">${data.classes?.length || 0}</h3>
+                            <h3 class="text-2xl font-bold mt-1">${data.classes?.length || 0}</h3>
                         </div>
                         <div class="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
                             <i data-lucide="book-open" class="h-6 w-6 text-emerald-600"></i>
@@ -4156,7 +4158,7 @@ function renderAdminDashboard() {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm font-medium text-muted-foreground">Attendance Rate</p>
-                            <h3 class="text-2xl font-bold mt-1" id="attendance-rate">94%</h3>
+                            <h3 class="text-2xl font-bold mt-1">94.2%</h3>
                         </div>
                         <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
                             <i data-lucide="calendar-check" class="h-6 w-6 text-amber-600"></i>
@@ -4164,14 +4166,14 @@ function renderAdminDashboard() {
                     </div>
                 </div>
             </div>
-            
-            <!-- Quick Actions -->
+
+            <!-- Quick Actions (keep existing) -->
             <div class="grid gap-4 md:grid-cols-3">
                 <button onclick="showDashboardSection('teacher-approvals')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
                     <i data-lucide="user-plus" class="h-8 w-8 text-blue-600 mb-3"></i>
                     <h4 class="font-semibold">Teacher Approvals</h4>
                     <p class="text-sm text-muted-foreground">Approve pending teachers</p>
-                    <span class="mt-2 inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700" id="pending-count-badge">${data.pendingTeachers?.length || 0} pending</span>
+                    ${data.pendingTeachers?.length ? `<span class="mt-2 inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700">${data.pendingTeachers.length} pending</span>` : ''}
                 </button>
                 
                 <button onclick="showDashboardSection('students')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
@@ -4186,21 +4188,132 @@ function renderAdminDashboard() {
                     <p class="text-sm text-muted-foreground">Configure curriculum and subjects</p>
                 </button>
             </div>
-            
-            <!-- Charts -->
-            <div class="grid gap-4 lg:grid-cols-2">
-                <div class="rounded-xl border bg-card p-6">
-                    <h3 class="font-semibold mb-4">Enrollment Trends</h3>
-                    <div class="chart-container h-64">
-                        <canvas id="admin-enrollmentChart"></canvas>
+
+            <!-- ============ ADD THIS NEW SECTION ============ -->
+            <!-- Teacher Subject Assignment Section -->
+            <div class="rounded-xl border bg-card overflow-hidden" id="subject-assignment-section">
+                <div class="p-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700">
+                    <h3 class="font-semibold text-lg">📚 Teacher Subject Assignment</h3>
+                    <p class="text-sm text-muted-foreground">Assign teachers to classes and subjects they teach</p>
+                </div>
+                <div class="p-6">
+                    <div class="grid gap-4 md:grid-cols-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Select Teacher *</label>
+                            <select id="assign-teacher-select" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                                <option value="">Loading teachers...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Select Class *</label>
+                            <select id="assign-class-select" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                                <option value="">Loading classes...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Select Subject *</label>
+                            <select id="assign-subject-select" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                                <option value="">Loading subjects...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Role</label>
+                            <div class="flex items-center gap-4 mt-2">
+                                <label class="flex items-center gap-2">
+                                    <input type="radio" name="teacher-role" value="subject" checked class="w-4 h-4">
+                                    <span class="text-sm">Subject Teacher</span>
+                                </label>
+                                <label class="flex items-center gap-2">
+                                    <input type="radio" name="teacher-role" value="class_teacher" class="w-4 h-4">
+                                    <span class="text-sm">Class Teacher</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button onclick="assignTeacherToSubject()" class="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
+                            <i data-lucide="plus" class="h-4 w-4"></i>
+                            Assign Teacher
+                        </button>
+                        <button onclick="refreshSubjectAssignments()" class="px-6 py-2 border rounded-lg hover:bg-accent flex items-center gap-2">
+                            <i data-lucide="refresh-cw" class="h-4 w-4"></i>
+                            Refresh
+                        </button>
+                    </div>
+                    
+                    <div class="mt-8">
+                        <h4 class="font-medium mb-3 flex items-center gap-2">
+                            <i data-lucide="list" class="h-4 w-4"></i>
+                            Current Subject Assignments
+                        </h4>
+                        <div class="overflow-x-auto rounded-lg border">
+                            <table class="w-full text-sm">
+                                <thead class="bg-muted/50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left font-medium">Teacher</th>
+                                        <th class="px-4 py-3 text-left font-medium">Class</th>
+                                        <th class="px-4 py-3 text-left font-medium">Subject</th>
+                                        <th class="px-4 py-3 text-left font-medium">Role</th>
+                                        <th class="px-4 py-3 text-center font-medium">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="subject-assignments-tbody" class="divide-y">
+                                    <tr><td colspan="5" class="text-center py-8 text-muted-foreground">No assignments yet. Use the form above to assign teachers.\(
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="rounded-xl border bg-card p-6">
-                    <h3 class="font-semibold mb-4">Grade Distribution</h3>
-                    <div class="chart-container h-64">
-                        <canvas id="admin-gradeChart"></canvas>
-                    </div>
+            </div>
+            <!-- ============ END NEW SECTION ============ -->
+
+            <!-- Student Management Table (keep existing) -->
+            <div class="rounded-xl border bg-card overflow-hidden">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h3 class="font-semibold">Student Management</h3>
+                    <button onclick="refreshAdminStudentList()" class="px-3 py-1 border rounded-lg text-sm hover:bg-accent">Refresh</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-muted/50">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-medium">Student</th>
+                                <th class="px-4 py-3 text-left font-medium">ELIMUID</th>
+                                <th class="px-4 py-3 text-left font-medium">Grade</th>
+                                <th class="px-4 py-3 text-left font-medium">Status</th>
+                                <th class="px-4 py-3 text-left font-medium">Parent(s)</th>
+                                <th class="px-4 py-3 text-right font-medium">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-students-table-body" class="divide-y">
+                            <tr><td colspan="6" class="px-4 py-8 text-center text-muted-foreground">Loading students...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Pending Teachers Table (keep existing) -->
+            <div class="rounded-xl border bg-card overflow-hidden">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h3 class="font-semibold">Pending Teacher Approvals</h3>
+                    <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full" id="pending-count">0</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-muted/50">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-medium">Teacher</th>
+                                <th class="px-4 py-3 text-left font-medium">Email</th>
+                                <th class="px-4 py-3 text-left font-medium">Subjects</th>
+                                <th class="px-4 py-3 text-left font-medium">Applied</th>
+                                <th class="px-4 py-3 text-right font-medium">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pending-teachers-table">
+                            <tr><td colspan="5" class="px-4 py-8 text-center text-muted-foreground">No pending approvals</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
