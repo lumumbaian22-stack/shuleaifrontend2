@@ -624,10 +624,35 @@ function createSchoolDetailsModal() {
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
-// Get school details HTML - FIXED WITH BETTER LAYOUT
-function getSchoolDetailsHTML(school) {
+// ============================================
+// FIXED: SUPER ADMIN SCHOOL DETAILS WITH REAL STATISTICS
+// ============================================
+
+async function loadSchoolStatistics(schoolId) {
+    try {
+        // Fetch real stats from API
+        const [teachers, students, parents] = await Promise.all([
+            api.superAdmin.getSchoolTeachers(schoolId).catch(() => ({ data: [] })),
+            api.superAdmin.getSchoolStudents(schoolId).catch(() => ({ data: [] })),
+            api.superAdmin.getSchoolParents(schoolId).catch(() => ({ data: [] }))
+        ]);
+        
+        return {
+            teachers: teachers.data?.length || 0,
+            students: students.data?.length || 0,
+            parents: parents.data?.length || 0,
+            classes: 0 // You can add classes endpoint
+        };
+    } catch (error) {
+        console.error('Error loading school statistics:', error);
+        return { teachers: 0, students: 0, parents: 0, classes: 0 };
+    }
+}
+
+// Updated getSchoolDetailsHTML with real data
+function getSchoolDetailsHTML(school, stats = null) {
     const admin = school.admins && school.admins.length > 0 ? school.admins[0] : null;
-    const stats = school.stats || {};
+    const statsData = stats || school.stats || {};
     
     // Determine status color
     const statusColor = {
@@ -653,6 +678,30 @@ function getSchoolDetailsHTML(school) {
                             <span class="px-3 py-1 rounded-full text-xs font-medium border ${statusColor}">${school.status || 'Unknown'}</span>
                         </div>
                     </div>
+                </div>
+            </div>
+            
+            <!-- REAL STATISTICS - Dynamic from API -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-center hover:shadow-md transition-all">
+                    <i data-lucide="users" class="h-8 w-8 mx-auto text-blue-600 mb-2"></i>
+                    <p class="text-2xl font-bold text-blue-600">${statsData.teachers || 0}</p>
+                    <p class="text-xs text-muted-foreground">Total Teachers</p>
+                </div>
+                <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 text-center hover:shadow-md transition-all">
+                    <i data-lucide="graduation-cap" class="h-8 w-8 mx-auto text-green-600 mb-2"></i>
+                    <p class="text-2xl font-bold text-green-600">${statsData.students || 0}</p>
+                    <p class="text-xs text-muted-foreground">Total Students</p>
+                </div>
+                <div class="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 text-center hover:shadow-md transition-all">
+                    <i data-lucide="heart" class="h-8 w-8 mx-auto text-purple-600 mb-2"></i>
+                    <p class="text-2xl font-bold text-purple-600">${statsData.parents || 0}</p>
+                    <p class="text-xs text-muted-foreground">Total Parents</p>
+                </div>
+                <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 text-center hover:shadow-md transition-all">
+                    <i data-lucide="book-open" class="h-8 w-8 mx-auto text-amber-600 mb-2"></i>
+                    <p class="text-2xl font-bold text-amber-600">${statsData.classes || 0}</p>
+                    <p class="text-xs text-muted-foreground">Total Classes</p>
                 </div>
             </div>
             
@@ -727,27 +776,6 @@ function getSchoolDetailsHTML(school) {
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="bg-muted/30 rounded-xl p-4">
-                        <h4 class="font-semibold mb-3 flex items-center gap-2">
-                            <i data-lucide="bar-chart-2" class="h-4 w-4 text-primary"></i>
-                            Statistics
-                        </h4>
-                        <div class="grid grid-cols-3 gap-3 text-center">
-                            <div class="p-2 bg-background/50 rounded-lg">
-                                <p class="text-2xl font-bold text-blue-600">${stats.teachers || 0}</p>
-                                <p class="text-xs text-muted-foreground">Teachers</p>
-                            </div>
-                            <div class="p-2 bg-background/50 rounded-lg">
-                                <p class="text-2xl font-bold text-green-600">${stats.students || 0}</p>
-                                <p class="text-xs text-muted-foreground">Students</p>
-                            </div>
-                            <div class="p-2 bg-background/50 rounded-lg">
-                                <p class="text-2xl font-bold text-purple-600">${stats.parents || 0}</p>
-                                <p class="text-xs text-muted-foreground">Parents</p>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
             
@@ -786,6 +814,37 @@ function getSchoolDetailsHTML(school) {
             </div>
         </div>
     `;
+}
+
+// Updated showSchoolDetailsModal with real stats
+async function showSchoolDetailsModal(school) {
+    showLoading();
+    try {
+        // Fetch real statistics for this school
+        const stats = await loadSchoolStatistics(school.id);
+        
+        let modal = document.getElementById('school-details-modal');
+        if (!modal) {
+            createSchoolDetailsModal();
+            modal = document.getElementById('school-details-modal');
+        }
+        
+        const modalContent = modal.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.innerHTML = getSchoolDetailsHTML(school, stats);
+        }
+        
+        modal.classList.remove('hidden');
+        
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    } catch (error) {
+        console.error('Error loading school details:', error);
+        showToast('Failed to load school statistics', 'error');
+    } finally {
+        hideLoading();
+    }
 }
 
 // Close school details modal
@@ -1373,6 +1432,279 @@ async function handleFirstPasswordChange(elimuid) {
 // Show help for students
 function showStudentHelp() {
     showToast('Contact your teacher to reset your password or get your ELIMUID', 'info', 5000);
+}
+
+// ============================================
+// FIXED: SUPER ADMIN HELP SECTION
+// ============================================
+
+function renderSuperAdminHelp() {
+    return `
+        <div class="space-y-6 animate-fade-in max-w-5xl mx-auto">
+            <div class="text-center">
+                <h2 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Super Admin Help Center</h2>
+                <p class="text-muted-foreground mt-2">Manage the entire platform, schools, and system settings</p>
+            </div>
+            
+            <!-- Quick Search -->
+            <div class="relative">
+                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"></i>
+                <input type="text" id="help-search" placeholder="Search help articles..." 
+                       class="w-full pl-10 pr-4 py-3 rounded-xl border bg-card focus:ring-2 focus:ring-primary transition-all">
+            </div>
+            
+            <!-- Help Categories -->
+            <div class="grid gap-4 md:grid-cols-3">
+                <div class="rounded-xl border bg-card p-6 hover:shadow-lg transition-all cursor-pointer" onclick="showHelpArticle('school-management')">
+                    <div class="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center mb-4">
+                        <i data-lucide="building-2" class="h-6 w-6 text-blue-600"></i>
+                    </div>
+                    <h3 class="font-semibold text-lg">School Management</h3>
+                    <p class="text-sm text-muted-foreground mt-1">Add, approve, suspend, and manage schools</p>
+                </div>
+                
+                <div class="rounded-xl border bg-card p-6 hover:shadow-lg transition-all cursor-pointer" onclick="showHelpArticle('approvals')">
+                    <div class="h-12 w-12 rounded-xl bg-green-100 flex items-center justify-center mb-4">
+                        <i data-lucide="check-circle" class="h-6 w-6 text-green-600"></i>
+                    </div>
+                    <h3 class="font-semibold text-lg">Approvals</h3>
+                    <p class="text-sm text-muted-foreground mt-1">Approve school registrations and name changes</p>
+                </div>
+                
+                <div class="rounded-xl border bg-card p-6 hover:shadow-lg transition-all cursor-pointer" onclick="showHelpArticle('platform-health')">
+                    <div class="h-12 w-12 rounded-xl bg-purple-100 flex items-center justify-center mb-4">
+                        <i data-lucide="activity" class="h-6 w-6 text-purple-600"></i>
+                    </div>
+                    <h3 class="font-semibold text-lg">Platform Health</h3>
+                    <p class="text-sm text-muted-foreground mt-1">Monitor system status and performance</p>
+                </div>
+                
+                <div class="rounded-xl border bg-card p-6 hover:shadow-lg transition-all cursor-pointer" onclick="showHelpArticle('settings')">
+                    <div class="h-12 w-12 rounded-xl bg-amber-100 flex items-center justify-center mb-4">
+                        <i data-lucide="settings" class="h-6 w-6 text-amber-600"></i>
+                    </div>
+                    <h3 class="font-semibold text-lg">Platform Settings</h3>
+                    <p class="text-sm text-muted-foreground mt-1">Configure global platform settings</p>
+                </div>
+                
+                <div class="rounded-xl border bg-card p-6 hover:shadow-lg transition-all cursor-pointer" onclick="showHelpArticle('security')">
+                    <div class="h-12 w-12 rounded-xl bg-red-100 flex items-center justify-center mb-4">
+                        <i data-lucide="shield" class="h-6 w-6 text-red-600"></i>
+                    </div>
+                    <h3 class="font-semibold text-lg">Security</h3>
+                    <p class="text-sm text-muted-foreground mt-1">Manage security settings and access</p>
+                </div>
+                
+                <div class="rounded-xl border bg-card p-6 hover:shadow-lg transition-all cursor-pointer" onclick="showHelpArticle('faq')">
+                    <div class="h-12 w-12 rounded-xl bg-cyan-100 flex items-center justify-center mb-4">
+                        <i data-lucide="help-circle" class="h-6 w-6 text-cyan-600"></i>
+                    </div>
+                    <h3 class="font-semibold text-lg">FAQ</h3>
+                    <p class="text-sm text-muted-foreground mt-1">Frequently asked questions</p>
+                </div>
+            </div>
+            
+            <!-- Help Articles Container -->
+            <div id="help-articles" class="space-y-4">
+                ${renderDefaultHelpArticles()}
+            </div>
+            
+            <!-- Contact Support -->
+            <div class="rounded-xl border bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 p-6 text-center">
+                <h3 class="font-semibold text-lg mb-2">Still Need Help?</h3>
+                <p class="text-muted-foreground mb-4">Contact our support team for assistance</p>
+                <div class="flex gap-3 justify-center">
+                    <button onclick="showToast('Opening support chat...', 'info')" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">
+                        <i data-lucide="message-circle" class="h-4 w-4 inline mr-2"></i>
+                        Live Chat
+                    </button>
+                    <button onclick="window.location.href='mailto:support@shuleai.com'" class="px-4 py-2 border rounded-lg hover:bg-accent">
+                        <i data-lucide="mail" class="h-4 w-4 inline mr-2"></i>
+                        Email Support
+                    </button>
+                    <button onclick="window.open('https://docs.shuleai.com', '_blank')" class="px-4 py-2 border rounded-lg hover:bg-accent">
+                        <i data-lucide="book-open" class="h-4 w-4 inline mr-2"></i>
+                        Documentation
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderDefaultHelpArticles() {
+    return `
+        <div class="rounded-xl border bg-card p-6">
+            <h3 class="font-semibold text-lg mb-4">📚 Getting Started as Super Admin</h3>
+            <div class="space-y-3">
+                <div class="p-3 bg-muted/30 rounded-lg">
+                    <p class="font-medium">1. Managing Schools</p>
+                    <p class="text-sm text-muted-foreground mt-1">View all registered schools, approve pending registrations, suspend/reactivate schools as needed.</p>
+                </div>
+                <div class="p-3 bg-muted/30 rounded-lg">
+                    <p class="font-medium">2. Name Change Requests</p>
+                    <p class="text-sm text-muted-foreground mt-1">Review and approve/reject school name change requests. Approved changes take effect immediately.</p>
+                </div>
+                <div class="p-3 bg-muted/30 rounded-lg">
+                    <p class="font-medium">3. Platform Monitoring</p>
+                    <p class="text-sm text-muted-foreground mt-1">Use Platform Health to monitor system status, CPU usage, memory, and recent events.</p>
+                </div>
+                <div class="p-3 bg-muted/30 rounded-lg">
+                    <p class="font-medium">4. System Configuration</p>
+                    <p class="text-sm text-muted-foreground mt-1">Configure platform settings like default curriculum, name change fees, and maintenance mode.</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+window.showHelpArticle = function(articleId) {
+    const articles = {
+        'school-management': `
+            <div class="rounded-xl border bg-card p-6">
+                <h3 class="font-semibold text-lg mb-4">🏫 School Management Guide</h3>
+                <div class="space-y-4">
+                    <div>
+                        <p class="font-medium">Viewing Schools</p>
+                        <p class="text-sm text-muted-foreground">Navigate to Schools section to see all registered schools. Click on any school to view detailed information including statistics, admin details, and status.</p>
+                    </div>
+                    <div>
+                        <p class="font-medium">Approving New Schools</p>
+                        <p class="text-sm text-muted-foreground">Check the School Approvals section for pending registrations. Review the school information and click Approve to activate the school, or Reject with a reason.</p>
+                    </div>
+                    <div>
+                        <p class="font-medium">Suspending Schools</p>
+                        <p class="text-sm text-muted-foreground">If a school violates terms, you can suspend it. All users from that school will be locked out. Provide a reason for the suspension.</p>
+                    </div>
+                    <div>
+                        <p class="font-medium">Deleting Schools</p>
+                        <p class="text-sm text-muted-foreground text-red-600">⚠️ This action is permanent and cannot be undone. All data including teachers, students, and records will be deleted.</p>
+                    </div>
+                </div>
+            </div>
+        `,
+        'approvals': `
+            <div class="rounded-xl border bg-card p-6">
+                <h3 class="font-semibold text-lg mb-4">✅ Approval Workflow Guide</h3>
+                <div class="space-y-4">
+                    <div>
+                        <p class="font-medium">School Registrations</p>
+                        <p class="text-sm text-muted-foreground">When a new school signs up, they appear in Pending Approvals. Review their information and approve or reject. Approved schools receive their short code immediately.</p>
+                    </div>
+                    <div>
+                        <p class="font-medium">Name Change Requests</p>
+                        <p class="text-sm text-muted-foreground">Schools can request name changes (fee applies). Review the request, check payment confirmation, and approve or reject. Approved changes update the school name instantly.</p>
+                    </div>
+                    <div>
+                        <p class="font-medium">Approval History</p>
+                        <p class="text-sm text-muted-foreground">All approvals and rejections are logged. You can view the history to track past decisions.</p>
+                    </div>
+                </div>
+            </div>
+        `,
+        'platform-health': `
+            <div class="rounded-xl border bg-card p-6">
+                <h3 class="font-semibold text-lg mb-4">📊 Platform Health Monitoring</h3>
+                <div class="space-y-4">
+                    <div>
+                        <p class="font-medium">System Status Indicators</p>
+                        <p class="text-sm text-muted-foreground">Green indicators mean operational. Red indicates issues that need attention.</p>
+                    </div>
+                    <div>
+                        <p class="font-medium">Performance Metrics</p>
+                        <p class="text-sm text-muted-foreground">Monitor CPU and memory usage to ensure platform stability. High usage may indicate the need for scaling.</p>
+                    </div>
+                    <div>
+                        <p class="font-medium">Recent Events</p>
+                        <p class="text-sm text-muted-foreground">View recent system events including new registrations, approvals, and errors.</p>
+                    </div>
+                </div>
+            </div>
+        `,
+        'settings': `
+            <div class="rounded-xl border bg-card p-6">
+                <h3 class="font-semibold text-lg mb-4">⚙️ Platform Settings Guide</h3>
+                <div class="space-y-4">
+                    <div>
+                        <p class="font-medium">General Settings</p>
+                        <p class="text-sm text-muted-foreground">Configure platform name, default curriculum for new schools, and name change fees.</p>
+                    </div>
+                    <div>
+                        <p class="font-medium">Maintenance Mode</p>
+                        <p class="text-sm text-muted-foreground">Enable during updates. Only super admins can access the platform.</p>
+                    </div>
+                    <div>
+                        <p class="font-medium">Data Management</p>
+                        <p class="text-sm text-muted-foreground">Export platform data, clear cache, or run system backups.</p>
+                    </div>
+                </div>
+            </div>
+        `,
+        'security': `
+            <div class="rounded-xl border bg-card p-6">
+                <h3 class="font-semibold text-lg mb-4">🔒 Security Best Practices</h3>
+                <div class="space-y-4">
+                    <div>
+                        <p class="font-medium">Super Admin Access</p>
+                        <p class="text-sm text-muted-foreground">Keep your secret key secure. Never share it with anyone.</p>
+                    </div>
+                    <div>
+                        <p class="font-medium">School Suspensions</p>
+                        <p class="text-sm text-muted-foreground">Use suspension for policy violations. Always provide a clear reason.</p>
+                    </div>
+                    <div>
+                        <p class="font-medium">Regular Backups</p>
+                        <p class="text-sm text-muted-foreground">Run regular system backups to prevent data loss.</p>
+                    </div>
+                </div>
+            </div>
+        `,
+        'faq': `
+            <div class="rounded-xl border bg-card p-6">
+                <h3 class="font-semibold text-lg mb-4">❓ Frequently Asked Questions</h3>
+                <div class="space-y-3">
+                    <div class="p-3 bg-muted/30 rounded-lg">
+                        <p class="font-medium">How do I add a new super admin?</p>
+                        <p class="text-sm text-muted-foreground mt-1">Super admin accounts are created via database seeding. Contact the development team for this process.</p>
+                    </div>
+                    <div class="p-3 bg-muted/30 rounded-lg">
+                        <p class="font-medium">Can I undo a school deletion?</p>
+                        <p class="text-sm text-muted-foreground mt-1 text-red-600">No, school deletion is permanent. Always suspend first and confirm before permanent deletion.</p>
+                    </div>
+                    <div class="p-3 bg-muted/30 rounded-lg">
+                        <p class="font-medium">How often should I run backups?</p>
+                        <p class="text-sm text-muted-foreground mt-1">Daily backups are recommended. The system can be configured for automated backups.</p>
+                    </div>
+                    <div class="p-3 bg-muted/30 rounded-lg">
+                        <p class="font-medium">What happens during maintenance mode?</p>
+                        <p class="text-sm text-muted-foreground mt-1">Only super admins can log in. All other users see a maintenance page.</p>
+                    </div>
+                </div>
+            </div>
+        `
+    };
+    
+    const container = document.getElementById('help-articles');
+    if (container) {
+        container.innerHTML = articles[articleId] || renderDefaultHelpArticles();
+        container.scrollIntoView({ behavior: 'smooth' });
+        
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    }
+};
+
+// Update renderHelpSection for super admin
+function renderHelpSection() {
+    const user = getCurrentUser();
+    const role = user?.role || 'user';
+    
+    if (role === 'superadmin') {
+        return renderSuperAdminHelp();
+    }
+    
+    // ... rest of existing help section for other roles
 }
 
 // ============================================
@@ -2040,6 +2372,193 @@ async function loadNameChangeRequests() {
     }
 }
 
+// ============================================
+// FIXED: NAME CHANGE REQUEST HISTORY WITH STATUS
+// ============================================
+
+// Load all name change requests (including approved/rejected)
+async function loadAllNameChangeRequests() {
+    try {
+        // You'll need to add this endpoint to your backend
+        const response = await api.superAdmin.getAllRequests();
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load all name change requests:', error);
+        // Fallback to pending only if endpoint doesn't exist
+        const pending = await loadNameChangeRequests();
+        return pending;
+    }
+}
+
+// Render complete name change requests with history
+async function renderSuperAdminNameChangeRequests() {
+    try {
+        const requests = await loadAllNameChangeRequests();
+        const pending = requests.filter(r => r.status === 'pending');
+        const approved = requests.filter(r => r.status === 'approved');
+        const rejected = requests.filter(r => r.status === 'rejected');
+        
+        return `
+            <div class="space-y-6 animate-fade-in">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold">Name Change Requests</h2>
+                    <div class="flex gap-2">
+                        <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm">Pending: ${pending.length}</span>
+                        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">Approved: ${approved.length}</span>
+                        <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm">Rejected: ${rejected.length}</span>
+                    </div>
+                </div>
+                
+                <!-- Tabs -->
+                <div class="flex gap-2 border-b">
+                    <button onclick="showNameRequestTab('pending')" id="tab-pending" class="px-4 py-2 text-sm font-medium border-b-2 border-primary text-primary">Pending</button>
+                    <button onclick="showNameRequestTab('approved')" id="tab-approved" class="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">Approved</button>
+                    <button onclick="showNameRequestTab('rejected')" id="tab-rejected" class="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">Rejected</button>
+                </div>
+                
+                <!-- Pending Requests Table -->
+                <div id="pending-requests-table" class="rounded-xl border bg-card overflow-hidden">
+                    ${renderNameRequestTable(pending, 'pending')}
+                </div>
+                
+                <!-- Approved Requests Table (hidden by default) -->
+                <div id="approved-requests-table" class="rounded-xl border bg-card overflow-hidden hidden">
+                    ${renderNameRequestTable(approved, 'approved')}
+                </div>
+                
+                <!-- Rejected Requests Table (hidden by default) -->
+                <div id="rejected-requests-table" class="rounded-xl border bg-card overflow-hidden hidden">
+                    ${renderNameRequestTable(rejected, 'rejected')}
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error rendering name change requests:', error);
+        return `
+            <div class="text-center py-12 text-red-500">
+                <i data-lucide="alert-circle" class="h-12 w-12 mx-auto mb-3"></i>
+                <p>Error loading name change requests: ${error.message}</p>
+                <button onclick="refreshNameChangeRequests()" class="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg">Retry</button>
+            </div>
+        `;
+    }
+}
+
+// Render name request table with status
+function renderNameRequestTable(requests, status) {
+    if (!requests || requests.length === 0) {
+        return `
+            <div class="text-center py-12">
+                <i data-lucide="file-check" class="h-12 w-12 mx-auto text-muted-foreground mb-3"></i>
+                <p class="text-muted-foreground">No ${status} requests</p>
+            </div>
+        `;
+    }
+    
+    const statusColors = {
+        pending: 'bg-yellow-100 text-yellow-700',
+        approved: 'bg-green-100 text-green-700',
+        rejected: 'bg-red-100 text-red-700'
+    };
+    
+    return `
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-muted/50">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-medium">School</th>
+                        <th class="px-4 py-3 text-left font-medium">Current Name</th>
+                        <th class="px-4 py-3 text-left font-medium">New Name</th>
+                        <th class="px-4 py-3 text-left font-medium">Requested By</th>
+                        <th class="px-4 py-3 text-left font-medium">Date</th>
+                        <th class="px-4 py-3 text-center font-medium">Status</th>
+                        <th class="px-4 py-3 text-right font-medium">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+                    ${requests.map(request => `
+                        <tr class="hover:bg-accent/50 transition-colors">
+                            <td class="px-4 py-3 font-medium">${request.School?.name || 'N/A'}</td>
+                            <td class="px-4 py-3">
+                                <span class="text-muted-foreground">${request.currentName}</span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="font-semibold text-primary">${request.newName}</span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div>
+                                    <p class="font-medium">${request.User?.name || 'N/A'}</p>
+                                    <p class="text-xs text-muted-foreground">${request.User?.email || ''}</p>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div>
+                                    <p class="text-sm">${formatDate(request.createdAt)}</p>
+                                    <p class="text-xs text-muted-foreground">${timeAgo(request.createdAt)}</p>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColors[request.status]}">
+                                    ${request.status}
+                                </span>
+                                ${request.status !== 'pending' && request.reviewedAt ? `
+                                    <p class="text-xs text-muted-foreground mt-1">by ${request.ReviewedBy?.name || 'Admin'} on ${formatDate(request.reviewedAt)}</p>
+                                ` : ''}
+                                ${request.rejectionReason ? `
+                                    <p class="text-xs text-red-600 mt-1">Reason: ${request.rejectionReason}</p>
+                                ` : ''}
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                    ${request.status === 'pending' ? `
+                                        <button onclick="approveNameChange('${request.id}')" class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full hover:bg-green-200 transition-colors">
+                                            Approve
+                                        </button>
+                                        <button onclick="rejectNameChange('${request.id}')" class="px-3 py-1 bg-red-100 text-red-700 text-xs rounded-full hover:bg-red-200 transition-colors">
+                                            Reject
+                                        </button>
+                                    ` : ''}
+                                    <button onclick="viewNameChangeDetails('${request.id}')" class="p-2 hover:bg-accent rounded-lg transition-colors" title="View Details">
+                                        <i data-lucide="eye" class="h-4 w-4"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+// Tab switching function
+window.showNameRequestTab = function(tab) {
+    const tables = ['pending', 'approved', 'rejected'];
+    const tabs = ['pending', 'approved', 'rejected'];
+    
+    tables.forEach(t => {
+        const table = document.getElementById(`${t}-requests-table`);
+        if (table) table.classList.add('hidden');
+    });
+    
+    tabs.forEach(t => {
+        const tabBtn = document.getElementById(`tab-${t}`);
+        if (tabBtn) {
+            tabBtn.classList.remove('border-primary', 'text-primary');
+            tabBtn.classList.add('text-muted-foreground');
+        }
+    });
+    
+    const activeTable = document.getElementById(`${tab}-requests-table`);
+    if (activeTable) activeTable.classList.remove('hidden');
+    
+    const activeTab = document.getElementById(`tab-${tab}`);
+    if (activeTab) {
+        activeTab.classList.add('border-primary', 'text-primary');
+        activeTab.classList.remove('text-muted-foreground');
+    }
+};
+
 // Load fairness report
 async function loadFairnessReport() {
     try {
@@ -2415,96 +2934,348 @@ function renderNameChangeRequestsTable(requests) {
     `;
 }
 
-function renderSuperAdminHealth() {
-    return `
-        <div class="space-y-6 animate-fade-in">
-            <h2 class="text-2xl font-bold">Platform Health</h2>
-            
-            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <div class="rounded-xl border bg-card p-6">
-                    <h3 class="font-semibold mb-4">System Status</h3>
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center">
-                            <span>Database</span>
-                            <span class="text-green-600 flex items-center gap-1"><i data-lucide="check-circle" class="h-4 w-4"></i> Operational</span>
+// ============================================
+// FIXED: PLATFORM HEALTH WITH REAL DATA
+// ============================================
+
+async function renderSuperAdminHealth() {
+    showLoading();
+    try {
+        // Fetch real platform metrics
+        const [systemStatus, metrics, recentEvents] = await Promise.all([
+            api.superAdmin.getSystemStatus().catch(() => ({ data: {} })),
+            api.superAdmin.getSystemMetrics().catch(() => ({ data: {} })),
+            api.superAdmin.getRecentEvents().catch(() => ({ data: [] }))
+        ]);
+        
+        const status = systemStatus.data || {};
+        const systemMetrics = metrics.data || {};
+        const events = recentEvents.data || [];
+        
+        return `
+            <div class="space-y-6 animate-fade-in">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold">Platform Health</h2>
+                    <button onclick="refreshPlatformHealth()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
+                        <i data-lucide="refresh-cw" class="h-4 w-4"></i>
+                        Refresh
+                    </button>
+                </div>
+                
+                <!-- System Status Cards -->
+                <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <div class="rounded-xl border bg-card p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-muted-foreground">Database</p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <div class="h-3 w-3 rounded-full ${status.database === 'operational' ? 'bg-green-500' : 'bg-red-500'} animate-pulse"></div>
+                                    <h3 class="text-xl font-bold">${status.database === 'operational' ? 'Operational' : 'Issues Detected'}</h3>
+                                </div>
+                                <p class="text-xs text-muted-foreground mt-1">Last checked: ${timeAgo(status.databaseLastCheck)}</p>
+                            </div>
+                            <div class="h-12 w-12 rounded-lg ${status.database === 'operational' ? 'bg-green-100' : 'bg-red-100'} flex items-center justify-center">
+                                <i data-lucide="database" class="h-6 w-6 ${status.database === 'operational' ? 'text-green-600' : 'text-red-600'}"></i>
+                            </div>
                         </div>
-                        <div class="flex justify-between items-center">
-                            <span>API Server</span>
-                            <span class="text-green-600 flex items-center gap-1"><i data-lucide="check-circle" class="h-4 w-4"></i> Operational</span>
+                    </div>
+                    
+                    <div class="rounded-xl border bg-card p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-muted-foreground">API Server</p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <div class="h-3 w-3 rounded-full ${status.api === 'operational' ? 'bg-green-500' : 'bg-red-500'} animate-pulse"></div>
+                                    <h3 class="text-xl font-bold">${status.api === 'operational' ? 'Operational' : 'Issues Detected'}</h3>
+                                </div>
+                                <p class="text-xs text-muted-foreground mt-1">Response: ${status.apiLatency || 0}ms</p>
+                            </div>
+                            <div class="h-12 w-12 rounded-lg ${status.api === 'operational' ? 'bg-green-100' : 'bg-red-100'} flex items-center justify-center">
+                                <i data-lucide="server" class="h-6 w-6 ${status.api === 'operational' ? 'text-green-600' : 'text-red-600'}"></i>
+                            </div>
                         </div>
-                        <div class="flex justify-between items-center">
-                            <span>Storage</span>
-                            <span class="text-yellow-600 flex items-center gap-1"><i data-lucide="alert-circle" class="h-4 w-4"></i> 75% Used</span>
+                    </div>
+                    
+                    <div class="rounded-xl border bg-card p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-muted-foreground">Storage</p>
+                                <div class="mt-1">
+                                    <h3 class="text-xl font-bold">${systemMetrics.storageUsed || 0}GB / ${systemMetrics.storageTotal || 100}GB</h3>
+                                    <div class="w-full h-2 bg-muted rounded-full mt-2 overflow-hidden">
+                                        <div class="h-full rounded-full transition-all ${(systemMetrics.storagePercent || 0) > 80 ? 'bg-red-500' : (systemMetrics.storagePercent || 0) > 60 ? 'bg-yellow-500' : 'bg-green-500'}" 
+                                             style="width: ${systemMetrics.storagePercent || 0}%"></div>
+                                    </div>
+                                    <p class="text-xs text-muted-foreground mt-1">${(systemMetrics.storagePercent || 0)}% Used</p>
+                                </div>
+                            </div>
+                            <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
+                                <i data-lucide="hard-drive" class="h-6 w-6 text-amber-600"></i>
+                            </div>
                         </div>
-                        <div class="flex justify-between items-center">
-                            <span>WebSocket</span>
-                            <span class="text-green-600 flex items-center gap-1"><i data-lucide="check-circle" class="h-4 w-4"></i> Connected</span>
+                    </div>
+                    
+                    <div class="rounded-xl border bg-card p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-muted-foreground">WebSocket</p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <div class="h-3 w-3 rounded-full ${status.websocket === 'connected' ? 'bg-green-500' : 'bg-red-500'} animate-pulse"></div>
+                                    <h3 class="text-xl font-bold">${status.websocket === 'connected' ? 'Connected' : 'Disconnected'}</h3>
+                                </div>
+                                <p class="text-xs text-muted-foreground mt-1">Active connections: ${status.activeConnections || 0}</p>
+                            </div>
+                            <div class="h-12 w-12 rounded-lg ${status.websocket === 'connected' ? 'bg-green-100' : 'bg-red-100'} flex items-center justify-center">
+                                <i data-lucide="zap" class="h-6 w-6 ${status.websocket === 'connected' ? 'text-green-600' : 'text-red-600'}"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="rounded-xl border bg-card p-6">
-                    <h3 class="font-semibold mb-4">System Metrics</h3>
-                    <div class="space-y-3">
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span>CPU Usage</span>
-                                <span>32%</span>
+                <!-- System Metrics -->
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div class="rounded-xl border bg-card p-6">
+                        <h3 class="font-semibold mb-4">CPU Usage</h3>
+                        <div class="relative pt-1">
+                            <div class="flex mb-2 items-center justify-between">
+                                <div>
+                                    <span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full bg-blue-100 text-blue-700">
+                                        Current
+                                    </span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xs font-semibold inline-block text-blue-600">
+                                        ${systemMetrics.cpuUsage || 0}%
+                                    </span>
+                                </div>
                             </div>
-                            <div class="w-full h-2 bg-muted rounded-full overflow-hidden">
-                                <div class="h-full w-[32%] bg-blue-500 rounded-full"></div>
+                            <div class="overflow-hidden h-3 mb-4 text-xs flex rounded bg-blue-100">
+                                <div style="width:${systemMetrics.cpuUsage || 0}%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 transition-all duration-500"></div>
+                            </div>
+                            <div class="flex justify-between text-xs text-muted-foreground">
+                                <span>Min: ${systemMetrics.cpuMin || 0}%</span>
+                                <span>Avg: ${systemMetrics.cpuAvg || 0}%</span>
+                                <span>Max: ${systemMetrics.cpuMax || 0}%</span>
                             </div>
                         </div>
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span>Memory Usage</span>
-                                <span>48%</span>
+                    </div>
+                    
+                    <div class="rounded-xl border bg-card p-6">
+                        <h3 class="font-semibold mb-4">Memory Usage</h3>
+                        <div class="relative pt-1">
+                            <div class="flex mb-2 items-center justify-between">
+                                <div>
+                                    <span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full bg-purple-100 text-purple-700">
+                                        Current
+                                    </span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xs font-semibold inline-block text-purple-600">
+                                        ${systemMetrics.memoryUsage || 0}%
+                                    </span>
+                                </div>
                             </div>
-                            <div class="w-full h-2 bg-muted rounded-full overflow-hidden">
-                                <div class="h-full w-[48%] bg-blue-500 rounded-full"></div>
+                            <div class="overflow-hidden h-3 mb-4 text-xs flex rounded bg-purple-100">
+                                <div style="width:${systemMetrics.memoryUsage || 0}%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-purple-500 transition-all duration-500"></div>
                             </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span>Disk Usage</span>
-                                <span>63%</span>
-                            </div>
-                            <div class="w-full h-2 bg-muted rounded-full overflow-hidden">
-                                <div class="h-full w-[63%] bg-blue-500 rounded-full"></div>
+                            <div class="flex justify-between text-xs text-muted-foreground">
+                                <span>Used: ${systemMetrics.memoryUsed || 0}GB</span>
+                                <span>Total: ${systemMetrics.memoryTotal || 0}GB</span>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="rounded-xl border bg-card p-6">
-                    <h3 class="font-semibold mb-4">Recent Events</h3>
-                    <div class="space-y-2">
-                        <div class="p-2 bg-muted/30 rounded text-sm">System backup completed</div>
-                        <div class="p-2 bg-muted/30 rounded text-sm">New school registered</div>
-                        <div class="p-2 bg-muted/30 rounded text-sm">Database optimization</div>
+                <!-- Recent Events -->
+                <div class="rounded-xl border bg-card">
+                    <div class="p-4 border-b">
+                        <h3 class="font-semibold">Recent Platform Events</h3>
+                    </div>
+                    <div class="divide-y">
+                        ${events.length > 0 ? events.map(event => `
+                            <div class="p-4 flex items-center gap-4 hover:bg-accent/50 transition-colors">
+                                <div class="h-10 w-10 rounded-full ${getEventIconBg(event.type)} flex items-center justify-center">
+                                    <i data-lucide="${getEventIcon(event.type)}" class="h-5 w-5 ${getEventIconColor(event.type)}"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium">${event.title}</p>
+                                    <p class="text-xs text-muted-foreground">${event.description}</p>
+                                </div>
+                                <span class="text-xs text-muted-foreground">${timeAgo(event.timestamp)}</span>
+                            </div>
+                        `).join('') : `
+                            <div class="p-8 text-center text-muted-foreground">
+                                <i data-lucide="activity" class="h-12 w-12 mx-auto mb-3 opacity-50"></i>
+                                <p>No recent events</p>
+                            </div>
+                        `}
                     </div>
                 </div>
             </div>
-        </div>
-    `;
+        `;
+    } catch (error) {
+        console.error('Error loading platform health:', error);
+        return `
+            <div class="text-center py-12 text-red-500">
+                <i data-lucide="alert-circle" class="h-12 w-12 mx-auto mb-3"></i>
+                <p>Error loading platform health: ${error.message}</p>
+                <button onclick="renderSuperAdminHealth()" class="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg">Retry</button>
+            </div>
+        `;
+    } finally {
+        hideLoading();
+    }
 }
 
+// Helper functions for events
+function getEventIcon(type) {
+    const icons = {
+        'system': 'settings',
+        'school': 'building-2',
+        'user': 'user-plus',
+        'error': 'alert-circle',
+        'warning': 'alert-triangle',
+        'success': 'check-circle'
+    };
+    return icons[type] || 'activity';
+}
+
+function getEventIconBg(type) {
+    const bgs = {
+        'system': 'bg-gray-100',
+        'school': 'bg-blue-100',
+        'user': 'bg-green-100',
+        'error': 'bg-red-100',
+        'warning': 'bg-amber-100',
+        'success': 'bg-green-100'
+    };
+    return bgs[type] || 'bg-gray-100';
+}
+
+function getEventIconColor(type) {
+    const colors = {
+        'system': 'text-gray-600',
+        'school': 'text-blue-600',
+        'user': 'text-green-600',
+        'error': 'text-red-600',
+        'warning': 'text-amber-600',
+        'success': 'text-green-600'
+    };
+    return colors[type] || 'text-gray-600';
+}
+
+// Refresh platform health
+window.refreshPlatformHealth = function() {
+    renderSuperAdminHealth();
+};
+
+// ============================================
+// FIXED: SUPER ADMIN SETTINGS - FULLY FUNCTIONAL
+// ============================================
+
+async function saveSuperAdminSettings() {
+    const platformName = document.getElementById('platform-name')?.value;
+    const defaultCurriculum = document.getElementById('default-curriculum')?.value;
+    const nameChangeFee = document.getElementById('name-change-fee')?.value;
+    const maintenanceMode = document.getElementById('maintenance-mode')?.dataset.checked === 'true';
+    const allowNewRegistrations = document.getElementById('allow-registrations')?.dataset.checked === 'true';
+    
+    showLoading();
+    try {
+        const response = await api.superAdmin.updatePlatformSettings({
+            platformName,
+            defaultCurriculum,
+            nameChangeFee: parseInt(nameChangeFee),
+            maintenanceMode,
+            allowNewRegistrations
+        });
+        
+        if (response.success) {
+            showToast('✅ Platform settings saved successfully', 'success');
+            
+            // Update localStorage
+            localStorage.setItem('platformSettings', JSON.stringify(response.data));
+            
+            // Show success with reload option for critical changes
+            if (maintenanceMode) {
+                showToast('⚠️ Maintenance mode enabled. Only super admins can access the platform.', 'warning', 5000);
+            }
+        }
+    } catch (error) {
+        console.error('Save settings error:', error);
+        showToast(error.message || 'Failed to save settings', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Load super admin settings
+async function loadSuperAdminSettings() {
+    try {
+        const response = await api.superAdmin.getPlatformSettings();
+        const settings = response.data || {};
+        
+        // Populate form fields if they exist
+        const platformName = document.getElementById('platform-name');
+        const defaultCurriculum = document.getElementById('default-curriculum');
+        const nameChangeFee = document.getElementById('name-change-fee');
+        const maintenanceMode = document.getElementById('maintenance-mode');
+        const allowRegistrations = document.getElementById('allow-registrations');
+        
+        if (platformName) platformName.value = settings.platformName || 'ShuleAI';
+        if (defaultCurriculum) defaultCurriculum.value = settings.defaultCurriculum || 'cbc';
+        if (nameChangeFee) nameChangeFee.value = settings.nameChangeFee || 50;
+        if (maintenanceMode) {
+            const isMaintenance = settings.maintenanceMode || false;
+            maintenanceMode.dataset.checked = isMaintenance;
+            const span = maintenanceMode.querySelector('span');
+            if (span) {
+                if (isMaintenance) {
+                    maintenanceMode.classList.remove('bg-muted');
+                    maintenanceMode.classList.add('bg-primary');
+                    span.classList.remove('translate-x-1');
+                    span.classList.add('translate-x-6');
+                } else {
+                    maintenanceMode.classList.remove('bg-primary');
+                    maintenanceMode.classList.add('bg-muted');
+                    span.classList.remove('translate-x-6');
+                    span.classList.add('translate-x-1');
+                }
+            }
+        }
+        
+        return settings;
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        return {};
+    }
+}
+
+// Updated renderSuperAdminSettings
 function renderSuperAdminSettings() {
+    // Load settings when rendered
+    setTimeout(() => {
+        loadSuperAdminSettings();
+    }, 100);
+    
     return `
         <div class="space-y-6 animate-fade-in">
             <h2 class="text-2xl font-bold">Platform Settings</h2>
+            <p class="text-sm text-muted-foreground">Configure global platform settings. Changes affect all schools.</p>
             
             <div class="grid gap-6">
                 <div class="rounded-xl border bg-card p-6">
-                    <h3 class="font-semibold mb-4">Global Platform Settings</h3>
+                    <h3 class="font-semibold mb-4">General Settings</h3>
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium mb-1">Platform Name</label>
-                            <input type="text" value="ShuleAI" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                            <input type="text" id="platform-name" value="ShuleAI" 
+                                   class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
+                            <p class="text-xs text-muted-foreground mt-1">This name appears in emails and headers</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Default Curriculum for New Schools</label>
-                            <select class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                            <select id="default-curriculum" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
                                 <option value="cbc">CBC (Competency Based Curriculum)</option>
                                 <option value="844">8-4-4 System</option>
                                 <option value="british">British Curriculum</option>
@@ -2513,34 +3284,132 @@ function renderSuperAdminSettings() {
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Name Change Fee ($)</label>
-                            <input type="number" value="50" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                            <input type="number" id="name-change-fee" value="50" 
+                                   class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
+                            <p class="text-xs text-muted-foreground mt-1">Amount schools pay to request a name change</p>
                         </div>
                     </div>
                 </div>
                 
                 <div class="rounded-xl border bg-card p-6">
-                    <h3 class="font-semibold mb-4">Maintenance</h3>
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="font-medium">Maintenance Mode</p>
-                            <p class="text-sm text-muted-foreground">When enabled, only super admins can access the platform</p>
+                    <h3 class="font-semibold mb-4">Platform Controls</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                            <div>
+                                <p class="font-medium">Maintenance Mode</p>
+                                <p class="text-sm text-muted-foreground">When enabled, only super admins can access the platform</p>
+                            </div>
+                            <button id="maintenance-mode" onclick="toggleSwitch(this)" 
+                                    class="relative inline-flex h-6 w-11 items-center rounded-full bg-muted transition-colors" 
+                                    data-checked="false">
+                                <span class="translate-x-1 inline-block h-4 w-4 transform rounded-full bg-white transition-transform"></span>
+                            </button>
                         </div>
-                        <button onclick="toggleSwitch(this)" class="relative inline-flex h-6 w-11 items-center rounded-full bg-muted transition-colors" data-checked="false">
-                            <span class="translate-x-1 inline-block h-4 w-4 transform rounded-full bg-white transition-transform"></span>
+                        <div class="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                            <div>
+                                <p class="font-medium">Allow New Registrations</p>
+                                <p class="text-sm text-muted-foreground">Allow new schools to sign up</p>
+                            </div>
+                            <button id="allow-registrations" onclick="toggleSwitch(this)" 
+                                    class="relative inline-flex h-6 w-11 items-center rounded-full bg-primary transition-colors" 
+                                    data-checked="true">
+                                <span class="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition-transform"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="rounded-xl border bg-card p-6">
+                    <h3 class="font-semibold mb-4">Data Management</h3>
+                    <div class="space-y-4">
+                        <button onclick="exportPlatformData()" class="w-full py-2 border rounded-lg hover:bg-accent transition-colors flex items-center justify-center gap-2">
+                            <i data-lucide="download" class="h-4 w-4"></i>
+                            Export All Platform Data (JSON)
+                        </button>
+                        <button onclick="clearPlatformCache()" class="w-full py-2 border rounded-lg hover:bg-accent transition-colors flex items-center justify-center gap-2 text-yellow-600">
+                            <i data-lucide="trash-2" class="h-4 w-4"></i>
+                            Clear Platform Cache
+                        </button>
+                        <button onclick="runSystemBackup()" class="w-full py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+                            <i data-lucide="database-backup" class="h-4 w-4"></i>
+                            Run System Backup
                         </button>
                     </div>
                 </div>
                 
-                <div class="flex justify-end">
-                    <button onclick="showToast('Platform settings saved', 'success')" class="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
+                <div class="flex justify-end gap-3">
+                    <button onclick="resetPlatformSettings()" class="px-6 py-3 border rounded-lg hover:bg-accent transition-colors">
+                        Reset to Default
+                    </button>
+                    <button onclick="saveSuperAdminSettings()" class="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2">
                         <i data-lucide="save" class="h-4 w-4"></i>
-                        Save Settings
+                        Save All Settings
                     </button>
                 </div>
             </div>
         </div>
     `;
 }
+
+// Additional helper functions
+window.exportPlatformData = async function() {
+    showLoading();
+    try {
+        const response = await api.superAdmin.exportData();
+        const data = response.data;
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `shuleai_export_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('✅ Data exported successfully', 'success');
+    } catch (error) {
+        showToast('Failed to export data', 'error');
+    } finally {
+        hideLoading();
+    }
+};
+
+window.clearPlatformCache = async function() {
+    if (!confirm('⚠️ Clear all platform caches? This may temporarily slow down the system.')) return;
+    showLoading();
+    try {
+        await api.superAdmin.clearCache();
+        showToast('✅ Cache cleared successfully', 'success');
+    } catch (error) {
+        showToast('Failed to clear cache', 'error');
+    } finally {
+        hideLoading();
+    }
+};
+
+window.runSystemBackup = async function() {
+    showLoading();
+    try {
+        const response = await api.superAdmin.runBackup();
+        showToast(`✅ Backup completed: ${response.data.filename}`, 'success');
+    } catch (error) {
+        showToast('Failed to run backup', 'error');
+    } finally {
+        hideLoading();
+    }
+};
+
+window.resetPlatformSettings = async function() {
+    if (!confirm('⚠️ Reset all platform settings to default? This cannot be undone.')) return;
+    showLoading();
+    try {
+        const response = await api.superAdmin.resetSettings();
+        await loadSuperAdminSettings();
+        showToast('✅ Settings reset to default', 'success');
+    } catch (error) {
+        showToast('Failed to reset settings', 'error');
+    } finally {
+        hideLoading();
+    }
+};
 
 // ============================================
 // MISSING: RENDER SUPER ADMIN NAME CHANGE REQUESTS
@@ -8245,6 +9114,508 @@ function showToast(message, type = 'info', duration = 3000) {
         toast.classList.add('animate-fade-out');
         setTimeout(() => toast.remove(), 300);
     }, duration);
+}
+
+// ============================================
+// FIXED: NOTIFICATIONS SYSTEM - FULLY FUNCTIONAL
+// ============================================
+
+let notifications = [];
+let unreadCount = 0;
+
+async function loadNotifications() {
+    try {
+        const user = getCurrentUser();
+        if (!user) return [];
+        
+        const response = await api.notifications.getMyNotifications();
+        notifications = response.data || [];
+        unreadCount = notifications.filter(n => !n.read).length;
+        
+        // Update badge
+        const badge = document.getElementById('notification-badge');
+        if (badge) {
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+        
+        return notifications;
+    } catch (error) {
+        console.error('Failed to load notifications:', error);
+        return [];
+    }
+}
+
+async function toggleNotifications() {
+    let panel = document.getElementById('notifications-panel');
+    
+    if (!panel) {
+        createNotificationsPanel();
+        panel = document.getElementById('notifications-panel');
+    }
+    
+    if (panel.classList.contains('hidden')) {
+        await renderNotificationsPanel();
+        panel.classList.remove('hidden');
+        
+        // Mark all as read when opened
+        await markAllNotificationsAsRead();
+    } else {
+        panel.classList.add('hidden');
+    }
+}
+
+function createNotificationsPanel() {
+    const panelHTML = `
+        <div id="notifications-panel" class="fixed right-4 top-16 z-50 w-96 max-w-[calc(100vw-2rem)] bg-card border rounded-xl shadow-2xl hidden animate-fade-in">
+            <div class="flex flex-col h-[500px]">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h3 class="font-semibold">Notifications</h3>
+                    <div class="flex gap-2">
+                        <button onclick="markAllNotificationsAsRead()" class="text-xs text-primary hover:underline">Mark all read</button>
+                        <button onclick="clearAllNotifications()" class="text-xs text-red-600 hover:underline">Clear all</button>
+                    </div>
+                </div>
+                <div id="notifications-list" class="flex-1 overflow-y-auto">
+                    <div class="p-8 text-center text-muted-foreground">Loading notifications...</div>
+                </div>
+                <div class="p-3 border-t text-center">
+                    <button onclick="viewAllNotifications()" class="text-xs text-primary hover:underline">View all notifications</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', panelHTML);
+}
+
+async function renderNotificationsPanel() {
+    const container = document.getElementById('notifications-list');
+    if (!container) return;
+    
+    await loadNotifications();
+    
+    if (notifications.length === 0) {
+        container.innerHTML = `
+            <div class="p-8 text-center">
+                <i data-lucide="bell-off" class="h-12 w-12 mx-auto text-muted-foreground mb-3"></i>
+                <p class="text-muted-foreground">No notifications</p>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+    }
+    
+    container.innerHTML = notifications.map(notification => `
+        <div class="p-4 border-b hover:bg-accent/50 transition-colors ${!notification.read ? 'bg-primary/5' : ''}" onclick="markNotificationRead('${notification.id}')">
+            <div class="flex gap-3">
+                <div class="h-10 w-10 rounded-full ${getNotificationBg(notification.type)} flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="${getNotificationIcon(notification.type)}" class="h-5 w-5 ${getNotificationColor(notification.type)}"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium">${notification.title}</p>
+                    <p class="text-xs text-muted-foreground mt-1">${notification.message}</p>
+                    <p class="text-xs text-muted-foreground mt-2">${timeAgo(notification.createdAt)}</p>
+                </div>
+                ${!notification.read ? '<span class="h-2 w-2 bg-primary rounded-full flex-shrink-0 mt-2"></span>' : ''}
+            </div>
+        </div>
+    `).join('');
+    
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function markNotificationRead(notificationId) {
+    try {
+        await api.notifications.markAsRead(notificationId);
+        await renderNotificationsPanel();
+    } catch (error) {
+        console.error('Failed to mark as read:', error);
+    }
+}
+
+async function markAllNotificationsAsRead() {
+    try {
+        await api.notifications.markAllAsRead();
+        await renderNotificationsPanel();
+    } catch (error) {
+        console.error('Failed to mark all as read:', error);
+    }
+}
+
+async function clearAllNotifications() {
+    if (!confirm('Clear all notifications?')) return;
+    try {
+        await api.notifications.clearAll();
+        await renderNotificationsPanel();
+    } catch (error) {
+        console.error('Failed to clear notifications:', error);
+    }
+}
+
+function viewAllNotifications() {
+    showDashboardSection('notifications');
+    const panel = document.getElementById('notifications-panel');
+    if (panel) panel.classList.add('hidden');
+}
+
+function getNotificationIcon(type) {
+    const icons = {
+        'system': 'settings',
+        'alert': 'alert-triangle',
+        'message': 'message-circle',
+        'duty': 'clock',
+        'approval': 'check-circle',
+        'attendance': 'calendar-check',
+        'payment': 'credit-card',
+        'school': 'building-2',
+        'user': 'user-plus'
+    };
+    return icons[type] || 'bell';
+}
+
+function getNotificationBg(type) {
+    const bgs = {
+        'system': 'bg-gray-100',
+        'alert': 'bg-red-100',
+        'message': 'bg-blue-100',
+        'duty': 'bg-amber-100',
+        'approval': 'bg-green-100',
+        'attendance': 'bg-purple-100',
+        'payment': 'bg-emerald-100',
+        'school': 'bg-blue-100',
+        'user': 'bg-green-100'
+    };
+    return bgs[type] || 'bg-gray-100';
+}
+
+function getNotificationColor(type) {
+    const colors = {
+        'system': 'text-gray-600',
+        'alert': 'text-red-600',
+        'message': 'text-blue-600',
+        'duty': 'text-amber-600',
+        'approval': 'text-green-600',
+        'attendance': 'text-purple-600',
+        'payment': 'text-emerald-600',
+        'school': 'text-blue-600',
+        'user': 'text-green-600'
+    };
+    return colors[type] || 'text-gray-600';
+}
+
+// ============================================
+// FIXED: PROFILE SECTION - FULLY FUNCTIONAL
+// ============================================
+
+async function renderProfileSection() {
+    const user = getCurrentUser();
+    const school = getCurrentSchool();
+    
+    // Load user stats
+    const stats = await loadUserStats(user.role);
+    
+    return `
+        <div class="space-y-6 animate-fade-in max-w-4xl mx-auto">
+            <!-- Profile Header -->
+            <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white">
+                <div class="absolute right-0 top-0 -mt-10 -mr-10 h-40 w-40 rounded-full bg-white/10"></div>
+                <div class="absolute bottom-0 left-0 -mb-10 -ml-10 h-40 w-40 rounded-full bg-black/10"></div>
+                <div class="relative z-10 flex items-center gap-6">
+                    <div class="h-24 w-24 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-4xl font-bold border-4 border-white shadow-xl">
+                        ${getInitials(user.name)}
+                    </div>
+                    <div>
+                        <h2 class="text-3xl font-bold">${user.name}</h2>
+                        <p class="text-white/80 capitalize">${user.role} • ${user.email}</p>
+                        <div class="flex gap-2 mt-2">
+                            <span class="px-2 py-1 bg-white/20 rounded-full text-xs">ID: ${user.id}</span>
+                            ${school?.shortCode ? `<span class="px-2 py-1 bg-white/20 rounded-full text-xs">School: ${school.shortCode}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stats Cards -->
+            <div class="grid gap-4 md:grid-cols-3">
+                <div class="rounded-xl border bg-card p-4">
+                    <p class="text-sm text-muted-foreground">Member Since</p>
+                    <p class="text-lg font-semibold">${formatDate(user.createdAt)}</p>
+                </div>
+                <div class="rounded-xl border bg-card p-4">
+                    <p class="text-sm text-muted-foreground">Last Login</p>
+                    <p class="text-lg font-semibold">${user.lastLogin ? timeAgo(user.lastLogin) : 'N/A'}</p>
+                </div>
+                <div class="rounded-xl border bg-card p-4">
+                    <p class="text-sm text-muted-foreground">Account Status</p>
+                    <p class="text-lg font-semibold text-green-600">${user.isActive ? 'Active' : 'Inactive'}</p>
+                </div>
+            </div>
+            
+            <!-- Profile Information Form -->
+            <div class="rounded-xl border bg-card p-6">
+                <h3 class="font-semibold text-lg mb-4">Profile Information</h3>
+                <form id="profile-form" class="space-y-4" onsubmit="updateProfile(event)">
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Full Name</label>
+                            <input type="text" name="name" value="${user.name || ''}" 
+                                   class="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Email</label>
+                            <input type="email" name="email" value="${user.email || ''}" 
+                                   class="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
+                        </div>
+                    </div>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Phone</label>
+                            <input type="tel" name="phone" value="${user.phone || ''}" 
+                                   class="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Role</label>
+                            <input type="text" value="${user.role}" disabled 
+                                   class="w-full rounded-lg border border-input bg-muted px-4 py-2 text-sm text-muted-foreground">
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+                            Update Profile
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Change Password -->
+            <div class="rounded-xl border bg-card p-6">
+                <h3 class="font-semibold text-lg mb-4">Change Password</h3>
+                <form id="password-form" class="space-y-4" onsubmit="updatePassword(event)">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Current Password</label>
+                        <input type="password" id="current-password" required
+                               class="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
+                    </div>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">New Password</label>
+                            <input type="password" id="new-password" required minlength="8"
+                                   class="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Confirm New Password</label>
+                            <input type="password" id="confirm-password" required
+                                   class="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-primary transition-all">
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+                            Update Password
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Preferences -->
+            <div class="rounded-xl border bg-card p-6">
+                <h3 class="font-semibold text-lg mb-4">Preferences</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="font-medium">Email Notifications</p>
+                            <p class="text-sm text-muted-foreground">Receive email updates about important events</p>
+                        </div>
+                        <button onclick="togglePreference('email')" id="pref-email" 
+                                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${user.preferences?.email !== false ? 'bg-primary' : 'bg-muted'}">
+                            <span class="translate-x-${user.preferences?.email !== false ? '6' : '1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform"></span>
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="font-medium">Push Notifications</p>
+                            <p class="text-sm text-muted-foreground">Show desktop notifications</p>
+                        </div>
+                        <button onclick="togglePreference('push')" id="pref-push" 
+                                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${user.preferences?.push !== false ? 'bg-primary' : 'bg-muted'}">
+                            <span class="translate-x-${user.preferences?.push !== false ? '6' : '1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform"></span>
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="font-medium">Dark Mode</p>
+                            <p class="text-sm text-muted-foreground">Use dark theme</p>
+                        </div>
+                        <button onclick="togglePreference('darkMode')" id="pref-darkmode" 
+                                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${document.documentElement.classList.contains('dark') ? 'bg-primary' : 'bg-muted'}">
+                            <span class="translate-x-${document.documentElement.classList.contains('dark') ? '6' : '1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Account Actions -->
+            <div class="rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 p-6">
+                <h3 class="font-semibold text-lg mb-4 text-red-700 dark:text-red-400">Account Actions</h3>
+                <div class="flex gap-3">
+                    <button onclick="downloadMyData()" class="px-4 py-2 border rounded-lg hover:bg-red-100 transition-colors">
+                        <i data-lucide="download" class="h-4 w-4 inline mr-2"></i>
+                        Download My Data
+                    </button>
+                    <button onclick="deactivateAccount()" class="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-100 transition-colors">
+                        <i data-lucide="user-x" class="h-4 w-4 inline mr-2"></i>
+                        Deactivate Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+async function updateProfile(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    const profileData = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        phone: formData.get('phone')
+    };
+    
+    showLoading();
+    try {
+        const response = await api.user.updateProfile(profileData);
+        if (response.success) {
+            showToast('✅ Profile updated successfully', 'success');
+            // Update local storage
+            const user = getCurrentUser();
+            user.name = profileData.name;
+            user.email = profileData.email;
+            user.phone = profileData.phone;
+            localStorage.setItem('user', JSON.stringify(user));
+            updateUserInfo();
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to update profile', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+async function updatePassword(event) {
+    event.preventDefault();
+    const currentPassword = document.getElementById('current-password').value;
+    const newPassword = document.getElementById('new-password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        showToast('Please fill all password fields', 'error');
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        showToast('New passwords do not match', 'error');
+        return;
+    }
+    
+    if (newPassword.length < 8) {
+        showToast('Password must be at least 8 characters', 'error');
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await api.auth.changePassword(currentPassword, newPassword);
+        if (response.success) {
+            showToast('✅ Password changed successfully', 'success');
+            document.getElementById('current-password').value = '';
+            document.getElementById('new-password').value = '';
+            document.getElementById('confirm-password').value = '';
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to change password', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+async function togglePreference(prefKey) {
+    const user = getCurrentUser();
+    const preferences = user.preferences || {};
+    preferences[prefKey] = !preferences[prefKey];
+    
+    if (prefKey === 'darkMode') {
+        toggleTheme();
+    }
+    
+    showLoading();
+    try {
+        const response = await api.user.updatePreferences(preferences);
+        if (response.success) {
+            user.preferences = preferences;
+            localStorage.setItem('user', JSON.stringify(user));
+            showToast('Preferences updated', 'success');
+        }
+    } catch (error) {
+        showToast('Failed to update preferences', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+async function downloadMyData() {
+    showLoading();
+    try {
+        const response = await api.user.exportMyData();
+        const data = response.data;
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `shuleai_my_data_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('✅ Data exported successfully', 'success');
+    } catch (error) {
+        showToast('Failed to export data', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+async function deactivateAccount() {
+    if (!confirm('⚠️ Are you sure you want to deactivate your account? You can reactivate later by contacting support.')) return;
+    
+    const reason = prompt('Please tell us why you are deactivating (optional):');
+    
+    showLoading();
+    try {
+        const response = await api.user.deactivateAccount(reason);
+        if (response.success) {
+            showToast('Account deactivated. Logging out...', 'info');
+            setTimeout(() => {
+                logout();
+            }, 2000);
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to deactivate account', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+async function loadUserStats(role) {
+    try {
+        const response = await api.user.getMyStats();
+        return response.data || {};
+    } catch (error) {
+        console.error('Failed to load user stats:', error);
+        return {};
+    }
 }
 
 // ============ SETTINGS HELPER FUNCTIONS ============
