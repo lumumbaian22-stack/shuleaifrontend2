@@ -410,6 +410,7 @@ const teacherAPI = {
             method: 'DELETE'
         }),
     
+    // Add to teacherAPI object
     getMyAssignments: () => apiRequest('/api/teacher/my-assignments'),
     
     getClassStudentsForSubject: (classId, subject) => 
@@ -438,23 +439,6 @@ const teacherAPI = {
     }),
     
     getStaffMembers: () => apiRequest('/api/teacher/staff-members')
-};
-
-// Add to adminAPI object
-const adminAPI = {
-    // ... existing methods ...
-    
-    assignTeacherToSubject: (data) => apiRequest('/api/admin/assign-teacher-to-subject', {
-        method: 'POST',
-        body: JSON.stringify(data)
-    }),
-    
-    getSubjectAssignments: () => apiRequest('/api/admin/subject-assignments'),
-    
-    removeSubjectAssignment: (assignmentId) => 
-        apiRequest(`/api/admin/subject-assignments/${assignmentId}`, {
-            method: 'DELETE'
-        })
 };
 
 // ============ PARENT ENDPOINTS ============
