@@ -4164,111 +4164,6 @@ function renderAdminDashboard() {
                 </div>
             </div>
 
-            <!-- Quick Action Buttons -->
-            <div class="grid gap-4 md:grid-cols-4">
-                <button onclick="showDashboardSection('teacher-approvals')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
-                    <i data-lucide="user-plus" class="h-8 w-8 text-blue-600 mb-3"></i>
-                    <h4 class="font-semibold">Teacher Approvals</h4>
-                    <p class="text-sm text-muted-foreground">Approve pending teachers</p>
-                    ${data.pendingTeachers?.length ? `<span class="mt-2 inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700">${data.pendingTeachers.length} pending</span>` : ''}
-                </button>
-                
-                <button onclick="showDashboardSection('students')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
-                    <i data-lucide="users" class="h-8 w-8 text-green-600 mb-3"></i>
-                    <h4 class="font-semibold">Student Management</h4>
-                    <p class="text-sm text-muted-foreground">View and manage all students</p>
-                </button>
-                
-                <button onclick="showDashboardSection('classes')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
-                    <i data-lucide="book-open" class="h-8 w-8 text-purple-600 mb-3"></i>
-                    <h4 class="font-semibold">Class Management</h4>
-                    <p class="text-sm text-muted-foreground">Create and manage classes</p>
-                </button>
-                
-                <button onclick="showDashboardSection('settings')" class="p-6 border rounded-lg hover:bg-accent transition-colors text-left">
-                    <i data-lucide="settings" class="h-8 w-8 text-orange-600 mb-3"></i>
-                    <h4 class="font-semibold">School Settings</h4>
-                    <p class="text-sm text-muted-foreground">Configure curriculum and subjects</p>
-                </button>
-            </div>
-
-            <!-- Teacher Subject Assignment Section -->
-            <div class="rounded-xl border bg-card overflow-hidden" id="subject-assignment-section">
-                <div class="p-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700">
-                    <h3 class="font-semibold text-lg">📚 Teacher Subject Assignment</h3>
-                    <p class="text-sm text-muted-foreground">Assign teachers to classes and subjects they teach</p>
-                </div>
-                <div class="p-6">
-                    <div class="grid gap-4 md:grid-cols-4 mb-6">
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Select Teacher *</label>
-                            <select id="assign-teacher-select" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                                <option value="">Loading teachers...</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Select Class *</label>
-                            <select id="assign-class-select" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                                <option value="">Loading classes...</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Select Subject *</label>
-                            <select id="assign-subject-select" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                                <option value="">Loading subjects...</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Role</label>
-                            <div class="flex items-center gap-4 mt-2">
-                                <label class="flex items-center gap-2">
-                                    <input type="radio" name="teacher-role" value="subject" checked class="w-4 h-4">
-                                    <span class="text-sm">Subject Teacher</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input type="radio" name="teacher-role" value="class_teacher" class="w-4 h-4">
-                                    <span class="text-sm">Class Teacher</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="flex gap-3">
-                        <button onclick="assignTeacherToSubject()" class="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
-                            <i data-lucide="plus" class="h-4 w-4"></i>
-                            Assign Teacher
-                        </button>
-                        <button onclick="refreshSubjectAssignments()" class="px-6 py-2 border rounded-lg hover:bg-accent flex items-center gap-2">
-                            <i data-lucide="refresh-cw" class="h-4 w-4"></i>
-                            Refresh
-                        </button>
-                    </div>
-                    
-                    <div class="mt-8">
-                        <h4 class="font-medium mb-3 flex items-center gap-2">
-                            <i data-lucide="list" class="h-4 w-4"></i>
-                            Current Subject Assignments
-                        </h4>
-                        <div class="overflow-x-auto rounded-lg border">
-                            <table class="w-full text-sm">
-                                <thead class="bg-muted/50">
-                                    <tr>
-                                        <th class="px-4 py-3 text-left font-medium">Teacher</th>
-                                        <th class="px-4 py-3 text-left font-medium">Class</th>
-                                        <th class="px-4 py-3 text-left font-medium">Subject</th>
-                                        <th class="px-4 py-3 text-left font-medium">Role</th>
-                                        <th class="px-4 py-3 text-center font-medium">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="subject-assignments-tbody" class="divide-y">
-                                    <tr><td colspan="5" class="text-center py-8 text-muted-foreground">No assignments yet. Use the form above to assign teachers.\(
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Charts Row -->
             <div class="grid gap-4 lg:grid-cols-2">
                 <div class="rounded-xl border bg-card p-6">
@@ -4292,7 +4187,6 @@ function renderAdminDashboard() {
         </div>
     `;
 }
-
 // Render Admin Pending Teachers
 async function renderAdminPendingTeachers() {
     try {
