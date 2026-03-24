@@ -1,5 +1,4 @@
 // class-management.js - COMPLETE WORKING VERSION
-// This file uses CURRICULUM_STRUCTURE from main.js
 
 // ============ LOAD FUNCTIONS ============
 
@@ -39,8 +38,8 @@ async function generateClassesFromCurriculum() {
     
     let streamNames = [];
     if (streamCount > 1) {
-        const streamNamesInput = prompt(`Enter stream names separated by commas (e.g., A, B, C or Blue, Green, Yellow):\nDefault: ${Array.from({ length: streamCount }, (_, i) => String.fromCharCode(65 + i)).join(', ')}`, 
-            Array.from({ length: streamCount }, (_, i) => String.fromCharCode(65 + i)).join(', '));
+        const defaultNames = Array.from({ length: streamCount }, (_, i) => String.fromCharCode(65 + i)).join(', ');
+        const streamNamesInput = prompt(`Enter stream names separated by commas (e.g., A, B, C or Blue, Green, Yellow):\nDefault: ${defaultNames}`, defaultNames);
         
         if (streamNamesInput) {
             streamNames = streamNamesInput.split(',').map(s => s.trim()).filter(s => s);
@@ -465,15 +464,39 @@ async function loadAndDisplaySubjectAssignments(classId) {
     if (!container) return;
     
     try {
-        // For now, show placeholder since backend endpoint may not exist
+        const assignments = await api.admin.getClassSubjectAssignments(classId);
+        
+        if (!assignments.data || assignments.data.length === 0) {
+            container.innerHTML = `
+                <div class="text-sm text-muted-foreground text-center py-3 bg-muted/20 rounded">
+                    <i data-lucide="book-open" class="h-4 w-4 mx-auto mb-1 opacity-50"></i>
+                    <p>No subject teachers assigned yet</p>
+                    <p class="text-xs mt-1">Click "Assign Subjects" to add teachers</p>
+                </div>
+            `;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            return;
+        }
+        
         container.innerHTML = `
-            <div class="text-sm text-muted-foreground text-center py-3 bg-muted/20 rounded">
-                <i data-lucide="book-open" class="h-4 w-4 mx-auto mb-1 opacity-50"></i>
-                <p>Subject assignment feature coming soon</p>
-                <p class="text-xs mt-1">You can assign teachers to subjects from the "Assign Subjects" button</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                ${assignments.data.map(ass => `
+                    <div class="flex justify-between items-center p-2 bg-muted/20 rounded-lg">
+                        <div>
+                            <span class="font-medium text-sm">${escapeHtml(ass.subject)}</span>
+                            <span class="text-xs text-muted-foreground ml-2">- ${escapeHtml(ass.teacherName)}</span>
+                        </div>
+                        <button onclick="removeSubjectAssignment(${ass.id}, ${classId})" 
+                                class="text-red-500 hover:text-red-700 p-1">
+                            <i data-lucide="x" class="h-3 w-3"></i>
+                        </button>
+                    </div>
+                `).join('')}
             </div>
         `;
+        
         if (typeof lucide !== 'undefined') lucide.createIcons();
+        
     } catch (error) {
         console.error('Error loading subject assignments:', error);
         container.innerHTML = `
@@ -576,10 +599,12 @@ window.assignClassTeacher = async function(classId) {
     }
 };
 
-// ============ SUBJECT ASSIGNMENT FUNCTIONS (Placeholder) ============
+// ============ SUBJECT ASSIGNMENT FUNCTIONS ============
 
 window.openSubjectAssignmentModal = async function(classId, className) {
-    // Get all subjects from curriculum
+    const teachers = await loadAvailableTeachers();
+    
+    // Get subjects from curriculum
     const curriculum = window.schoolSettings?.curriculum || 'cbc';
     const schoolLevel = window.schoolSettings?.schoolLevel || 'secondary';
     const subjectsByCurriculum = {
@@ -605,8 +630,6 @@ window.openSubjectAssignmentModal = async function(classId, className) {
     let subjects = subjectsByCurriculum[curriculum]?.[level] || subjectsByCurriculum['cbc'][level];
     const customSubjects = window.schoolSettings?.customSubjects || [];
     const allSubjects = [...subjects, ...customSubjects];
-    
-    const teachers = await loadAvailableTeachers();
     
     let modal = document.getElementById('subject-assignment-modal');
     if (!modal) {
@@ -701,11 +724,37 @@ window.saveSubjectAssignment = async function(classId, subject) {
     
     showLoading();
     try {
-        // This will need a backend endpoint
-        showToast(`✅ ${subject} assigned - Feature coming soon`, 'info');
-        closeSubjectAssignmentModal();
+        const response = await api.admin.assignTeacherToSubject({
+            classId: parseInt(classId),
+            teacherId: parseInt(teacherId),
+            subject: subject,
+            isClassTeacher: false
+        });
+        
+        if (response.success) {
+            showToast(`✅ ${subject} assigned successfully`, 'success');
+            closeSubjectAssignmentModal();
+            await showDashboardSection('classes');
+        }
     } catch (error) {
         showToast(error.message || 'Failed to assign teacher', 'error');
+    } finally {
+        hideLoading();
+    }
+};
+
+window.removeSubjectAssignment = async function(assignmentId, classId) {
+    if (!confirm('Remove this teacher from this subject?')) return;
+    
+    showLoading();
+    try {
+        const response = await api.admin.removeSubjectAssignment(assignmentId);
+        if (response.success) {
+            showToast('✅ Assignment removed', 'success');
+            await showDashboardSection('classes');
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to remove assignment', 'error');
     } finally {
         hideLoading();
     }
@@ -723,6 +772,23 @@ function escapeHtml(text) {
 // Make functions globally available
 window.generateClassesFromCurriculum = generateClassesFromCurriculum;
 window.renderClassManagement = renderClassManagement;
-window.openSubjectAssignmentModal = openSubjectAssignmentModal;
-window.closeSubjectAssignmentModal = closeSubjectAssignmentModal;
-window.saveSubjectAssignment = saveSubjectAssignment;
+window.toggleLevel = function(levelKey) {
+    const content = document.getElementById(`level-content-${levelKey}`);
+    const icon = document.getElementById(`level-icon-${levelKey}`);
+    if (content) {
+        content.classList.toggle('hidden');
+        if (icon) {
+            icon.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+    }
+};
+window.toggleClassDetails = function(classId) {
+    const details = document.getElementById(`class-details-${classId}`);
+    const icon = document.getElementById(`class-icon-${classId}`);
+    if (details) {
+        details.classList.toggle('hidden');
+        if (icon) {
+            icon.style.transform = details.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+    }
+};
