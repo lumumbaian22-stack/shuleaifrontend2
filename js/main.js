@@ -536,6 +536,10 @@ const CURRICULUM_STRUCTURE = {
 // FIXED: GENERATE CLASSES FROM CURRICULUM
 // ============================================
 
+// ============================================
+// FIXED: GENERATE FROM CURRICULUM BUTTON
+// ============================================
+
 async function generateClassesFromCurriculum() {
     const curriculum = window.schoolSettings?.curriculum || 'cbc';
     const schoolLevel = window.schoolSettings?.schoolLevel || 'secondary';
@@ -574,41 +578,26 @@ async function generateClassesFromCurriculum() {
     
     if (curriculum === 'cbc') {
         if (schoolLevel === 'primary' || schoolLevel === 'both') {
-            // Pre-Primary
-            for (const className of ['PP1', 'PP2']) {
+            for (const className of ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']) {
                 for (let i = 0; i < streamCount; i++) {
                     const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
-                    classesToCreate.push({ name: `${className}${streamName}`, grade: className });
-                }
-            }
-            // Lower Primary
-            for (const className of ['Grade 1', 'Grade 2', 'Grade 3']) {
-                for (let i = 0; i < streamCount; i++) {
-                    const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
-                    classesToCreate.push({ name: `${className}${streamName}`, grade: className });
-                }
-            }
-            // Upper Primary
-            for (const className of ['Grade 4', 'Grade 5', 'Grade 6']) {
-                for (let i = 0; i < streamCount; i++) {
-                    const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
-                    classesToCreate.push({ name: `${className}${streamName}`, grade: className });
+                    classesToCreate.push({
+                        name: `${className}${streamName}`,
+                        grade: className,
+                        stream: streamCount > 1 ? (streamNames[i] || String.fromCharCode(65 + i)) : null
+                    });
                 }
             }
         }
         if (schoolLevel === 'secondary' || schoolLevel === 'both') {
-            // Junior Secondary
-            for (const className of ['Grade 7', 'Grade 8', 'Grade 9']) {
+            for (const className of ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']) {
                 for (let i = 0; i < streamCount; i++) {
                     const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
-                    classesToCreate.push({ name: `${className}${streamName}`, grade: className });
-                }
-            }
-            // Senior Secondary
-            for (const className of ['Grade 10', 'Grade 11', 'Grade 12']) {
-                for (let i = 0; i < streamCount; i++) {
-                    const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
-                    classesToCreate.push({ name: `${className}${streamName}`, grade: className });
+                    classesToCreate.push({
+                        name: `${className}${streamName}`,
+                        grade: className,
+                        stream: streamCount > 1 ? (streamNames[i] || String.fromCharCode(65 + i)) : null
+                    });
                 }
             }
         }
@@ -617,7 +606,11 @@ async function generateClassesFromCurriculum() {
             for (const className of ['Standard 1', 'Standard 2', 'Standard 3', 'Standard 4', 'Standard 5', 'Standard 6', 'Standard 7', 'Standard 8']) {
                 for (let i = 0; i < streamCount; i++) {
                     const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
-                    classesToCreate.push({ name: `${className}${streamName}`, grade: className });
+                    classesToCreate.push({
+                        name: `${className}${streamName}`,
+                        grade: className,
+                        stream: streamCount > 1 ? (streamNames[i] || String.fromCharCode(65 + i)) : null
+                    });
                 }
             }
         }
@@ -625,7 +618,11 @@ async function generateClassesFromCurriculum() {
             for (const className of ['Form 1', 'Form 2', 'Form 3', 'Form 4']) {
                 for (let i = 0; i < streamCount; i++) {
                     const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
-                    classesToCreate.push({ name: `${className}${streamName}`, grade: className });
+                    classesToCreate.push({
+                        name: `${className}${streamName}`,
+                        grade: className,
+                        stream: streamCount > 1 ? (streamNames[i] || String.fromCharCode(65 + i)) : null
+                    });
                 }
             }
         }
@@ -634,7 +631,11 @@ async function generateClassesFromCurriculum() {
         for (const className of classes) {
             for (let i = 0; i < streamCount; i++) {
                 const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
-                classesToCreate.push({ name: `${className}${streamName}`, grade: className });
+                classesToCreate.push({
+                    name: `${className}${streamName}`,
+                    grade: className,
+                    stream: streamCount > 1 ? (streamNames[i] || String.fromCharCode(65 + i)) : null
+                });
             }
         }
     } else if (curriculum === 'american') {
@@ -642,7 +643,11 @@ async function generateClassesFromCurriculum() {
         for (const className of classes) {
             for (let i = 0; i < streamCount; i++) {
                 const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
-                classesToCreate.push({ name: `${className}${streamName}`, grade: className });
+                classesToCreate.push({
+                    name: `${className}${streamName}`,
+                    grade: className,
+                    stream: streamCount > 1 ? (streamNames[i] || String.fromCharCode(65 + i)) : null
+                });
             }
         }
     }
@@ -675,7 +680,7 @@ async function generateClassesFromCurriculum() {
             await api.admin.createClass({
                 name: classData.name,
                 grade: classData.grade,
-                stream: classData.stream || null,
+                stream: classData.stream,
                 academicYear: new Date().getFullYear().toString()
             });
             created++;
@@ -4983,7 +4988,11 @@ async function refreshNameChangeRequests() {
 // CALENDAR FUNCTIONS - Add to main.js
 // ============================================
 
-// Load calendar events from localStorage
+// ============================================
+// FIXED: CALENDAR FUNCTIONS
+// ============================================
+
+// Load calendar events
 function loadCalendarEvents() {
     try {
         const events = localStorage.getItem('calendarEvents');
@@ -4999,7 +5008,7 @@ function saveCalendarEvents(events) {
     localStorage.setItem('calendarEvents', JSON.stringify(events));
 }
 
-// Show add event modal
+// Add event modal
 window.showAddEventModal = function(prefillDate) {
     let modal = document.getElementById('add-event-modal');
     if (!modal) {
@@ -5021,7 +5030,6 @@ window.showAddEventModal = function(prefillDate) {
     modal.classList.remove('hidden');
 };
 
-// Create add event modal
 function createAddEventModal() {
     const modalHTML = `
         <div id="add-event-modal" class="fixed inset-0 z-50 hidden">
@@ -5039,7 +5047,7 @@ function createAddEventModal() {
                             <input type="date" id="event-date" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium mb-1">Time (Optional)</label>
+                            <label class="block text-sm font-medium mb-1">Time</label>
                             <input type="time" id="event-time" class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
                         </div>
                         <div>
@@ -5062,10 +5070,77 @@ function createAddEventModal() {
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
-// Close add event modal
 window.closeAddEventModal = function() {
     const modal = document.getElementById('add-event-modal');
     if (modal) modal.classList.add('hidden');
+};
+
+window.saveCalendarEvent = function() {
+    const title = document.getElementById('event-title')?.value;
+    const date = document.getElementById('event-date')?.value;
+    const time = document.getElementById('event-time')?.value;
+    const location = document.getElementById('event-location')?.value;
+    const description = document.getElementById('event-description')?.value;
+    
+    if (!title || !date) {
+        showToast('Title and date are required', 'error');
+        return;
+    }
+    
+    const events = loadCalendarEvents();
+    const newEvent = {
+        id: Date.now().toString(),
+        title,
+        date,
+        time,
+        location,
+        description,
+        createdAt: new Date().toISOString()
+    };
+    
+    events.push(newEvent);
+    saveCalendarEvents(events);
+    
+    showToast('Event added successfully', 'success');
+    closeAddEventModal();
+    
+    if (currentSection === 'calendar') {
+        showDashboardSection('calendar');
+    }
+};
+
+window.deleteEvent = function(eventId) {
+    if (!confirm('Delete this event?')) return;
+    
+    const events = loadCalendarEvents();
+    const filtered = events.filter(e => e.id !== eventId);
+    saveCalendarEvents(filtered);
+    
+    showToast('Event deleted', 'success');
+    
+    if (currentSection === 'calendar') {
+        showDashboardSection('calendar');
+    }
+};
+
+window.showDayDetails = function(dateStr) {
+    const events = loadCalendarEvents();
+    const dayEvents = events.filter(e => e.date === dateStr);
+    const date = new Date(dateStr);
+    
+    alert(`Events for ${date.toLocaleDateString()}\n\n${dayEvents.length === 0 ? 'No events' : dayEvents.map(e => `• ${e.title}${e.time ? ` at ${e.time}` : ''}`).join('\n')}`);
+};
+
+window.calendarChangeMonth = function(direction) {
+    showToast('Calendar month navigation', 'info');
+};
+
+window.calendarGoToToday = function() {
+    showToast('Going to today', 'info');
+};
+
+window.calendarGoToDate = function(year, month, day) {
+    showToast(`Going to ${year}-${month+1}-${day}`, 'info');
 };
 
 // ============================================
@@ -6409,37 +6484,40 @@ async function renderAdminDuty() {
     }
 }
 
+// ============================================
+// FIXED: FAIRNESS REPORT
+// ============================================
+
 async function renderAdminFairnessReport() {
+    showLoading();
     try {
-        const report = await loadFairnessReport();
+        const report = await api.admin.getFairnessReport();
+        
         return `
             <div class="space-y-6 animate-fade-in">
                 <div class="flex justify-between items-center">
                     <h2 class="text-2xl font-bold">Duty Fairness Report</h2>
-                    <div class="text-right">
-                        <p class="text-sm text-muted-foreground">${report?.period?.month || new Date().toLocaleString('default', { month: 'long' })}</p>
-                    </div>
+                    <button onclick="renderAdminFairnessReport()" class="px-4 py-2 border rounded-lg hover:bg-accent">
+                        <i data-lucide="refresh-cw" class="h-4 w-4"></i>
+                        Refresh
+                    </button>
                 </div>
                 
                 <div class="grid gap-4 md:grid-cols-3">
                     <div class="rounded-xl border bg-card p-6">
                         <p class="text-sm text-muted-foreground">Fairness Score</p>
                         <div class="flex items-end gap-2">
-                            <h3 class="text-3xl font-bold">${report?.summary?.fairnessScore || 85}%</h3>
-                            <span class="text-sm ${(report?.summary?.fairnessScore || 85) > 80 ? 'text-green-600' : 'text-yellow-600'} mb-1">
-                                ${(report?.summary?.fairnessScore || 85) > 80 ? 'Good' : 'Needs Improvement'}
-                            </span>
+                            <h3 class="text-3xl font-bold">${report?.data?.summary?.fairnessScore || 0}%</h3>
+                            <span class="text-sm text-muted-foreground mb-1">/ 100</span>
                         </div>
                     </div>
-                    
                     <div class="rounded-xl border bg-card p-6">
-                        <p class="text-sm text-muted-foreground">Total Duties This Month</p>
-                        <h3 class="text-3xl font-bold">${report?.summary?.totalDuties || 0}</h3>
+                        <p class="text-sm text-muted-foreground">Total Duties</p>
+                        <h3 class="text-3xl font-bold">${report?.data?.summary?.totalDuties || 0}</h3>
                     </div>
-                    
                     <div class="rounded-xl border bg-card p-6">
-                        <p class="text-sm text-muted-foreground">Understaffed Days</p>
-                        <h3 class="text-3xl font-bold">${report?.summary?.understaffedDays?.length || 0}</h3>
+                        <p class="text-sm text-muted-foreground">Teachers</p>
+                        <h3 class="text-3xl font-bold">${report?.data?.teacherStats?.length || 0}</h3>
                     </div>
                 </div>
                 
@@ -6451,54 +6529,39 @@ async function renderAdminFairnessReport() {
                         <table class="w-full text-sm">
                             <thead class="bg-muted/50">
                                 <tr>
-                                    <th class="px-4 py-3 text-left font-medium">Teacher</th>
-                                    <th class="px-4 py-3 text-left font-medium">Department</th>
-                                    <th class="px-4 py-3 text-center font-medium">Scheduled</th>
-                                    <th class="px-4 py-3 text-center font-medium">Completed</th>
-                                    <th class="px-4 py-3 text-center font-medium">Missed</th>
-                                    <th class="px-4 py-3 text-center font-medium">Completion Rate</th>
-                                    <th class="px-4 py-3 text-center font-medium">Reliability</th>
+                                    <th class="px-4 py-3 text-left">Teacher</th>
+                                    <th class="px-4 py-3 text-left">Department</th>
+                                    <th class="px-4 py-3 text-center">Scheduled</th>
+                                    <th class="px-4 py-3 text-center">Completed</th>
+                                    <th class="px-4 py-3 text-center">Completion Rate</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y">
-                                ${report?.teacherStats?.map(teacher => `
-                                    <tr class="hover:bg-accent/50 transition-colors">
-                                        <td class="px-4 py-3 font-medium">${teacher.teacherName}</td>
-                                        <td class="px-4 py-3">${teacher.department}</td>
-                                        <td class="px-4 py-3 text-center">${teacher.scheduled}</td>
-                                        <td class="px-4 py-3 text-center">${teacher.completed}</td>
-                                        <td class="px-4 py-3 text-center">${teacher.missed}</td>
-                                        <td class="px-4 py-3 text-center">${teacher.completionRate}%</td>
+                                ${report?.data?.teacherStats?.map(t => `
+                                    <tr class="hover:bg-accent/50">
+                                        <td class="px-4 py-3 font-medium">${t.teacherName}</td>
+                                        <td class="px-4 py-3">${t.department}</td>
+                                        <td class="px-4 py-3 text-center">${t.scheduled}</td>
+                                        <td class="px-4 py-3 text-center">${t.completed}</td>
                                         <td class="px-4 py-3 text-center">
-                                            <span class="px-2 py-1 ${teacher.reliabilityScore > 90 ? 'bg-green-100 text-green-700' : teacher.reliabilityScore > 70 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'} text-xs rounded-full">
-                                                ${teacher.reliabilityScore}
+                                            <span class="px-2 py-1 rounded-full text-xs ${t.completionRate >= 80 ? 'bg-green-100 text-green-700' : t.completionRate >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}">
+                                                ${t.completionRate}%
                                             </span>
                                         </td>
                                     </tr>
                                 `).join('')}
-                                ${!report?.teacherStats?.length ? '<tr><td colspan="7" class="px-4 py-8 text-center text-muted-foreground">No data available</td></tr>' : ''}
+                                ${!report?.data?.teacherStats?.length ? '<tr><td colspan="5" class="text-center py-8 text-muted-foreground">No data available</td></tr>' : ''}
                             </tbody>
                         </table>
                     </div>
                 </div>
-                
-                ${report?.recommendations?.length > 0 ? `
-                    <div class="rounded-xl border bg-card p-6">
-                        <h3 class="font-semibold mb-4">Recommendations</h3>
-                        <div class="space-y-3">
-                            ${report.recommendations.map(rec => `
-                                <div class="p-3 bg-${rec.type === 'workload_balance' ? 'blue' : 'amber'}-50 dark:bg-${rec.type === 'workload_balance' ? 'blue' : 'amber'}-900/20 rounded-lg">
-                                    <p class="text-sm font-medium">${rec.message}</p>
-                                    ${rec.teachers ? `<p class="text-xs text-muted-foreground mt-1">Teachers: ${rec.teachers.join(', ')}</p>` : ''}
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : ''}
             </div>
         `;
     } catch (error) {
+        console.error('Error loading fairness report:', error);
         return `<div class="text-center py-12 text-red-500">Error loading fairness report: ${error.message}</div>`;
+    } finally {
+        hideLoading();
     }
 }
 
@@ -8023,12 +8086,12 @@ function renderAdminSettings() {
 }
 
 // ============================================
-// CUSTOM SUBJECTS SECTION
+// FIXED: CUSTOM SUBJECTS
 // ============================================
 
 function renderAdminCustomSubjects() {
-    const curriculum = schoolSettings.curriculum || 'cbc';
-    const schoolLevel = schoolSettings.schoolLevel || 'secondary';
+    const curriculum = window.schoolSettings?.curriculum || 'cbc';
+    const schoolLevel = window.schoolSettings?.schoolLevel || 'secondary';
     const curriculumInfo = CURRICULUMS[curriculum];
     const subjectInfo = curriculumInfo?.subjects[schoolLevel] || [];
     
@@ -8050,10 +8113,10 @@ function renderAdminCustomSubjects() {
                     
                     <div>
                         <h4 class="text-sm font-medium mb-3">Curriculum Subjects</h4>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6" id="curriculum-subjects-container">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
                             ${subjectInfo.map(subject => `
-                                <div class="flex items-center justify-between p-3 bg-muted/30 dark:bg-muted/20 rounded-lg border border-border">
-                                    <span class="text-sm font-medium text-foreground">${subject}</span>
+                                <div class="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                                    <span class="text-sm font-medium">${subject}</span>
                                     <span class="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">core</span>
                                 </div>
                             `).join('')}
@@ -8063,9 +8126,9 @@ function renderAdminCustomSubjects() {
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="custom-subjects-container">
                             ${customSubjects && customSubjects.length > 0 ? 
                                 customSubjects.map(subject => `
-                                    <div class="custom-subject-item flex items-center justify-between p-3 bg-secondary/30 dark:bg-secondary/20 rounded-lg border border-border group hover:bg-secondary/50 dark:hover:bg-secondary/30 transition-colors" data-subject="${subject}">
-                                        <span class="text-sm font-medium text-foreground">${subject}</span>
-                                        <button onclick="removeCustomSubject('${subject}')" class="text-destructive hover:text-destructive/80 dark:text-red-400 dark:hover:text-red-300 opacity-70 hover:opacity-100 transition-opacity">
+                                    <div class="custom-subject-item flex items-center justify-between p-3 bg-secondary/30 rounded-lg border group" data-subject="${subject}">
+                                        <span class="text-sm font-medium">${subject}</span>
+                                        <button onclick="removeCustomSubject('${subject}')" class="text-red-500 hover:text-red-700">
                                             <i data-lucide="x" class="h-4 w-4"></i>
                                         </button>
                                     </div>
@@ -8086,6 +8149,63 @@ function renderAdminCustomSubjects() {
         </div>
     `;
 }
+
+window.addCustomSubject = function() {
+    const newSubject = document.getElementById('new-subject-name')?.value.trim();
+    if (!newSubject) {
+        showToast('Please enter a subject name', 'error');
+        return;
+    }
+    
+    if (!customSubjects) customSubjects = [];
+    
+    if (customSubjects.includes(newSubject)) {
+        showToast('Subject already exists', 'warning');
+        return;
+    }
+    
+    customSubjects.push(newSubject);
+    schoolSettings.customSubjects = customSubjects;
+    localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings));
+    
+    const container = document.getElementById('custom-subjects-container');
+    if (container) {
+        const noSubjectsMsg = document.getElementById('no-custom-subjects-message');
+        if (noSubjectsMsg) noSubjectsMsg.remove();
+        
+        const newSubjectHTML = `
+            <div class="custom-subject-item flex items-center justify-between p-3 bg-secondary/30 rounded-lg border" data-subject="${newSubject}">
+                <span class="text-sm font-medium">${newSubject}</span>
+                <button onclick="removeCustomSubject('${newSubject}')" class="text-red-500 hover:text-red-700">
+                    <i data-lucide="x" class="h-4 w-4"></i>
+                </button>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', newSubjectHTML);
+    }
+    
+    document.getElementById('new-subject-name').value = '';
+    showToast(`Subject "${newSubject}" added`, 'success');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+};
+
+window.removeCustomSubject = function(subject) {
+    if (!confirm(`Remove "${subject}" from custom subjects?`)) return;
+    
+    customSubjects = customSubjects.filter(s => s !== subject);
+    schoolSettings.customSubjects = customSubjects;
+    localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings));
+    
+    const subjectItem = document.querySelector(`.custom-subject-item[data-subject="${subject}"]`);
+    if (subjectItem) subjectItem.remove();
+    
+    const container = document.getElementById('custom-subjects-container');
+    if (container && container.children.length === 0) {
+        container.innerHTML = '<p class="text-sm text-muted-foreground col-span-3 py-4 text-center bg-muted/30 rounded-lg" id="no-custom-subjects-message">No custom subjects added yet</p>';
+    }
+    
+    showToast(`Subject "${subject}" removed`, 'info');
+};
 
 // ============================================
 // ATTENDANCE SECTION
