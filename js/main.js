@@ -31,18 +31,21 @@ async function safeApiCall(apiCall, fallbackData = null, errorMessage = 'API cal
 }
 
 // ============================================
-// REMOVE MOCK DATA - USE REAL API ONLY
+// FIXED: LOAD FAIRNESS REPORT
 // ============================================
 
-// Update loadFairnessReport to use real data
 async function loadFairnessReport() {
     try {
         const response = await api.admin.getFairnessReport();
-        return response.data || {};
+        return response.data || { summary: { fairnessScore: 0 }, teacherStats: [] };
     } catch (error) {
         console.error('Failed to load fairness report:', error);
-        showToast('Failed to load fairness report', 'error');
-        return { summary: { fairnessScore: 0 }, teacherStats: [] };
+        // Return empty data structure instead of showing error
+        return { 
+            summary: { fairnessScore: 0, totalDuties: 0, understaffedDays: [] }, 
+            teacherStats: [],
+            recommendations: []
+        };
     }
 }
 
@@ -530,105 +533,166 @@ const CURRICULUM_STRUCTURE = {
 };
 
 // ============================================
-// CLASS GENERATION FUNCTIONS
+// FIXED: GENERATE CLASSES FROM CURRICULUM
 // ============================================
 
 async function generateClassesFromCurriculum() {
     const curriculum = window.schoolSettings?.curriculum || 'cbc';
     const schoolLevel = window.schoolSettings?.schoolLevel || 'secondary';
-    const streams = window.schoolSettings?.streams || { count: 1, names: [] };
     
-    // Get the curriculum structure
-    const structure = CURRICULUM_STRUCTURE[curriculum];
-    if (!structure) return [];
+    // Ask for stream configuration
+    const streamCount = parseInt(prompt('How many streams do you want to create? (e.g., 1, 2, 3, etc.)', '1') || '1');
+    if (isNaN(streamCount) || streamCount < 1) {
+        showToast('Invalid stream count', 'error');
+        return;
+    }
     
-    // Determine which levels to generate based on school level
-    let levelsToGenerate = [];
-    
-    if (schoolLevel === 'primary') {
-        if (curriculum === 'cbc') {
-            levelsToGenerate = ['pre_primary', 'lower_primary', 'upper_primary'];
-        } else if (curriculum === '844') {
-            levelsToGenerate = ['primary'];
-        } else if (curriculum === 'british') {
-            levelsToGenerate = ['primary'];
-        } else if (curriculum === 'american') {
-            levelsToGenerate = ['elementary'];
+    let streamNames = [];
+    if (streamCount > 1) {
+        const defaultNames = Array.from({ length: streamCount }, (_, i) => String.fromCharCode(65 + i)).join(', ');
+        const streamNamesInput = prompt(`Enter stream names separated by commas (e.g., A, B, C or Blue, Green, Yellow):\nDefault: ${defaultNames}`, defaultNames);
+        
+        if (streamNamesInput) {
+            streamNames = streamNamesInput.split(',').map(s => s.trim()).filter(s => s);
         }
-    } else if (schoolLevel === 'secondary') {
-        if (curriculum === 'cbc') {
-            levelsToGenerate = ['junior_secondary', 'senior_secondary'];
-        } else if (curriculum === '844') {
-            levelsToGenerate = ['secondary'];
-        } else if (curriculum === 'british') {
-            levelsToGenerate = ['lower_secondary', 'upper_secondary'];
-        } else if (curriculum === 'american') {
-            levelsToGenerate = ['middle', 'high'];
-        }
-    } else if (schoolLevel === 'both') {
-        if (curriculum === 'cbc') {
-            levelsToGenerate = ['pre_primary', 'lower_primary', 'upper_primary', 'junior_secondary', 'senior_secondary'];
-        } else if (curriculum === '844') {
-            levelsToGenerate = ['primary', 'secondary'];
-        } else if (curriculum === 'british') {
-            levelsToGenerate = ['primary', 'lower_secondary', 'upper_secondary'];
-        } else if (curriculum === 'american') {
-            levelsToGenerate = ['elementary', 'middle', 'high'];
+        
+        if (streamNames.length !== streamCount) {
+            streamNames = Array.from({ length: streamCount }, (_, i) => String.fromCharCode(65 + i));
         }
     }
     
-    const classesToCreate = [];
+    // Save stream settings
+    if (!window.schoolSettings) window.schoolSettings = {};
+    window.schoolSettings.streams = {
+        count: streamCount,
+        names: streamNames
+    };
+    localStorage.setItem('schoolSettings', JSON.stringify(window.schoolSettings));
     
-    for (const levelKey of levelsToGenerate) {
-        const level = structure.levels[levelKey];
-        if (!level) continue;
-        
-        // For each class in this level
-        for (const className of level.classes) {
-            // For each stream
-            const streamCount = streams.count || 1;
-            const streamNames = streams.names || generateStreamNames(streamCount);
-            
+    // Define classes based on curriculum and level
+    let classesToCreate = [];
+    
+    if (curriculum === 'cbc') {
+        if (schoolLevel === 'primary' || schoolLevel === 'both') {
+            // Pre-Primary
+            for (const className of ['PP1', 'PP2']) {
+                for (let i = 0; i < streamCount; i++) {
+                    const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
+                    classesToCreate.push({ name: `${className}${streamName}`, grade: className });
+                }
+            }
+            // Lower Primary
+            for (const className of ['Grade 1', 'Grade 2', 'Grade 3']) {
+                for (let i = 0; i < streamCount; i++) {
+                    const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
+                    classesToCreate.push({ name: `${className}${streamName}`, grade: className });
+                }
+            }
+            // Upper Primary
+            for (const className of ['Grade 4', 'Grade 5', 'Grade 6']) {
+                for (let i = 0; i < streamCount; i++) {
+                    const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
+                    classesToCreate.push({ name: `${className}${streamName}`, grade: className });
+                }
+            }
+        }
+        if (schoolLevel === 'secondary' || schoolLevel === 'both') {
+            // Junior Secondary
+            for (const className of ['Grade 7', 'Grade 8', 'Grade 9']) {
+                for (let i = 0; i < streamCount; i++) {
+                    const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
+                    classesToCreate.push({ name: `${className}${streamName}`, grade: className });
+                }
+            }
+            // Senior Secondary
+            for (const className of ['Grade 10', 'Grade 11', 'Grade 12']) {
+                for (let i = 0; i < streamCount; i++) {
+                    const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
+                    classesToCreate.push({ name: `${className}${streamName}`, grade: className });
+                }
+            }
+        }
+    } else if (curriculum === '844') {
+        if (schoolLevel === 'primary' || schoolLevel === 'both') {
+            for (const className of ['Standard 1', 'Standard 2', 'Standard 3', 'Standard 4', 'Standard 5', 'Standard 6', 'Standard 7', 'Standard 8']) {
+                for (let i = 0; i < streamCount; i++) {
+                    const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
+                    classesToCreate.push({ name: `${className}${streamName}`, grade: className });
+                }
+            }
+        }
+        if (schoolLevel === 'secondary' || schoolLevel === 'both') {
+            for (const className of ['Form 1', 'Form 2', 'Form 3', 'Form 4']) {
+                for (let i = 0; i < streamCount; i++) {
+                    const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
+                    classesToCreate.push({ name: `${className}${streamName}`, grade: className });
+                }
+            }
+        }
+    } else if (curriculum === 'british') {
+        const classes = ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5', 'Year 6', 'Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12', 'Year 13'];
+        for (const className of classes) {
             for (let i = 0; i < streamCount; i++) {
-                const streamName = streamNames[i] || String.fromCharCode(65 + i); // A, B, C...
-                const fullClassName = streamCount > 1 ? `${className} ${streamName}` : className;
-                
-                // Get subjects for this class
-                let subjects = [...level.subjects];
-                if (level.optional_subjects) {
-                    subjects = [...subjects, ...level.optional_subjects];
-                }
-                
-                // For senior secondary, add pathway subjects
-                if (levelKey === 'senior_secondary' && level.pathways) {
-                    // For now, add all pathway subjects
-                    for (const pathway of Object.values(level.pathways)) {
-                        subjects = [...subjects, ...pathway.subjects];
-                    }
-                }
-                
-                classesToCreate.push({
-                    name: fullClassName,
-                    grade: className,
-                    stream: streamCount > 1 ? streamName : null,
-                    level: levelKey,
-                    subjects: subjects,
-                    academicYear: new Date().getFullYear().toString()
-                });
+                const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
+                classesToCreate.push({ name: `${className}${streamName}`, grade: className });
+            }
+        }
+    } else if (curriculum === 'american') {
+        const classes = ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+        for (const className of classes) {
+            for (let i = 0; i < streamCount; i++) {
+                const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
+                classesToCreate.push({ name: `${className}${streamName}`, grade: className });
             }
         }
     }
     
-    return classesToCreate;
-}
-
-function generateStreamNames(count) {
-    const defaultNames = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
-    if (count <= defaultNames.length) {
-        return defaultNames.slice(0, count);
+    if (classesToCreate.length === 0) {
+        showToast('No classes to generate for this curriculum', 'info');
+        return;
     }
-    // For more streams, use numbers
-    return Array.from({ length: count }, (_, i) => (i + 1).toString());
+    
+    // Get existing classes
+    const existingClasses = await loadAllClasses();
+    const existingNames = new Set(existingClasses.map(c => c.name));
+    const newClasses = classesToCreate.filter(c => !existingNames.has(c.name));
+    
+    if (newClasses.length === 0) {
+        showToast('All classes already exist', 'info');
+        return;
+    }
+    
+    if (!confirm(`Generate ${newClasses.length} new classes?\n\n${newClasses.slice(0, 15).map(c => `• ${c.name}`).join('\n')}${newClasses.length > 15 ? `\n... and ${newClasses.length - 15} more` : ''}\n\nProceed?`)) {
+        return;
+    }
+    
+    showLoading();
+    let created = 0;
+    let failed = 0;
+    
+    for (const classData of newClasses) {
+        try {
+            await api.admin.createClass({
+                name: classData.name,
+                grade: classData.grade,
+                stream: classData.stream || null,
+                academicYear: new Date().getFullYear().toString()
+            });
+            created++;
+        } catch (error) {
+            console.error(`Failed to create ${classData.name}:`, error);
+            failed++;
+        }
+    }
+    
+    hideLoading();
+    
+    if (created > 0) {
+        showToast(`✅ Created ${created} classes${failed > 0 ? `, ${failed} failed` : ''}`, 'success');
+        await showDashboardSection('classes');
+    } else {
+        showToast('Failed to create classes', 'error');
+    }
 }
 
 // ============================================
@@ -5212,17 +5276,41 @@ window.closeDayDetailsModal = function() {
     if (modal) modal.classList.add('hidden');
 };
 
-// Calendar navigation
+// ============================================
+// FIXED: CALENDAR FUNCTIONS
+// ============================================
+
 window.calendarChangeMonth = function(direction) {
-    console.log('Changing month by:', direction);
-    showToast('Calendar month navigation - Feature coming soon', 'info');
+    if (calendarState && calendarState.currentDate) {
+        calendarState.currentDate.setMonth(calendarState.currentDate.getMonth() + direction);
+        showDashboardSection('calendar');
+    } else {
+        // Initialize calendar state if not exists
+        calendarState = { currentDate: new Date() };
+        calendarState.currentDate.setMonth(calendarState.currentDate.getMonth() + direction);
+        showDashboardSection('calendar');
+    }
 };
 
 window.calendarGoToToday = function() {
-    console.log('Going to today');
-    showToast('Calendar navigation - Feature coming soon', 'info');
+    if (calendarState) {
+        calendarState.currentDate = new Date();
+        showDashboardSection('calendar');
+    } else {
+        calendarState = { currentDate: new Date() };
+        showDashboardSection('calendar');
+    }
 };
 
+window.calendarGoToDate = function(year, month, day) {
+    if (calendarState) {
+        calendarState.currentDate = new Date(year, month, day);
+        showDashboardSection('calendar');
+    } else {
+        calendarState = { currentDate: new Date(year, month, day) };
+        showDashboardSection('calendar');
+    }
+};
 window.calendarGoToDate = function(year, month, day) {
     console.log('Going to date:', year, month, day);
     showToast('Calendar navigation - Feature coming soon', 'info');
