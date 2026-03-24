@@ -226,7 +226,6 @@ const superAdminAPI = {
     getUserStats: () => apiRequest('/api/super-admin/users/stats')
 };
 
-// ============ ADMIN ENDPOINTS ============
 const adminAPI = {
     // Teacher management
     getTeachers: () => apiRequest('/api/admin/teachers'),
@@ -266,7 +265,6 @@ const adminAPI = {
             method: 'DELETE'
         }),
     
-    // ============ NEW: Update Teacher ============
     updateTeacher: (teacherId, data) => 
         apiRequest(`/api/admin/teachers/${teacherId}`, {
             method: 'PUT',
@@ -281,7 +279,7 @@ const adminAPI = {
             body: JSON.stringify(data)
         }),
     
-    // ============ CLASS MANAGEMENT ============
+    // Class Management
     createClass: (data) => 
         apiRequest('/api/admin/classes', {
             method: 'POST',
@@ -295,20 +293,7 @@ const adminAPI = {
             method: 'PUT',
             body: JSON.stringify(data)
         }),
-
-    // Add to adminAPI object
-    assignTeacherToSubject: (data) => apiRequest('/api/admin/assign-teacher-to-subject', {
-        method: 'POST',
-        body: JSON.stringify(data)
-    }),
     
-    getSubjectAssignments: () => apiRequest('/api/admin/subject-assignments'),
-    
-    removeSubjectAssignment: (assignmentId) => 
-        apiRequest(`/api/admin/subject-assignments/${assignmentId}`, {
-            method: 'DELETE'
-        }),
-
     deleteClass: (classId) => 
         apiRequest(`/api/admin/classes/${classId}`, {
             method: 'DELETE'
@@ -329,6 +314,24 @@ const adminAPI = {
     
     getClassStudents: (classId) => 
         apiRequest(`/api/admin/classes/${classId}/students`),
+    
+    // ============ SUBJECT ASSIGNMENT ENDPOINTS (ADD THESE) ============
+    getClassSubjectAssignments: (classId) => 
+        apiRequest(`/api/admin/classes/${classId}/subject-assignments`),
+    
+    assignTeacherToSubject: (data) => 
+        apiRequest('/api/admin/assign-teacher-to-subject', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        }),
+    
+    removeSubjectAssignment: (assignmentId) => 
+        apiRequest(`/api/admin/subject-assignments/${assignmentId}`, {
+            method: 'DELETE'
+        }),
+    
+    getSubjectAssignments: () => 
+        apiRequest('/api/admin/subject-assignments'),
     
     // Student details
     getStudentDetails: (studentId) => 
@@ -372,7 +375,7 @@ const adminAPI = {
     getUnderstaffedAreas: () => apiRequest('/api/admin/duty/understaffed'),
     getTeacherWorkload: () => apiRequest('/api/admin/duty/teacher-workload'),
 
-    // ============ NEW: Statistics for Charts ============
+    // Statistics for Charts
     getStudentGrades: () => apiRequest('/api/admin/grades/stats'),
     getAttendanceStats: () => apiRequest('/api/admin/attendance/stats'),
     getDashboardData: () => apiRequest('/api/admin/dashboard')
