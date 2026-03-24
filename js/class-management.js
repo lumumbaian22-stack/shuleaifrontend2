@@ -1,89 +1,5 @@
 // class-management.js - PREMIUM DESIGN WITH FULL FUNCTIONALITY
-
-// ============ CURRICULUM STRUCTURE ============
-
-const CURRICULUM_STRUCTURE = {
-    'cbc': {
-        name: 'CBC (Competency Based Curriculum)',
-        levels: {
-            pre_primary: {
-                name: 'Pre-Primary',
-                classes: ['PP1', 'PP2'],
-                subjects: ['Language Activities', 'Mathematics Activities', 'Environmental Activities', 'Psychomotor and Creative Activities', 'Religious Education']
-            },
-            lower_primary: {
-                name: 'Lower Primary',
-                classes: ['Grade 1', 'Grade 2', 'Grade 3'],
-                subjects: ['Literacy (English)', 'Literacy (Kiswahili)', 'Mathematics', 'Environmental Activities', 'Religious Education', 'Creative Arts', 'Physical and Health Education']
-            },
-            upper_primary: {
-                name: 'Upper Primary',
-                classes: ['Grade 4', 'Grade 5', 'Grade 6'],
-                subjects: ['English', 'Kiswahili', 'Mathematics', 'Science and Technology', 'Agriculture and Nutrition', 'Creative Arts', 'Social Studies', 'Religious Education', 'Physical and Health Education']
-            },
-            junior_secondary: {
-                name: 'Junior Secondary',
-                classes: ['Grade 7', 'Grade 8', 'Grade 9'],
-                subjects: ['English', 'Kiswahili', 'Mathematics', 'Integrated Science', 'Health Education', 'Social Studies', 'Pre-Technical and Pre-Career Education', 'Agriculture', 'Business Studies', 'Religious Education', 'Life Skills Education', 'Sports and Physical Education', 'Visual Arts', 'Performing Arts']
-            },
-            senior_secondary: {
-                name: 'Senior Secondary',
-                classes: ['Grade 10', 'Grade 11', 'Grade 12'],
-                subjects: ['English', 'Kiswahili', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'History', 'Geography', 'Business Studies', 'Computer Science', 'Physical Education', 'Community Service Learning']
-            }
-        }
-    },
-    '844': {
-        name: '8-4-4 System',
-        levels: {
-            primary: {
-                name: 'Primary',
-                classes: ['Standard 1', 'Standard 2', 'Standard 3', 'Standard 4', 'Standard 5', 'Standard 6', 'Standard 7', 'Standard 8'],
-                subjects: ['Mathematics', 'English', 'Kiswahili', 'Science', 'Social Studies', 'Religious Education', 'Physical Education']
-            },
-            secondary: {
-                name: 'Secondary',
-                classes: ['Form 1', 'Form 2', 'Form 3', 'Form 4'],
-                subjects: ['Mathematics', 'English', 'Kiswahili', 'Biology', 'Chemistry', 'Physics', 'History', 'Geography', 'Religious Education', 'Business Studies', 'Agriculture', 'Computer Studies']
-            }
-        }
-    },
-    'british': {
-        name: 'British Curriculum',
-        levels: {
-            primary: {
-                name: 'Primary',
-                classes: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5', 'Year 6'],
-                subjects: ['English', 'Mathematics', 'Science', 'History', 'Geography', 'Art', 'Music', 'Physical Education', 'Computing']
-            },
-            secondary: {
-                name: 'Secondary',
-                classes: ['Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12', 'Year 13'],
-                subjects: ['English Literature', 'English Language', 'Mathematics', 'Biology', 'Chemistry', 'Physics', 'History', 'Geography', 'French', 'Spanish', 'Computer Science', 'Business Studies', 'Economics', 'Art', 'Music', 'Physical Education']
-            }
-        }
-    },
-    'american': {
-        name: 'American Curriculum',
-        levels: {
-            elementary: {
-                name: 'Elementary',
-                classes: ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5'],
-                subjects: ['English Language Arts', 'Mathematics', 'Science', 'Social Studies', 'Art', 'Music', 'Physical Education']
-            },
-            middle: {
-                name: 'Middle School',
-                classes: ['Grade 6', 'Grade 7', 'Grade 8'],
-                subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'Spanish', 'Computer Science', 'Art', 'Music', 'Physical Education']
-            },
-            high: {
-                name: 'High School',
-                classes: ['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
-                subjects: ['English', 'Mathematics', 'Biology', 'Chemistry', 'Physics', 'History', 'Government', 'Economics', 'Spanish', 'French', 'Computer Science', 'Business', 'Art', 'Music', 'Physical Education']
-            }
-        }
-    }
-};
+// Uses CURRICULUM_STRUCTURE from main.js
 
 // ============ LOAD FUNCTIONS ============
 
@@ -157,13 +73,19 @@ async function generateClassesFromCurriculum() {
     const schoolLevel = window.schoolSettings?.schoolLevel || 'secondary';
     const streams = window.schoolSettings?.streams || { count: 1, names: ['A', 'B', 'C'] };
     
+    // Use the existing CURRICULUM_STRUCTURE from main.js
+    if (typeof CURRICULUM_STRUCTURE === 'undefined') {
+        showToast('Curriculum structure not loaded', 'error');
+        return;
+    }
+    
     const structure = CURRICULUM_STRUCTURE[curriculum];
     if (!structure) {
         showToast('Curriculum structure not found', 'error');
         return;
     }
     
-    // Determine which levels to generate
+    // Determine which levels to generate based on curriculum
     let levelsToGenerate = [];
     
     if (curriculum === 'cbc') {
@@ -265,7 +187,11 @@ async function renderClassManagement() {
         ]);
         
         const curriculum = window.schoolSettings?.curriculum || 'cbc';
-        const curriculumName = CURRICULUM_STRUCTURE[curriculum]?.name || 'Current Curriculum';
+        let curriculumName = 'Current Curriculum';
+        
+        if (typeof CURRICULUM_STRUCTURE !== 'undefined' && CURRICULUM_STRUCTURE[curriculum]) {
+            curriculumName = CURRICULUM_STRUCTURE[curriculum].name;
+        }
         
         if (!classes || classes.length === 0) {
             return `
@@ -726,7 +652,7 @@ window.openSubjectAssignmentModal = async function(classId, className) {
                                 <th class="px-4 py-3 text-left font-medium">Subject</th>
                                 <th class="px-4 py-3 text-left font-medium">Teacher</th>
                                 <th class="px-4 py-3 text-center font-medium">Actions</th>
-                            </tr>
+                             </tr>
                         </thead>
                         <tbody class="divide-y">
                             ${allSubjects.map(subject => {
@@ -758,7 +684,7 @@ window.openSubjectAssignmentModal = async function(classId, className) {
                                                     </button>
                                                 ` : ''}
                                             </div>
-                                         </td>
+                                        </td>
                                     </tr>
                                 `;
                             }).join('')}
