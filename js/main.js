@@ -11318,6 +11318,77 @@ window.addTerm = function() {
     termsContainer.insertBefore(newTermDiv, document.querySelector('button[onclick="addTerm()"]').parentNode);
 };
 
+// ============================================
+// CUSTOM SUBJECT FUNCTIONS (Add to main.js)
+// ============================================
+
+function addCustomSubject() {
+    const newSubject = document.getElementById('new-subject-name')?.value.trim();
+    if (!newSubject) {
+        showToast('Please enter a subject name', 'error');
+        return;
+    }
+    
+    if (!window.customSubjects) window.customSubjects = [];
+    
+    if (window.customSubjects.includes(newSubject)) {
+        showToast('Subject already exists', 'warning');
+        return;
+    }
+    
+    window.customSubjects.push(newSubject);
+    window.schoolSettings.customSubjects = window.customSubjects;
+    localStorage.setItem('schoolSettings', JSON.stringify(window.schoolSettings));
+    
+    // Update the UI
+    const container = document.getElementById('custom-subjects-container');
+    const noMsg = document.getElementById('no-custom-subjects-message');
+    if (noMsg) noMsg.remove();
+    
+    if (container) {
+        container.innerHTML += `
+            <div class="custom-subject-item flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full border border-primary/20" data-subject="${newSubject}">
+                <span class="text-sm">${escapeHtml(newSubject)}</span>
+                <button onclick="removeCustomSubject('${escapeHtml(newSubject)}')" class="text-primary hover:text-red-500 transition-colors">
+                    <i data-lucide="x" class="h-3 w-3"></i>
+                </button>
+            </div>
+        `;
+    }
+    
+    document.getElementById('new-subject-name').value = '';
+    showToast(`✅ Subject "${newSubject}" added`, 'success');
+    
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function removeCustomSubject(subject) {
+    if (!confirm(`Remove "${subject}" from custom subjects?`)) return;
+    
+    window.customSubjects = window.customSubjects.filter(s => s !== subject);
+    window.schoolSettings.customSubjects = window.customSubjects;
+    localStorage.setItem('schoolSettings', JSON.stringify(window.schoolSettings));
+    
+    // Remove from UI
+    const subjectItem = document.querySelector(`.custom-subject-item[data-subject="${subject}"]`);
+    if (subjectItem) subjectItem.remove();
+    
+    // Show "no subjects" message if container is empty
+    const container = document.getElementById('custom-subjects-container');
+    if (container && container.children.length === 0) {
+        container.innerHTML = '<p class="text-sm text-muted-foreground" id="no-custom-subjects-message">No custom subjects added yet</p>';
+    }
+    
+    showToast(`Subject "${subject}" removed`, 'info');
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // Add custom subject
 window.addCustomSubject = function() {
     const newSubject = document.getElementById('new-subject-name')?.value.trim();
