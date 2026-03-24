@@ -417,6 +417,353 @@ function formatDate(dateString) {
 }
 
 // ============================================
+// CURRICULUM STRUCTURE CONFIGURATION
+// ============================================
+
+const CURRICULUM_STRUCTURE = {
+    'cbc': {
+        name: 'CBC (Competency Based Curriculum)',
+        levels: {
+            pre_primary: {
+                name: 'Pre-Primary',
+                classes: ['PP1', 'PP2'],
+                subjects: ['Language Activities', 'Mathematics Activities', 'Environmental Activities', 'Psychomotor and Creative Activities', 'Religious Education']
+            },
+            lower_primary: {
+                name: 'Lower Primary (Grade 1-3)',
+                classes: ['Grade 1', 'Grade 2', 'Grade 3'],
+                subjects: ['Literacy (English)', 'Literacy (Kiswahili)', 'Mathematics', 'Environmental Activities', 'Religious Education', 'Creative Arts', 'Physical and Health Education']
+            },
+            upper_primary: {
+                name: 'Upper Primary (Grade 4-6)',
+                classes: ['Grade 4', 'Grade 5', 'Grade 6'],
+                subjects: ['English', 'Kiswahili', 'Mathematics', 'Science and Technology', 'Agriculture and Nutrition', 'Creative Arts', 'Social Studies', 'Religious Education', 'Physical and Health Education']
+            },
+            junior_secondary: {
+                name: 'Junior Secondary (Grade 7-9)',
+                classes: ['Grade 7', 'Grade 8', 'Grade 9'],
+                subjects: [
+                    'English', 'Kiswahili', 'Mathematics', 'Integrated Science', 'Health Education',
+                    'Social Studies', 'Pre-Technical and Pre-Career Education', 'Agriculture',
+                    'Business Studies', 'Religious Education', 'Life Skills Education',
+                    'Sports and Physical Education', 'Visual Arts', 'Performing Arts'
+                ],
+                optional_subjects: ['German', 'French', 'Mandarin', 'Indigenous Languages', 'Computer Science']
+            },
+            senior_secondary: {
+                name: 'Senior Secondary (Grade 10-12)',
+                classes: ['Grade 10', 'Grade 11', 'Grade 12'],
+                pathways: {
+                    stem: {
+                        name: 'STEM Pathway',
+                        subjects: ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'Aviation Technology', 'Agriculture']
+                    },
+                    arts_sports: {
+                        name: 'Arts and Sports Science',
+                        subjects: ['Music', 'Fine Arts', 'Performing Arts', 'Media Studies', 'Physical Education', 'Creative Writing']
+                    },
+                    social_sciences: {
+                        name: 'Social Sciences',
+                        subjects: ['History', 'Geography', 'English Literature', 'Religious Education', 'Business Studies', 'Sociology', 'Philosophy', 'Foreign Languages']
+                    }
+                },
+                mandatory_subjects: ['English', 'Kiswahili', 'Physical Education', 'Community Service Learning']
+            }
+        }
+    },
+    '844': {
+        name: '8-4-4 System',
+        levels: {
+            primary: {
+                name: 'Primary (Standard 1-8)',
+                classes: ['Standard 1', 'Standard 2', 'Standard 3', 'Standard 4', 'Standard 5', 'Standard 6', 'Standard 7', 'Standard 8'],
+                subjects: ['Mathematics', 'English', 'Kiswahili', 'Science', 'Social Studies', 'Religious Education', 'Physical Education']
+            },
+            secondary: {
+                name: 'Secondary (Form 1-4)',
+                classes: ['Form 1', 'Form 2', 'Form 3', 'Form 4'],
+                subjects: ['Mathematics', 'English', 'Kiswahili', 'Biology', 'Chemistry', 'Physics', 'History', 'Geography', 'Religious Education', 'Business Studies', 'Agriculture', 'Computer Studies'],
+                optional_subjects: ['French', 'German', 'Arabic', 'Music', 'Art and Design']
+            }
+        }
+    },
+    'british': {
+        name: 'British Curriculum',
+        levels: {
+            primary: {
+                name: 'Primary (Year 1-6)',
+                classes: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5', 'Year 6'],
+                subjects: ['English', 'Mathematics', 'Science', 'History', 'Geography', 'Art', 'Music', 'Physical Education', 'Computing']
+            },
+            lower_secondary: {
+                name: 'Lower Secondary (Year 7-9)',
+                classes: ['Year 7', 'Year 8', 'Year 9'],
+                subjects: ['English', 'Mathematics', 'Biology', 'Chemistry', 'Physics', 'History', 'Geography', 'French', 'Spanish', 'Computer Science', 'Art', 'Music', 'Physical Education']
+            },
+            upper_secondary: {
+                name: 'Upper Secondary (Year 10-13)',
+                classes: ['Year 10', 'Year 11', 'Year 12', 'Year 13'],
+                subjects: ['English Literature', 'English Language', 'Mathematics', 'Biology', 'Chemistry', 'Physics', 'History', 'Geography', 'French', 'Spanish', 'Computer Science', 'Business Studies', 'Economics', 'Psychology', 'Sociology', 'Art', 'Music']
+            }
+        }
+    },
+    'american': {
+        name: 'American Curriculum',
+        levels: {
+            elementary: {
+                name: 'Elementary (K-5)',
+                classes: ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5'],
+                subjects: ['English Language Arts', 'Mathematics', 'Science', 'Social Studies', 'Art', 'Music', 'Physical Education']
+            },
+            middle: {
+                name: 'Middle School (6-8)',
+                classes: ['Grade 6', 'Grade 7', 'Grade 8'],
+                subjects: ['English', 'Mathematics', 'Science', 'Social Studies', 'Spanish', 'French', 'Computer Science', 'Art', 'Music', 'Physical Education']
+            },
+            high: {
+                name: 'High School (9-12)',
+                classes: ['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
+                subjects: ['English', 'Mathematics', 'Biology', 'Chemistry', 'Physics', 'History', 'Government', 'Economics', 'Spanish', 'French', 'Computer Science', 'Business', 'Art', 'Music', 'Physical Education', 'Psychology', 'Sociology']
+            }
+        }
+    }
+};
+
+// ============================================
+// CLASS GENERATION FUNCTIONS
+// ============================================
+
+async function generateClassesFromCurriculum() {
+    const curriculum = window.schoolSettings?.curriculum || 'cbc';
+    const schoolLevel = window.schoolSettings?.schoolLevel || 'secondary';
+    const streams = window.schoolSettings?.streams || { count: 1, names: [] };
+    
+    // Get the curriculum structure
+    const structure = CURRICULUM_STRUCTURE[curriculum];
+    if (!structure) return [];
+    
+    // Determine which levels to generate based on school level
+    let levelsToGenerate = [];
+    
+    if (schoolLevel === 'primary') {
+        if (curriculum === 'cbc') {
+            levelsToGenerate = ['pre_primary', 'lower_primary', 'upper_primary'];
+        } else if (curriculum === '844') {
+            levelsToGenerate = ['primary'];
+        } else if (curriculum === 'british') {
+            levelsToGenerate = ['primary'];
+        } else if (curriculum === 'american') {
+            levelsToGenerate = ['elementary'];
+        }
+    } else if (schoolLevel === 'secondary') {
+        if (curriculum === 'cbc') {
+            levelsToGenerate = ['junior_secondary', 'senior_secondary'];
+        } else if (curriculum === '844') {
+            levelsToGenerate = ['secondary'];
+        } else if (curriculum === 'british') {
+            levelsToGenerate = ['lower_secondary', 'upper_secondary'];
+        } else if (curriculum === 'american') {
+            levelsToGenerate = ['middle', 'high'];
+        }
+    } else if (schoolLevel === 'both') {
+        if (curriculum === 'cbc') {
+            levelsToGenerate = ['pre_primary', 'lower_primary', 'upper_primary', 'junior_secondary', 'senior_secondary'];
+        } else if (curriculum === '844') {
+            levelsToGenerate = ['primary', 'secondary'];
+        } else if (curriculum === 'british') {
+            levelsToGenerate = ['primary', 'lower_secondary', 'upper_secondary'];
+        } else if (curriculum === 'american') {
+            levelsToGenerate = ['elementary', 'middle', 'high'];
+        }
+    }
+    
+    const classesToCreate = [];
+    
+    for (const levelKey of levelsToGenerate) {
+        const level = structure.levels[levelKey];
+        if (!level) continue;
+        
+        // For each class in this level
+        for (const className of level.classes) {
+            // For each stream
+            const streamCount = streams.count || 1;
+            const streamNames = streams.names || generateStreamNames(streamCount);
+            
+            for (let i = 0; i < streamCount; i++) {
+                const streamName = streamNames[i] || String.fromCharCode(65 + i); // A, B, C...
+                const fullClassName = streamCount > 1 ? `${className} ${streamName}` : className;
+                
+                // Get subjects for this class
+                let subjects = [...level.subjects];
+                if (level.optional_subjects) {
+                    subjects = [...subjects, ...level.optional_subjects];
+                }
+                
+                // For senior secondary, add pathway subjects
+                if (levelKey === 'senior_secondary' && level.pathways) {
+                    // For now, add all pathway subjects
+                    for (const pathway of Object.values(level.pathways)) {
+                        subjects = [...subjects, ...pathway.subjects];
+                    }
+                }
+                
+                classesToCreate.push({
+                    name: fullClassName,
+                    grade: className,
+                    stream: streamCount > 1 ? streamName : null,
+                    level: levelKey,
+                    subjects: subjects,
+                    academicYear: new Date().getFullYear().toString()
+                });
+            }
+        }
+    }
+    
+    return classesToCreate;
+}
+
+function generateStreamNames(count) {
+    const defaultNames = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+    if (count <= defaultNames.length) {
+        return defaultNames.slice(0, count);
+    }
+    // For more streams, use numbers
+    return Array.from({ length: count }, (_, i) => (i + 1).toString());
+}
+
+// ============================================
+// STREAM CONFIGURATION
+// ============================================
+
+function updateStreamNamesInputs() {
+    const streamCount = parseInt(document.getElementById('stream-count')?.value || 1);
+    const container = document.getElementById('stream-names-container');
+    const inputsContainer = document.getElementById('stream-names-inputs');
+    
+    if (streamCount > 1) {
+        container.classList.remove('hidden');
+        inputsContainer.innerHTML = '';
+        
+        for (let i = 0; i < streamCount; i++) {
+            const defaultName = String.fromCharCode(65 + i); // A, B, C...
+            inputsContainer.innerHTML += `
+                <div class="flex gap-2">
+                    <input type="text" class="stream-name w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" 
+                           placeholder="Stream ${i+1} Name" value="${defaultName}">
+                </div>
+            `;
+        }
+    } else {
+        container.classList.add('hidden');
+    }
+}
+
+// Save stream settings
+async function saveStreamSettings() {
+    const streamCount = parseInt(document.getElementById('stream-count')?.value || 1);
+    const streamNames = [];
+    
+    if (streamCount > 1) {
+        const nameInputs = document.querySelectorAll('.stream-name');
+        nameInputs.forEach(input => {
+            if (input.value.trim()) {
+                streamNames.push(input.value.trim());
+            }
+        });
+    }
+    
+    const streamSettings = {
+        count: streamCount,
+        names: streamNames
+    };
+    
+    // Save to school settings
+    const school = getCurrentSchool();
+    if (school) {
+        school.streams = streamSettings;
+        localStorage.setItem('school', JSON.stringify(school));
+    }
+    
+    // Also save to schoolSettings
+    if (!window.schoolSettings) window.schoolSettings = {};
+    window.schoolSettings.streams = streamSettings;
+    localStorage.setItem('schoolSettings', JSON.stringify(window.schoolSettings));
+    
+    showToast('Stream settings saved', 'success');
+}
+
+// Add event listener for stream count change
+document.addEventListener('DOMContentLoaded', function() {
+    const streamCountSelect = document.getElementById('stream-count');
+    if (streamCountSelect) {
+        streamCountSelect.addEventListener('change', updateStreamNamesInputs);
+        
+        // Load saved stream settings
+        const savedStreams = window.schoolSettings?.streams || { count: 1, names: [] };
+        streamCountSelect.value = savedStreams.count;
+        updateStreamNamesInputs();
+        
+        if (savedStreams.names && savedStreams.names.length > 0) {
+            setTimeout(() => {
+                const nameInputs = document.querySelectorAll('.stream-name');
+                savedStreams.names.forEach((name, index) => {
+                    if (nameInputs[index]) nameInputs[index].value = name;
+                });
+            }, 100);
+        }
+    }
+});
+
+// ============================================
+// AUTO-GENERATE CLASSES ON CURRICULUM CHANGE
+// ============================================
+
+async function autoGenerateClassesOnCurriculumChange() {
+    showLoading();
+    try {
+        const classesToCreate = await generateClassesFromCurriculum();
+        const existingClasses = await loadAllClasses();
+        
+        // Filter out classes that already exist
+        const existingNames = new Set(existingClasses.map(c => c.name));
+        const newClasses = classesToCreate.filter(c => !existingNames.has(c.name));
+        
+        if (newClasses.length === 0) {
+            showToast('All curriculum classes already exist', 'info');
+            return;
+        }
+        
+        // Ask user if they want to create the classes
+        const confirmMessage = `This will create ${newClasses.length} new classes based on your curriculum:\n\n${newClasses.map(c => `• ${c.name}`).join('\n')}\n\nDo you want to proceed?`;
+        
+        if (!confirm(confirmMessage)) {
+            showToast('Class generation cancelled', 'info');
+            return;
+        }
+        
+        // Create the classes
+        let created = 0;
+        for (const classData of newClasses) {
+            try {
+                await api.admin.createClass(classData);
+                created++;
+            } catch (error) {
+                console.error(`Failed to create class ${classData.name}:`, error);
+            }
+        }
+        
+        showToast(`✅ Created ${created} new classes`, 'success');
+        await refreshClassesList();
+        
+    } catch (error) {
+        console.error('Error generating classes:', error);
+        showToast('Failed to generate classes', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// ============================================
 // CURRICULUM CHANGE FOR ALL USERS - Add to main.js
 // ============================================
 
@@ -6203,6 +6550,10 @@ async function getAllSubjects() {
 
 // ============ RENDER MAIN CLASS MANAGEMENT PAGE ============
 
+// ============================================
+// RENDER CLASS MANAGEMENT - EXPANDABLE VERSION
+// ============================================
+
 async function renderClassManagement() {
     try {
         const [classes, teachers] = await Promise.all([
@@ -6210,19 +6561,55 @@ async function renderClassManagement() {
             loadAvailableTeachers()
         ]);
         
-        if (!classes || classes.length === 0) {
+        // Group classes by level
+        const groupedClasses = {};
+        for (const cls of classes) {
+            // Determine level from grade
+            let level = 'other';
+            if (cls.grade.includes('PP') || cls.grade.includes('Pre')) level = 'pre_primary';
+            else if (cls.grade.includes('Grade 1') || cls.grade.includes('Grade 2') || cls.grade.includes('Grade 3')) level = 'lower_primary';
+            else if (cls.grade.includes('Grade 4') || cls.grade.includes('Grade 5') || cls.grade.includes('Grade 6')) level = 'upper_primary';
+            else if (cls.grade.includes('Grade 7') || cls.grade.includes('Grade 8') || cls.grade.includes('Grade 9')) level = 'junior_secondary';
+            else if (cls.grade.includes('Grade 10') || cls.grade.includes('Grade 11') || cls.grade.includes('Grade 12')) level = 'senior_secondary';
+            else if (cls.grade.includes('Standard') || cls.grade.includes('Form')) level = 'secondary';
+            
+            if (!groupedClasses[level]) groupedClasses[level] = [];
+            groupedClasses[level].push(cls);
+        }
+        
+        // Level display names
+        const levelNames = {
+            pre_primary: '🎨 Pre-Primary (PP1-PP2)',
+            lower_primary: '📚 Lower Primary (Grade 1-3)',
+            upper_primary: '📖 Upper Primary (Grade 4-6)',
+            junior_secondary: '🔬 Junior Secondary (Grade 7-9)',
+            senior_secondary: '🎓 Senior Secondary (Grade 10-12)',
+            secondary: '🏫 Secondary (Form 1-4)',
+            other: '📌 Other Classes'
+        };
+        
+        if (classes.length === 0) {
             return `
                 <div class="space-y-6 animate-fade-in">
                     <div class="flex justify-between items-center">
-                        <h2 class="text-2xl font-bold">Class Management</h2>
-                        <button onclick="showAddClassModal()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
-                            <i data-lucide="plus" class="h-4 w-4"></i>
-                            Add New Class
-                        </button>
+                        <div>
+                            <h2 class="text-2xl font-bold">Class Management</h2>
+                            <p class="text-sm text-muted-foreground mt-1">No classes yet. Generate classes from curriculum or add manually.</p>
+                        </div>
+                        <div class="flex gap-3">
+                            <button onclick="autoGenerateClassesOnCurriculumChange()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2">
+                                <i data-lucide="wand-2" class="h-4 w-4"></i>
+                                Auto-Generate from Curriculum
+                            </button>
+                            <button onclick="showAddClassModal()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
+                                <i data-lucide="plus" class="h-4 w-4"></i>
+                                Add Manually
+                            </button>
+                        </div>
                     </div>
                     <div class="text-center py-12 border rounded-lg bg-card">
                         <i data-lucide="school" class="h-12 w-12 mx-auto text-muted-foreground mb-4"></i>
-                        <p class="text-muted-foreground">No classes found. Click "Add New Class" to create your first class.</p>
+                        <p class="text-muted-foreground">No classes found. Click "Auto-Generate" to create classes based on your curriculum.</p>
                     </div>
                 </div>
             `;
@@ -6230,84 +6617,137 @@ async function renderClassManagement() {
         
         let html = `
             <div class="space-y-6 animate-fade-in">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-2xl font-bold">Class Management</h2>
-                    <button onclick="showAddClassModal()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
-                        <i data-lucide="plus" class="h-4 w-4"></i>
-                        Add New Class
-                    </button>
+                <div class="flex justify-between items-center sticky top-0 bg-background z-10 pb-4">
+                    <div>
+                        <h2 class="text-2xl font-bold">Class Management</h2>
+                        <p class="text-sm text-muted-foreground mt-1">${classes.length} total classes</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="autoGenerateClassesOnCurriculumChange()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2">
+                            <i data-lucide="wand-2" class="h-4 w-4"></i>
+                            Generate from Curriculum
+                        </button>
+                        <button onclick="showAddClassModal()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
+                            <i data-lucide="plus" class="h-4 w-4"></i>
+                            Add Manually
+                        </button>
+                    </div>
                 </div>
                 
-                <div class="grid gap-4" id="classes-grid">
+                <div class="space-y-4" id="classes-accordion">
         `;
         
-        for (const cls of classes) {
-            const currentTeacher = cls.Teacher?.User?.name || 'Not assigned';
+        // Render each level as an accordion section
+        for (const [levelKey, levelClasses] of Object.entries(groupedClasses)) {
+            const levelName = levelNames[levelKey] || levelKey;
             
             html += `
-                <div class="border rounded-lg bg-card hover:shadow-md transition-shadow overflow-hidden" data-class-id="${cls.id}">
-                    <div class="p-5 border-b bg-muted/30">
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <div>
-                                <h3 class="font-semibold text-lg">${escapeHtml(cls.name)}</h3>
-                                <p class="text-sm text-muted-foreground">Grade: ${escapeHtml(cls.grade)} | Stream: ${escapeHtml(cls.stream || 'N/A')}</p>
-                                <p class="text-xs text-muted-foreground mt-1">${cls.studentCount || 0} students enrolled</p>
+                <div class="rounded-xl border bg-card overflow-hidden">
+                    <button onclick="toggleLevel('${levelKey}')" 
+                            class="w-full p-4 text-left flex justify-between items-center hover:bg-muted/50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl">${levelName}</span>
+                            <span class="text-sm text-muted-foreground">(${levelClasses.length} classes)</span>
+                        </div>
+                        <i data-lucide="chevron-down" class="h-5 w-5 transition-transform" id="level-icon-${levelKey}"></i>
+                    </button>
+                    <div id="level-content-${levelKey}" class="divide-y border-t hidden">
+            `;
+            
+            for (const cls of levelClasses) {
+                const currentTeacher = cls.Teacher?.User?.name || 'Not assigned';
+                const hasTeacher = cls.Teacher !== null;
+                
+                html += `
+                    <div class="class-item" data-class-id="${cls.id}">
+                        <div class="p-5 hover:bg-accent/30 transition-colors">
+                            <!-- Class Header - Always Visible -->
+                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3 flex-wrap">
+                                        <h3 class="font-semibold text-lg">${escapeHtml(cls.name)}</h3>
+                                        <span class="px-2 py-0.5 bg-muted text-xs rounded-full">${cls.studentCount || 0} students</span>
+                                        <span class="px-2 py-0.5 ${hasTeacher ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} text-xs rounded-full">
+                                            ${hasTeacher ? 'Class Teacher Assigned' : 'No Class Teacher'}
+                                        </span>
+                                    </div>
+                                    <p class="text-sm text-muted-foreground mt-1">Grade: ${escapeHtml(cls.grade)} | Stream: ${escapeHtml(cls.stream || 'N/A')}</p>
+                                </div>
+                                
+                                <div class="flex gap-2">
+                                    <button onclick="toggleClassDetails(${cls.id})" 
+                                            class="p-2 border rounded-lg hover:bg-accent" 
+                                            title="Show Details">
+                                        <i data-lucide="chevron-down" class="h-4 w-4" id="class-icon-${cls.id}"></i>
+                                    </button>
+                                    <button onclick="editClass(${cls.id})" 
+                                            class="p-2 border rounded-lg hover:bg-accent" 
+                                            title="Edit Class">
+                                        <i data-lucide="edit" class="h-4 w-4"></i>
+                                    </button>
+                                    <button onclick="deleteClass(${cls.id})" 
+                                            class="p-2 border rounded-lg hover:bg-red-100 text-red-600" 
+                                            title="Delete Class">
+                                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <div class="flex gap-2">
-                                <button onclick="editClass(${cls.id})" class="p-2 border rounded-lg hover:bg-accent" title="Edit Class">
-                                    <i data-lucide="edit" class="h-4 w-4"></i>
-                                </button>
-                                <button onclick="deleteClass(${cls.id})" class="p-2 border rounded-lg hover:bg-red-100 text-red-600" title="Delete Class">
-                                    <i data-lucide="trash-2" class="h-4 w-4"></i>
-                                </button>
+                            
+                            <!-- Expandable Details Section - Hidden by Default -->
+                            <div id="class-details-${cls.id}" class="mt-4 pt-4 border-t hidden">
+                                <!-- Class Teacher Assignment -->
+                                <div class="mb-4 p-4 bg-muted/20 rounded-lg">
+                                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                        <div>
+                                            <p class="text-sm font-medium mb-1">🏫 Class Teacher</p>
+                                            <p class="text-sm ${hasTeacher ? 'text-green-600 font-medium' : 'text-yellow-600'}">
+                                                ${escapeHtml(currentTeacher)}
+                                            </p>
+                                            ${cls.Teacher?.User?.email ? `<p class="text-xs text-muted-foreground">${escapeHtml(cls.Teacher.User.email)}</p>` : ''}
+                                        </div>
+                                        <div class="flex gap-2 w-full md:w-auto">
+                                            <select id="class-teacher-${cls.id}" class="rounded-lg border border-input bg-background px-3 py-2 text-sm flex-1 md:flex-initial min-w-[200px]">
+                                                <option value="">-- Select Teacher --</option>
+                                                ${teachers.map(t => `
+                                                    <option value="${t.id}" ${t.id === cls.teacherId ? 'selected' : ''}>
+                                                        ${escapeHtml(t.User?.name || 'Unknown')} (${escapeHtml(t.subjects?.join(', ') || 'No subjects')})
+                                                    </option>
+                                                `).join('')}
+                                            </select>
+                                            <button onclick="assignClassTeacher(${cls.id})" 
+                                                    class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 whitespace-nowrap">
+                                                Assign
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Subject Teachers Section -->
+                                <div>
+                                    <div class="flex justify-between items-center mb-3">
+                                        <h4 class="font-medium text-sm flex items-center gap-2">
+                                            <i data-lucide="book-open" class="h-4 w-4 text-primary"></i>
+                                            Subject Teachers
+                                        </h4>
+                                        <button onclick="openSubjectAssignmentModal(${cls.id}, '${escapeHtml(cls.name)}')" 
+                                                class="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-lg hover:bg-blue-200 flex items-center gap-1">
+                                            <i data-lucide="plus" class="h-3 w-3"></i>
+                                            Assign Subjects
+                                        </button>
+                                    </div>
+                                    <div id="subject-assignments-${cls.id}" class="space-y-2 min-h-[60px]">
+                                        <div class="text-sm text-muted-foreground text-center py-3 bg-muted/20 rounded">
+                                            Loading subject assignments...
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Class Teacher Assignment -->
-                    <div class="p-5 border-b">
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <div>
-                                <p class="text-sm font-medium mb-1">🏫 Class Teacher</p>
-                                <p class="text-sm ${cls.Teacher ? 'text-green-600 font-medium' : 'text-yellow-600'}">
-                                    ${escapeHtml(currentTeacher)}
-                                </p>
-                                ${cls.Teacher?.User?.email ? `<p class="text-xs text-muted-foreground">${escapeHtml(cls.Teacher.User.email)}</p>` : ''}
-                            </div>
-                            <div class="flex gap-2">
-                                <select id="class-teacher-${cls.id}" class="rounded-lg border border-input bg-background px-3 py-2 text-sm min-w-[200px]">
-                                    <option value="">-- Select Teacher --</option>
-                                    ${teachers.map(t => `
-                                        <option value="${t.id}" ${t.id === cls.teacherId ? 'selected' : ''}>
-                                            ${escapeHtml(t.User?.name || 'Unknown')} (${escapeHtml(t.subjects?.join(', ') || 'No subjects')})
-                                        </option>
-                                    `).join('')}
-                                </select>
-                                <button onclick="assignClassTeacher(${cls.id})" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 whitespace-nowrap">
-                                    Assign
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Subject Teachers Section -->
-                    <div class="p-5">
-                        <div class="flex justify-between items-center mb-4">
-                            <h4 class="font-medium text-sm flex items-center gap-2">
-                                <i data-lucide="book-open" class="h-4 w-4 text-primary"></i>
-                                Subject Teachers
-                            </h4>
-                            <button onclick="openSubjectAssignmentModal(${cls.id}, '${escapeHtml(cls.name)}')" 
-                                    class="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-lg hover:bg-blue-200 flex items-center gap-1">
-                                <i data-lucide="plus" class="h-3 w-3"></i>
-                                Assign Subjects
-                            </button>
-                        </div>
-                        <div id="subject-assignments-${cls.id}" class="space-y-2">
-                            <div class="text-sm text-muted-foreground text-center py-3 bg-muted/20 rounded">
-                                Loading subject assignments...
-                            </div>
-                        </div>
+                `;
+            }
+            
+            html += `
                     </div>
                 </div>
             `;
@@ -6316,6 +6756,35 @@ async function renderClassManagement() {
         html += `
                 </div>
             </div>
+        `;
+        
+        // Add JavaScript for expand/collapse functionality
+        html += `
+            <script>
+                function toggleLevel(levelKey) {
+                    const content = document.getElementById('level-content-' + levelKey);
+                    const icon = document.getElementById('level-icon-' + levelKey);
+                    if (content.classList.contains('hidden')) {
+                        content.classList.remove('hidden');
+                        icon.style.transform = 'rotate(180deg)';
+                    } else {
+                        content.classList.add('hidden');
+                        icon.style.transform = 'rotate(0deg)';
+                    }
+                }
+                
+                function toggleClassDetails(classId) {
+                    const details = document.getElementById('class-details-' + classId);
+                    const icon = document.getElementById('class-icon-' + classId);
+                    if (details.classList.contains('hidden')) {
+                        details.classList.remove('hidden');
+                        icon.style.transform = 'rotate(180deg)';
+                    } else {
+                        details.classList.add('hidden');
+                        icon.style.transform = 'rotate(0deg)';
+                    }
+                }
+            </script>
         `;
         
         // After rendering, load subject assignments for each class
@@ -6331,6 +6800,68 @@ async function renderClassManagement() {
         console.error('Error rendering classes:', error);
         return `<div class="text-center py-12 text-red-500">Error loading classes: ${error.message}</div>`;
     }
+}
+
+async function loadAndDisplaySubjectAssignments(classId) {
+    const container = document.getElementById(`subject-assignments-${classId}`);
+    if (!container) return;
+    
+    try {
+        const assignments = await loadSubjectAssignmentsForClass(classId);
+        
+        if (!assignments || assignments.length === 0) {
+            container.innerHTML = `
+                <div class="text-sm text-muted-foreground text-center py-3 bg-muted/20 rounded">
+                    No subject teachers assigned yet
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                ${assignments.map(ass => `
+                    <div class="flex justify-between items-center p-2 bg-muted/20 rounded-lg">
+                        <div>
+                            <span class="font-medium text-sm">${escapeHtml(ass.subject)}</span>
+                            <span class="text-xs text-muted-foreground ml-2">- ${escapeHtml(ass.teacherName)}</span>
+                        </div>
+                        <button onclick="removeSubjectAssignment(${ass.id}, ${classId})" 
+                                class="text-red-500 hover:text-red-700 p-1">
+                            <i data-lucide="x" class="h-3 w-3"></i>
+                        </button>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        
+    } catch (error) {
+        console.error('Error loading subject assignments:', error);
+        container.innerHTML = `
+            <div class="text-sm text-red-500 text-center py-3 bg-red-50 rounded">
+                Error loading assignments
+            </div>
+        `;
+    }
+}
+
+async function loadSubjectAssignmentsForClass(classId) {
+    try {
+        const response = await api.admin.getClassSubjectAssignments(classId);
+        return response.data || [];
+    } catch (error) {
+        console.error('Failed to load subject assignments:', error);
+        return [];
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 async function loadAndDisplaySubjectAssignments(classId) {
