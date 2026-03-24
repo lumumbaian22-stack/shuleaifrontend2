@@ -315,7 +315,7 @@ const adminAPI = {
     getClassStudents: (classId) => 
         apiRequest(`/api/admin/classes/${classId}/students`),
     
-    // ============ SUBJECT ASSIGNMENT ENDPOINTS (ADD THESE) ============
+    // ============ SUBJECT ASSIGNMENT ENDPOINTS ============
     getClassSubjectAssignments: (classId) => 
         apiRequest(`/api/admin/classes/${classId}/subject-assignments`),
     
