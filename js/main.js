@@ -5937,9 +5937,8 @@ async function renderAdminSection(section) {
             case 'teacher-approvals':
                 return await renderAdminPendingTeachers();
             case 'class-management':
-                return await renderClassManagement(); // Make sure this exists
-            case 'classes':
-                return await renderAdminClasses();
+            case 'classes':  // Both routes point to the same function
+                return await renderClassManagement();
             case 'duty':
                 return await renderAdminDuty();
             case 'duty-points':
@@ -6243,15 +6242,35 @@ async function renderAdminTeacherWorkload() {
 // CLASS MANAGEMENT - Add to main.js
 // ============================================
 
+// Add this function to main.js (anywhere before renderAdminSection)
+
 async function renderClassManagement() {
     try {
         const classes = await loadAllClasses();
         const teachers = await loadAvailableTeachers();
         
-        return `
+        if (!classes || classes.length === 0) {
+            return `
+                <div class="space-y-6 animate-fade-in">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold">Class Management</h2>
+                        <button onclick="showAddClassModal()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
+                            <i data-lucide="plus" class="h-4 w-4"></i>
+                            Add New Class
+                        </button>
+                    </div>
+                    <div class="text-center py-12 border rounded-lg bg-card">
+                        <i data-lucide="school" class="h-12 w-12 mx-auto text-muted-foreground mb-4"></i>
+                        <p class="text-muted-foreground">No classes found. Click "Add New Class" to create your first class.</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        let html = `
             <div class="space-y-6 animate-fade-in">
                 <div class="flex justify-between items-center">
-                    <h2 class="text-2xl font-bold">Class Teacher Assignment</h2>
+                    <h2 class="text-2xl font-bold">Class Management</h2>
                     <button onclick="showAddClassModal()" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
                         <i data-lucide="plus" class="h-4 w-4"></i>
                         Add New Class
@@ -6259,58 +6278,89 @@ async function renderClassManagement() {
                 </div>
                 
                 <div class="grid gap-4">
-                    ${classes.length > 0 ? classes.map(cls => {
-                        const currentTeacher = cls.Teacher?.User?.name || 'Not assigned';
-                        return `
-                            <div class="border rounded-lg p-4 bg-card hover:shadow-md transition-shadow">
-                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                    <div>
-                                        <h3 class="font-semibold text-lg">${cls.name}</h3>
-                                        <p class="text-sm text-muted-foreground">Grade: ${cls.grade} | Stream: ${cls.stream || 'N/A'}</p>
-                                        <p class="text-sm mt-1">
-                                            <span class="font-medium">Current Teacher:</span> 
-                                            <span class="${cls.Teacher ? 'text-green-600' : 'text-yellow-600'}">${currentTeacher}</span>
-                                        </p>
-                                        <p class="text-xs text-muted-foreground mt-1">${cls.studentCount || 0} students enrolled</p>
-                                    </div>
-                                    
-                                    <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                                        <select id="class-teacher-${cls.id}" class="rounded-lg border border-input bg-background px-3 py-2 text-sm min-w-[200px]">
-                                            <option value="">-- Select Teacher --</option>
-                                            ${teachers.map(t => `
-                                                <option value="${t.id}" ${t.id === cls.teacherId ? 'selected' : ''}>
-                                                    ${t.User?.name || 'Unknown'} (${t.subjects?.join(', ') || 'No subjects'})
-                                                </option>
-                                            `).join('')}
-                                        </select>
-                                        <button onclick="assignClassTeacher('${cls.id}')" 
-                                                class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm whitespace-nowrap">
-                                            Assign Teacher
-                                        </button>
-                                        <button onclick="editClassDetails('${cls.id}')" 
-                                                class="p-2 border rounded-lg hover:bg-accent">
-                                            <i data-lucide="edit" class="h-4 w-4"></i>
-                                        </button>
-                                        <button onclick="deleteClassItem('${cls.id}')" 
-                                                class="p-2 border rounded-lg hover:bg-red-100 text-red-600">
-                                            <i data-lucide="trash-2" class="h-4 w-4"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('') : `
-                        <div class="text-center py-12 border rounded-lg bg-card">
-                            <i data-lucide="school" class="h-12 w-12 mx-auto text-muted-foreground mb-4"></i>
-                            <p class="text-muted-foreground">No classes found. Click "Add New Class" to create your first class.</p>
+        `;
+        
+        for (const cls of classes) {
+            const currentTeacher = cls.Teacher?.User?.name || 'Not assigned';
+            
+            html += `
+                <div class="border rounded-lg p-4 bg-card hover:shadow-md transition-shadow" data-class-id="${cls.id}">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h3 class="font-semibold text-lg">${escapeHtml(cls.name)}</h3>
+                            <p class="text-sm text-muted-foreground">Grade: ${escapeHtml(cls.grade)} | Stream: ${escapeHtml(cls.stream || 'N/A')}</p>
+                            <p class="text-sm mt-1">
+                                <span class="font-medium">Class Teacher:</span> 
+                                <span class="${cls.Teacher ? 'text-green-600' : 'text-yellow-600'}">${escapeHtml(currentTeacher)}</span>
+                            </p>
+                            <p class="text-xs text-muted-foreground mt-1">${cls.studentCount || 0} students enrolled</p>
                         </div>
-                    `}
+                        
+                        <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                            <select id="teacher-${cls.id}" class="rounded-lg border border-input bg-background px-3 py-2 text-sm min-w-[200px]">
+                                <option value="">-- Select Teacher --</option>
+                                ${teachers.map(t => `
+                                    <option value="${t.id}" ${t.id === cls.teacherId ? 'selected' : ''}>
+                                        ${escapeHtml(t.User?.name || 'Unknown')} (${escapeHtml(t.subjects?.join(', ') || 'No subjects')})
+                                    </option>
+                                `).join('')}
+                            </select>
+                            <button onclick="assignClassTeacher(${cls.id})" 
+                                    class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm whitespace-nowrap">
+                                Assign Teacher
+                            </button>
+                            <button onclick="editClass(${cls.id})" 
+                                    class="p-2 border rounded-lg hover:bg-accent">
+                                <i data-lucide="edit" class="h-4 w-4"></i>
+                            </button>
+                            <button onclick="deleteClass(${cls.id})" 
+                                    class="p-2 border rounded-lg hover:bg-red-100 text-red-600">
+                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        html += `
                 </div>
             </div>
         `;
+        
+        return html;
+        
     } catch (error) {
         console.error('Error rendering classes:', error);
         return `<div class="text-center py-12 text-red-500">Error loading classes: ${error.message}</div>`;
+    }
+}
+
+// Then in renderAdminSection, make sure it calls this function:
+async function renderAdminSection(section) {
+    try {
+        switch(section) {
+            case 'dashboard':
+                return renderAdminDashboard();
+            case 'students':
+                return await renderAdminStudents();
+            case 'teachers':
+                return await renderAdminTeachers();
+            case 'teacher-approvals':
+                return await renderAdminPendingTeachers();
+            case 'class-management':
+            case 'classes':  // Both routes go to the same function
+                return await renderClassManagement();
+            case 'duty':
+                return await renderAdminDuty();
+            case 'settings':
+                return renderAdminSettings();
+            default:
+                return '<div class="text-center py-12">Section not found</div>';
+        }
+    } catch (error) {
+        console.error('Error rendering admin section:', error);
+        return `<div class="text-center py-12 text-red-500">Error loading section: ${error.message}</div>`;
     }
 }
 
