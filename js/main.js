@@ -2713,6 +2713,12 @@ async function loadSchoolSettings() {
             window.customSubjects = response.data.customSubjects || [];
             localStorage.setItem('schoolSettings', JSON.stringify(response.data));
             
+            console.log('✅ School settings loaded:', {
+                curriculum: response.data.curriculum,
+                schoolLevel: response.data.schoolLevel,
+                schoolName: response.data.schoolName
+            });
+            
             // Dispatch event for other components
             window.dispatchEvent(new CustomEvent('settings-loaded', { 
                 detail: response.data 
