@@ -536,167 +536,153 @@ const CURRICULUM_STRUCTURE = {
 // FIXED: GENERATE CLASSES FROM CURRICULUM
 // ============================================
 
-// ============================================
-// FIXED: GENERATE FROM CURRICULUM BUTTON
-// ============================================
-
 async function generateClassesFromCurriculum() {
-    const curriculum = window.schoolSettings?.curriculum || 'cbc';
-    const schoolLevel = window.schoolSettings?.schoolLevel || 'secondary';
-    
-    // Ask for stream configuration
-    const streamCount = parseInt(prompt('How many streams do you want to create? (e.g., 1, 2, 3, etc.)', '1') || '1');
-    if (isNaN(streamCount) || streamCount < 1) {
-        showToast('Invalid stream count', 'error');
-        return;
-    }
-    
-    let streamNames = [];
-    if (streamCount > 1) {
-        const defaultNames = Array.from({ length: streamCount }, (_, i) => String.fromCharCode(65 + i)).join(', ');
-        const streamNamesInput = prompt(`Enter stream names separated by commas (e.g., A, B, C or Blue, Green, Yellow):\nDefault: ${defaultNames}`, defaultNames);
-        
-        if (streamNamesInput) {
-            streamNames = streamNamesInput.split(',').map(s => s.trim()).filter(s => s);
-        }
-        
-        if (streamNames.length !== streamCount) {
-            streamNames = Array.from({ length: streamCount }, (_, i) => String.fromCharCode(65 + i));
-        }
-    }
-    
-    // Save stream settings
-    if (!window.schoolSettings) window.schoolSettings = {};
-    window.schoolSettings.streams = {
-        count: streamCount,
-        names: streamNames
-    };
-    localStorage.setItem('schoolSettings', JSON.stringify(window.schoolSettings));
-    
-    // Define classes based on curriculum and level
-    let classesToCreate = [];
-    
-    if (curriculum === 'cbc') {
-        if (schoolLevel === 'primary' || schoolLevel === 'both') {
-            for (const className of ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']) {
-                for (let i = 0; i < streamCount; i++) {
-                    const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
-                    classesToCreate.push({
-                        name: `${className}${streamName}`,
-                        grade: className,
-                        stream: streamCount > 1 ? (streamNames[i] || String.fromCharCode(65 + i)) : null
-                    });
-                }
-            }
-        }
-        if (schoolLevel === 'secondary' || schoolLevel === 'both') {
-            for (const className of ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']) {
-                for (let i = 0; i < streamCount; i++) {
-                    const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
-                    classesToCreate.push({
-                        name: `${className}${streamName}`,
-                        grade: className,
-                        stream: streamCount > 1 ? (streamNames[i] || String.fromCharCode(65 + i)) : null
-                    });
-                }
-            }
-        }
-    } else if (curriculum === '844') {
-        if (schoolLevel === 'primary' || schoolLevel === 'both') {
-            for (const className of ['Standard 1', 'Standard 2', 'Standard 3', 'Standard 4', 'Standard 5', 'Standard 6', 'Standard 7', 'Standard 8']) {
-                for (let i = 0; i < streamCount; i++) {
-                    const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
-                    classesToCreate.push({
-                        name: `${className}${streamName}`,
-                        grade: className,
-                        stream: streamCount > 1 ? (streamNames[i] || String.fromCharCode(65 + i)) : null
-                    });
-                }
-            }
-        }
-        if (schoolLevel === 'secondary' || schoolLevel === 'both') {
-            for (const className of ['Form 1', 'Form 2', 'Form 3', 'Form 4']) {
-                for (let i = 0; i < streamCount; i++) {
-                    const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
-                    classesToCreate.push({
-                        name: `${className}${streamName}`,
-                        grade: className,
-                        stream: streamCount > 1 ? (streamNames[i] || String.fromCharCode(65 + i)) : null
-                    });
-                }
-            }
-        }
-    } else if (curriculum === 'british') {
-        const classes = ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5', 'Year 6', 'Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12', 'Year 13'];
-        for (const className of classes) {
-            for (let i = 0; i < streamCount; i++) {
-                const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
-                classesToCreate.push({
-                    name: `${className}${streamName}`,
-                    grade: className,
-                    stream: streamCount > 1 ? (streamNames[i] || String.fromCharCode(65 + i)) : null
-                });
-            }
-        }
-    } else if (curriculum === 'american') {
-        const classes = ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
-        for (const className of classes) {
-            for (let i = 0; i < streamCount; i++) {
-                const streamName = streamCount > 1 ? ` ${streamNames[i] || String.fromCharCode(65 + i)}` : '';
-                classesToCreate.push({
-                    name: `${className}${streamName}`,
-                    grade: className,
-                    stream: streamCount > 1 ? (streamNames[i] || String.fromCharCode(65 + i)) : null
-                });
-            }
-        }
-    }
-    
-    if (classesToCreate.length === 0) {
-        showToast('No classes to generate for this curriculum', 'info');
-        return;
-    }
-    
-    // Get existing classes
-    const existingClasses = await loadAllClasses();
-    const existingNames = new Set(existingClasses.map(c => c.name));
-    const newClasses = classesToCreate.filter(c => !existingNames.has(c.name));
-    
-    if (newClasses.length === 0) {
-        showToast('All classes already exist', 'info');
-        return;
-    }
-    
-    if (!confirm(`Generate ${newClasses.length} new classes?\n\n${newClasses.slice(0, 15).map(c => `• ${c.name}`).join('\n')}${newClasses.length > 15 ? `\n... and ${newClasses.length - 15} more` : ''}\n\nProceed?`)) {
-        return;
-    }
-    
     showLoading();
-    let created = 0;
-    let failed = 0;
-    
-    for (const classData of newClasses) {
-        try {
-            await api.admin.createClass({
-                name: classData.name,
-                grade: classData.grade,
-                stream: classData.stream,
-                academicYear: new Date().getFullYear().toString()
-            });
-            created++;
-        } catch (error) {
-            console.error(`Failed to create ${classData.name}:`, error);
-            failed++;
+    try {
+        // First, ensure school settings are loaded
+        const school = getCurrentSchool();
+        const settings = await loadSchoolSettings();
+        
+        // Get curriculum from settings - this is your actual school curriculum
+        const curriculum = settings?.curriculum || school?.system || 'cbc';
+        const schoolLevel = settings?.schoolLevel || 'secondary';
+        
+        console.log('📚 Generating classes for:', { curriculum, schoolLevel });
+        console.log('🏫 School settings:', settings);
+        
+        // Get subjects for this curriculum
+        const curriculumInfo = CURRICULUMS[curriculum];
+        if (!curriculumInfo) {
+            showToast(`Curriculum "${curriculum}" not found`, 'error');
+            hideLoading();
+            return [];
         }
-    }
-    
-    hideLoading();
-    
-    if (created > 0) {
-        showToast(`✅ Created ${created} classes${failed > 0 ? `, ${failed} failed` : ''}`, 'success');
-        await showDashboardSection('classes');
-    } else {
-        showToast('Failed to create classes', 'error');
+        
+        // Define classes based on curriculum and level
+        let classesToCreate = [];
+        
+        if (curriculum === 'cbc') {
+            // CBC Curriculum
+            if (schoolLevel === 'primary' || schoolLevel === 'both') {
+                classesToCreate.push(
+                    ...['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'].map(name => ({
+                        name: name,
+                        grade: name,
+                        stream: null
+                    }))
+                );
+            }
+            if (schoolLevel === 'secondary' || schoolLevel === 'both') {
+                classesToCreate.push(
+                    ...['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'].map(name => ({
+                        name: name,
+                        grade: name,
+                        stream: null
+                    }))
+                );
+            }
+        } 
+        else if (curriculum === '844') {
+            // 8-4-4 Curriculum
+            if (schoolLevel === 'primary' || schoolLevel === 'both') {
+                classesToCreate.push(
+                    ...['Standard 1', 'Standard 2', 'Standard 3', 'Standard 4', 'Standard 5', 'Standard 6', 'Standard 7', 'Standard 8'].map(name => ({
+                        name: name,
+                        grade: name,
+                        stream: null
+                    }))
+                );
+            }
+            if (schoolLevel === 'secondary' || schoolLevel === 'both') {
+                classesToCreate.push(
+                    ...['Form 1', 'Form 2', 'Form 3', 'Form 4'].map(name => ({
+                        name: name,
+                        grade: name,
+                        stream: null
+                    }))
+                );
+            }
+        }
+        else if (curriculum === 'british') {
+            // British Curriculum
+            const allClasses = ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5', 'Year 6', 'Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12', 'Year 13'];
+            classesToCreate = allClasses.map(name => ({
+                name: name,
+                grade: name,
+                stream: null
+            }));
+        }
+        else if (curriculum === 'american') {
+            // American Curriculum
+            const allClasses = ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+            classesToCreate = allClasses.map(name => ({
+                name: name,
+                grade: name,
+                stream: null
+            }));
+        }
+        
+        if (classesToCreate.length === 0) {
+            showToast('No classes to generate for this curriculum', 'info');
+            hideLoading();
+            return [];
+        }
+        
+        // Get existing classes
+        const existingClasses = await loadAllClasses();
+        const existingNames = new Set(existingClasses.map(c => c.name));
+        const newClasses = classesToCreate.filter(c => !existingNames.has(c.name));
+        
+        if (newClasses.length === 0) {
+            showToast('All classes already exist', 'info');
+            hideLoading();
+            return [];
+        }
+        
+        // Show confirmation
+        const confirmMessage = `Generate ${newClasses.length} new classes based on ${curriculumInfo.name}?\n\n${newClasses.slice(0, 15).map(c => `• ${c.name}`).join('\n')}${newClasses.length > 15 ? `\n... and ${newClasses.length - 15} more` : ''}`;
+        
+        if (!confirm(confirmMessage)) {
+            hideLoading();
+            return [];
+        }
+        
+        // Create the classes
+        let created = 0;
+        let failed = 0;
+        
+        for (const classData of newClasses) {
+            try {
+                await api.admin.createClass({
+                    name: classData.name,
+                    grade: classData.grade,
+                    stream: classData.stream,
+                    academicYear: new Date().getFullYear().toString()
+                });
+                created++;
+                console.log(`✅ Created class: ${classData.name}`);
+            } catch (error) {
+                console.error(`Failed to create ${classData.name}:`, error);
+                failed++;
+            }
+        }
+        
+        hideLoading();
+        
+        if (created > 0) {
+            showToast(`✅ Created ${created} classes${failed > 0 ? `, ${failed} failed` : ''}`, 'success');
+            await showDashboardSection('classes');
+        } else {
+            showToast('Failed to create classes. Check console for errors.', 'error');
+        }
+        
+        return classesToCreate;
+        
+    } catch (error) {
+        console.error('Error generating classes:', error);
+        showToast(error.message || 'Failed to generate classes', 'error');
+        hideLoading();
+        return [];
     }
 }
 
