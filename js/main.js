@@ -539,174 +539,82 @@ const CURRICULUM_STRUCTURE = {
 async function generateClassesFromCurriculum() {
     showLoading();
     try {
-        // ============ STEP 1: GET ACTUAL SCHOOL SETTINGS ============
-        const settings = await loadSchoolSettings();
-        const curriculum = settings?.curriculum || 'cbc';
-        let schoolLevel = settings?.schoolLevel || 'both';
+        // Get REAL school settings from API - NOT localStorage
+        const schoolResponse = await api.admin.getSchoolSettings();
         
-        console.log('📚 Curriculum:', curriculum);
-        console.log('🏫 School Level:', schoolLevel);
+        if (!schoolResponse || !schoolResponse.success) {
+            showToast('Failed to load school settings', 'error');
+            hideLoading();
+            return;
+        }
         
-        // ============ STEP 2: ASK FOR STREAMS ============
-        const streamCount = parseInt(prompt('How many streams do you want? (e.g., 1, 2, 3)', '1') || '1');
+        const schoolData = schoolResponse.data;
+        const curriculum = schoolData.curriculum || 'cbc';
+        const schoolLevel = schoolData.schoolLevel || 'both';
+        
+        console.log('📚 REAL School Curriculum:', curriculum);
+        console.log('🏫 REAL School Level:', schoolLevel);
+        
+        // Ask for streams
+        const streamCount = parseInt(prompt('Number of streams? (e.g., 1, 2, 3)', '1') || '1');
         if (isNaN(streamCount) || streamCount < 1) {
             showToast('Invalid stream count', 'error');
             hideLoading();
             return;
         }
         
-        // ============ STEP 3: GET STREAM NAMES ============
         let streamNames = [];
         if (streamCount > 1) {
-            const defaultNames = Array.from({ length: streamCount }, (_, i) => String.fromCharCode(65 + i)).join(', ');
-            const streamNamesInput = prompt(`Enter stream names separated by commas:\nExample: ${defaultNames}`, defaultNames);
-            
-            if (streamNamesInput) {
-                streamNames = streamNamesInput.split(',').map(s => s.trim()).filter(s => s);
-            }
-            
+            const input = prompt(`Stream names (comma separated):\nExample: A, B, C`, 'A, B, C');
+            if (input) streamNames = input.split(',').map(s => s.trim());
             if (streamNames.length !== streamCount) {
                 streamNames = Array.from({ length: streamCount }, (_, i) => String.fromCharCode(65 + i));
             }
         }
         
-        console.log('📊 Streams:', streamCount, streamNames);
-        
-        // ============ STEP 4: GENERATE CLASSES BASED ON CURRICULUM AND LEVEL ============
+        // Generate classes based on REAL school level
         let classesToCreate = [];
         
         if (curriculum === 'cbc') {
-            // CBC CURRICULUM
-            
-            // ONLY GENERATE PRIMARY if schoolLevel is 'primary' or 'both'
-            if (schoolLevel === 'primary' || schoolLevel === 'both') {
-                const primaryGrades = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
-                for (const grade of primaryGrades) {
+            // ONLY generate what the school actually has
+            if (schoolLevel === 'primary') {
+                // Only PP1 to Grade 9
+                const grades = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
+                for (const grade of grades) {
                     for (let s = 0; s < streamCount; s++) {
                         const suffix = streamCount > 1 ? ` ${streamNames[s]}` : '';
-                        classesToCreate.push({ 
-                            name: `${grade}${suffix}`, 
-                            grade: grade,
-                            stream: streamCount > 1 ? streamNames[s] : null
-                        });
+                        classesToCreate.push({ name: `${grade}${suffix}`, grade: grade });
                     }
                 }
-            }
-            
-            // ONLY GENERATE SECONDARY if schoolLevel is 'secondary' or 'both'
-            if (schoolLevel === 'secondary' || schoolLevel === 'both') {
+            } 
+            else if (schoolLevel === 'secondary') {
+                // Only Grade 10-12
                 for (let g = 10; g <= 12; g++) {
                     for (let s = 0; s < streamCount; s++) {
                         const suffix = streamCount > 1 ? ` ${streamNames[s]}` : '';
-                        classesToCreate.push({ 
-                            name: `Grade ${g}${suffix}`, 
-                            grade: `Grade ${g}`,
-                            stream: streamCount > 1 ? streamNames[s] : null
-                        });
+                        classesToCreate.push({ name: `Grade ${g}${suffix}`, grade: `Grade ${g}` });
                     }
                 }
-            }
-            
-        } else if (curriculum === '844') {
-            // 8-4-4 CURRICULUM
-            
-            if (schoolLevel === 'primary' || schoolLevel === 'both') {
-                for (let i = 1; i <= 8; i++) {
+            } 
+            else if (schoolLevel === 'both') {
+                // All grades PP1 to Grade 12
+                const allGrades = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+                for (const grade of allGrades) {
                     for (let s = 0; s < streamCount; s++) {
                         const suffix = streamCount > 1 ? ` ${streamNames[s]}` : '';
-                        classesToCreate.push({ 
-                            name: `Standard ${i}${suffix}`, 
-                            grade: `Standard ${i}`,
-                            stream: streamCount > 1 ? streamNames[s] : null
-                        });
-                    }
-                }
-            }
-            
-            if (schoolLevel === 'secondary' || schoolLevel === 'both') {
-                for (let i = 1; i <= 4; i++) {
-                    for (let s = 0; s < streamCount; s++) {
-                        const suffix = streamCount > 1 ? ` ${streamNames[s]}` : '';
-                        classesToCreate.push({ 
-                            name: `Form ${i}${suffix}`, 
-                            grade: `Form ${i}`,
-                            stream: streamCount > 1 ? streamNames[s] : null
-                        });
-                    }
-                }
-            }
-            
-        } else if (curriculum === 'british') {
-            // BRITISH CURRICULUM
-            
-            if (schoolLevel === 'primary' || schoolLevel === 'both') {
-                for (let i = 1; i <= 9; i++) {
-                    for (let s = 0; s < streamCount; s++) {
-                        const suffix = streamCount > 1 ? ` ${streamNames[s]}` : '';
-                        classesToCreate.push({ 
-                            name: `Year ${i}${suffix}`, 
-                            grade: `Year ${i}`,
-                            stream: streamCount > 1 ? streamNames[s] : null
-                        });
-                    }
-                }
-            }
-            
-            if (schoolLevel === 'secondary' || schoolLevel === 'both') {
-                for (let i = 10; i <= 13; i++) {
-                    for (let s = 0; s < streamCount; s++) {
-                        const suffix = streamCount > 1 ? ` ${streamNames[s]}` : '';
-                        classesToCreate.push({ 
-                            name: `Year ${i}${suffix}`, 
-                            grade: `Year ${i}`,
-                            stream: streamCount > 1 ? streamNames[s] : null
-                        });
-                    }
-                }
-            }
-            
-        } else if (curriculum === 'american') {
-            // AMERICAN CURRICULUM
-            
-            if (schoolLevel === 'primary' || schoolLevel === 'both') {
-                classesToCreate.push({ 
-                    name: streamCount > 1 ? `Kindergarten ${streamNames[0]}` : 'Kindergarten', 
-                    grade: 'Kindergarten',
-                    stream: streamCount > 1 ? streamNames[0] : null
-                });
-                for (let i = 1; i <= 9; i++) {
-                    for (let s = 0; s < streamCount; s++) {
-                        const suffix = streamCount > 1 ? ` ${streamNames[s]}` : '';
-                        classesToCreate.push({ 
-                            name: `Grade ${i}${suffix}`, 
-                            grade: `Grade ${i}`,
-                            stream: streamCount > 1 ? streamNames[s] : null
-                        });
-                    }
-                }
-            }
-            
-            if (schoolLevel === 'secondary' || schoolLevel === 'both') {
-                for (let i = 10; i <= 12; i++) {
-                    for (let s = 0; s < streamCount; s++) {
-                        const suffix = streamCount > 1 ? ` ${streamNames[s]}` : '';
-                        classesToCreate.push({ 
-                            name: `Grade ${i}${suffix}`, 
-                            grade: `Grade ${i}`,
-                            stream: streamCount > 1 ? streamNames[s] : null
-                        });
+                        classesToCreate.push({ name: `${grade}${suffix}`, grade: grade });
                     }
                 }
             }
         }
         
         if (classesToCreate.length === 0) {
-            showToast('No classes to generate for this curriculum', 'info');
+            showToast('No classes to generate for this school type', 'info');
             hideLoading();
             return;
         }
         
-        // ============ STEP 5: CHECK EXISTING CLASSES ============
+        // Check existing classes
         const existingClasses = await loadAllClasses();
         const existingNames = new Set(existingClasses.map(c => c.name));
         const newClasses = classesToCreate.filter(c => !existingNames.has(c.name));
@@ -717,28 +625,15 @@ async function generateClassesFromCurriculum() {
             return;
         }
         
-        // ============ STEP 6: SHOW CONFIRMATION ============
-        const levelNames = {
-            primary: '📚 Primary School (PP1 - Grade 9)',
-            secondary: '🎓 Secondary School (Grade 10-12)'
-        };
-        
-        let confirmMessage = `Generate ${newClasses.length} new classes?\n\n`;
-        confirmMessage += `📚 Curriculum: ${curriculum.toUpperCase()}\n`;
-        confirmMessage += `🏫 School Level: ${levelNames[schoolLevel] || schoolLevel}\n`;
-        confirmMessage += `📊 Streams: ${streamCount} (${streamNames.join(', ') || 'None'})\n\n`;
-        confirmMessage += `Classes to create:\n`;
-        confirmMessage += newClasses.slice(0, 20).map(c => `  • ${c.name}`).join('\n');
-        if (newClasses.length > 20) {
-            confirmMessage += `\n  ... and ${newClasses.length - 20} more`;
-        }
+        // Confirm
+        const confirmMessage = `Generate ${newClasses.length} new classes?\n\n📚 School: ${schoolData.schoolName || 'Your School'}\n📖 Level: ${schoolLevel.toUpperCase()}\n📊 Streams: ${streamCount} (${streamNames.join(', ') || 'None'})\n\nProceed?`;
         
         if (!confirm(confirmMessage)) {
             hideLoading();
             return;
         }
         
-        // ============ STEP 7: CREATE CLASSES ============
+        // Create classes
         let created = 0;
         let failed = 0;
         
@@ -747,7 +642,7 @@ async function generateClassesFromCurriculum() {
                 await api.admin.createClass({
                     name: classData.name,
                     grade: classData.grade,
-                    stream: classData.stream,
+                    stream: null,
                     academicYear: new Date().getFullYear().toString()
                 });
                 created++;
@@ -769,7 +664,7 @@ async function generateClassesFromCurriculum() {
         }
         
     } catch (error) {
-        console.error('Error generating classes:', error);
+        console.error('Error:', error);
         showToast(error.message || 'Failed to generate classes', 'error');
         hideLoading();
     }
@@ -6808,10 +6703,16 @@ async function renderClassManagement() {
                 <div class="space-y-6">
                     <div class="flex justify-between items-center">
                         <h2 class="text-2xl font-bold">Class Management</h2>
-                        <button onclick="autoGenerateClassesOnCurriculumChange()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">
-                            <i data-lucide="wand-2" class="h-4 w-4 inline mr-2"></i>
-                            Generate Classes
-                        </button>
+                        <div class="flex gap-3">
+                            <button onclick="showAddClassModal()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                                <i data-lucide="plus" class="h-4 w-4 inline mr-2"></i>
+                                Add Class
+                            </button>
+                            <button onclick="autoGenerateClassesOnCurriculumChange()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">
+                                <i data-lucide="wand-2" class="h-4 w-4 inline mr-2"></i>
+                                Generate Classes
+                            </button>
+                        </div>
                     </div>
                     <div class="text-center py-12 border rounded-lg">
                         <p class="text-muted-foreground">No classes found. Click "Generate Classes" to create them.</p>
@@ -6833,10 +6734,16 @@ async function renderClassManagement() {
                         <h2 class="text-2xl font-bold">Class Management</h2>
                         <p class="text-sm text-muted-foreground">${classes.length} total classes</p>
                     </div>
-                    <button onclick="autoGenerateClassesOnCurriculumChange()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">
-                        <i data-lucide="wand-2" class="h-4 w-4 inline mr-2"></i>
-                        Generate Classes
-                    </button>
+                    <div class="flex gap-3">
+                        <button onclick="showAddClassModal()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                            <i data-lucide="plus" class="h-4 w-4 inline mr-2"></i>
+                            Add Class
+                        </button>
+                        <button onclick="autoGenerateClassesOnCurriculumChange()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">
+                            <i data-lucide="wand-2" class="h-4 w-4 inline mr-2"></i>
+                            Generate Classes
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="border rounded-lg overflow-hidden">
