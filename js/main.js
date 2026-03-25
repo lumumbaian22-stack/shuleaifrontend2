@@ -539,152 +539,186 @@ const CURRICULUM_STRUCTURE = {
 async function generateClassesFromCurriculum() {
     showLoading();
     try {
-        // Load school settings
+        // STEP 1: Get school settings
+        const school = getCurrentSchool();
         const settings = await loadSchoolSettings();
         
-        // Get curriculum from settings
-        const curriculum = settings?.curriculum || 'cbc';
-        const schoolLevel = settings?.schoolLevel || 'both'; // 'primary', 'secondary', or 'both'
+        // STEP 2: Get the ACTUAL curriculum and level from your school
+        const curriculum = settings?.curriculum || school?.system || 'cbc';
+        const schoolLevel = settings?.schoolLevel || 'both';
         
-        console.log('📚 Generating classes for:', { curriculum, schoolLevel });
+        console.log('🏫 School:', school?.name);
+        console.log('📚 Curriculum:', curriculum);
+        console.log('🏫 School Level:', schoolLevel);
         
-        // Define classes based on curriculum and school level
+        // STEP 3: Ask for streams
+        const streamCount = parseInt(prompt('How many streams do you want? (e.g., 1, 2, 3)', '1') || '1');
+        if (isNaN(streamCount) || streamCount < 1) {
+            showToast('Invalid stream count', 'error');
+            hideLoading();
+            return;
+        }
+        
+        // STEP 4: Get stream names
+        let streamNames = [];
+        if (streamCount > 1) {
+            const defaultNames = Array.from({ length: streamCount }, (_, i) => String.fromCharCode(65 + i)).join(', ');
+            const streamNamesInput = prompt(`Enter stream names separated by commas:\nExample: ${defaultNames}`, defaultNames);
+            
+            if (streamNamesInput) {
+                streamNames = streamNamesInput.split(',').map(s => s.trim()).filter(s => s);
+            }
+            
+            if (streamNames.length !== streamCount) {
+                streamNames = Array.from({ length: streamCount }, (_, i) => String.fromCharCode(65 + i));
+            }
+        }
+        
+        console.log('📊 Streams:', streamCount, streamNames);
+        
+        // STEP 5: Generate classes based on ACTUAL curriculum and level
         let classesToCreate = [];
         
         if (curriculum === 'cbc') {
-            // ============ CBC CURRICULUM ============
+            // CBC CURRICULUM - Kenyan System
             
-            // PRIMARY SCHOOL (PP1 to Grade 9) - This is the complete primary cycle
             if (schoolLevel === 'primary' || schoolLevel === 'both') {
-                // Pre-Primary
-                classesToCreate.push(
-                    { name: 'PP1', grade: 'PP1', level: 'pre_primary' },
-                    { name: 'PP2', grade: 'PP2', level: 'pre_primary' }
-                );
+                // PRIMARY SCHOOL - PP1 to Grade 9
+                const primaryClasses = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
                 
-                // Lower Primary (Grade 1-3)
-                for (let i = 1; i <= 3; i++) {
-                    classesToCreate.push({
-                        name: `Grade ${i}`,
-                        grade: `Grade ${i}`,
-                        level: 'lower_primary'
-                    });
-                }
-                
-                // Upper Primary (Grade 4-6)
-                for (let i = 4; i <= 6; i++) {
-                    classesToCreate.push({
-                        name: `Grade ${i}`,
-                        grade: `Grade ${i}`,
-                        level: 'upper_primary'
-                    });
-                }
-                
-                // Junior Secondary (Grade 7-9) - Still part of primary school
-                for (let i = 7; i <= 9; i++) {
-                    classesToCreate.push({
-                        name: `Grade ${i}`,
-                        grade: `Grade ${i}`,
-                        level: 'junior_secondary'
-                    });
+                for (const className of primaryClasses) {
+                    for (let s = 0; s < streamCount; s++) {
+                        const streamName = streamCount > 1 ? ` ${streamNames[s] || String.fromCharCode(65 + s)}` : '';
+                        classesToCreate.push({
+                            name: `${className}${streamName}`,
+                            grade: className,
+                            stream: streamCount > 1 ? (streamNames[s] || String.fromCharCode(65 + s)) : null
+                        });
+                    }
                 }
             }
             
-            // SECONDARY SCHOOL (Grade 10-12) - Senior Secondary
             if (schoolLevel === 'secondary' || schoolLevel === 'both') {
-                for (let i = 10; i <= 12; i++) {
-                    classesToCreate.push({
-                        name: `Grade ${i}`,
-                        grade: `Grade ${i}`,
-                        level: 'senior_secondary'
-                    });
+                // SECONDARY SCHOOL - Grade 10 to Grade 12
+                for (let grade = 10; grade <= 12; grade++) {
+                    for (let s = 0; s < streamCount; s++) {
+                        const streamName = streamCount > 1 ? ` ${streamNames[s] || String.fromCharCode(65 + s)}` : '';
+                        classesToCreate.push({
+                            name: `Grade ${grade}${streamName}`,
+                            grade: `Grade ${grade}`,
+                            stream: streamCount > 1 ? (streamNames[s] || String.fromCharCode(65 + s)) : null
+                        });
+                    }
                 }
             }
             
         } else if (curriculum === '844') {
-            // ============ 8-4-4 CURRICULUM ============
+            // 8-4-4 CURRICULUM
             
-            // PRIMARY (Standard 1-8)
             if (schoolLevel === 'primary' || schoolLevel === 'both') {
+                // PRIMARY - Standard 1 to 8
                 for (let i = 1; i <= 8; i++) {
-                    classesToCreate.push({
-                        name: `Standard ${i}`,
-                        grade: `Standard ${i}`,
-                        level: 'primary'
-                    });
+                    for (let s = 0; s < streamCount; s++) {
+                        const streamName = streamCount > 1 ? ` ${streamNames[s] || String.fromCharCode(65 + s)}` : '';
+                        classesToCreate.push({
+                            name: `Standard ${i}${streamName}`,
+                            grade: `Standard ${i}`,
+                            stream: streamCount > 1 ? (streamNames[s] || String.fromCharCode(65 + s)) : null
+                        });
+                    }
                 }
             }
             
-            // SECONDARY (Form 1-4)
             if (schoolLevel === 'secondary' || schoolLevel === 'both') {
+                // SECONDARY - Form 1 to 4
                 for (let i = 1; i <= 4; i++) {
-                    classesToCreate.push({
-                        name: `Form ${i}`,
-                        grade: `Form ${i}`,
-                        level: 'secondary'
-                    });
+                    for (let s = 0; s < streamCount; s++) {
+                        const streamName = streamCount > 1 ? ` ${streamNames[s] || String.fromCharCode(65 + s)}` : '';
+                        classesToCreate.push({
+                            name: `Form ${i}${streamName}`,
+                            grade: `Form ${i}`,
+                            stream: streamCount > 1 ? (streamNames[s] || String.fromCharCode(65 + s)) : null
+                        });
+                    }
                 }
             }
             
         } else if (curriculum === 'british') {
-            // ============ BRITISH CURRICULUM ============
+            // BRITISH CURRICULUM
             
-            // PRIMARY (Year 1-9) - Primary and Lower Secondary
             if (schoolLevel === 'primary' || schoolLevel === 'both') {
+                // PRIMARY - Year 1 to 9
                 for (let i = 1; i <= 9; i++) {
-                    classesToCreate.push({
-                        name: `Year ${i}`,
-                        grade: `Year ${i}`,
-                        level: i <= 6 ? 'primary' : 'lower_secondary'
-                    });
+                    for (let s = 0; s < streamCount; s++) {
+                        const streamName = streamCount > 1 ? ` ${streamNames[s] || String.fromCharCode(65 + s)}` : '';
+                        classesToCreate.push({
+                            name: `Year ${i}${streamName}`,
+                            grade: `Year ${i}`,
+                            stream: streamCount > 1 ? (streamNames[s] || String.fromCharCode(65 + s)) : null
+                        });
+                    }
                 }
             }
             
-            // SECONDARY (Year 10-13)
             if (schoolLevel === 'secondary' || schoolLevel === 'both') {
+                // SECONDARY - Year 10 to 13
                 for (let i = 10; i <= 13; i++) {
-                    classesToCreate.push({
-                        name: `Year ${i}`,
-                        grade: `Year ${i}`,
-                        level: 'upper_secondary'
-                    });
+                    for (let s = 0; s < streamCount; s++) {
+                        const streamName = streamCount > 1 ? ` ${streamNames[s] || String.fromCharCode(65 + s)}` : '';
+                        classesToCreate.push({
+                            name: `Year ${i}${streamName}`,
+                            grade: `Year ${i}`,
+                            stream: streamCount > 1 ? (streamNames[s] || String.fromCharCode(65 + s)) : null
+                        });
+                    }
                 }
             }
             
         } else if (curriculum === 'american') {
-            // ============ AMERICAN CURRICULUM ============
+            // AMERICAN CURRICULUM
             
-            // ELEMENTARY & MIDDLE SCHOOL (K-9)
             if (schoolLevel === 'primary' || schoolLevel === 'both') {
-                classesToCreate.push({ name: 'Kindergarten', grade: 'Kindergarten', level: 'elementary' });
+                // ELEMENTARY/MIDDLE - Kindergarten to Grade 9
+                classesToCreate.push({
+                    name: streamCount > 1 ? `Kindergarten ${streamNames[0] || 'A'}` : 'Kindergarten',
+                    grade: 'Kindergarten',
+                    stream: streamCount > 1 ? (streamNames[0] || 'A') : null
+                });
+                
                 for (let i = 1; i <= 9; i++) {
-                    classesToCreate.push({
-                        name: `Grade ${i}`,
-                        grade: `Grade ${i}`,
-                        level: i <= 5 ? 'elementary' : 'middle'
-                    });
+                    for (let s = 0; s < streamCount; s++) {
+                        const streamName = streamCount > 1 ? ` ${streamNames[s] || String.fromCharCode(65 + s)}` : '';
+                        classesToCreate.push({
+                            name: `Grade ${i}${streamName}`,
+                            grade: `Grade ${i}`,
+                            stream: streamCount > 1 ? (streamNames[s] || String.fromCharCode(65 + s)) : null
+                        });
+                    }
                 }
             }
             
-            // HIGH SCHOOL (10-12)
             if (schoolLevel === 'secondary' || schoolLevel === 'both') {
+                // HIGH SCHOOL - Grade 10 to 12
                 for (let i = 10; i <= 12; i++) {
-                    classesToCreate.push({
-                        name: `Grade ${i}`,
-                        grade: `Grade ${i}`,
-                        level: 'high'
-                    });
+                    for (let s = 0; s < streamCount; s++) {
+                        const streamName = streamCount > 1 ? ` ${streamNames[s] || String.fromCharCode(65 + s)}` : '';
+                        classesToCreate.push({
+                            name: `Grade ${i}${streamName}`,
+                            grade: `Grade ${i}`,
+                            stream: streamCount > 1 ? (streamNames[s] || String.fromCharCode(65 + s)) : null
+                        });
+                    }
                 }
             }
         }
         
         if (classesToCreate.length === 0) {
-            showToast('No classes to generate for this curriculum', 'info');
+            showToast('No classes to generate', 'info');
             hideLoading();
-            return [];
+            return;
         }
         
-        // Get existing classes
+        // STEP 6: Check existing classes
         const existingClasses = await loadAllClasses();
         const existingNames = new Set(existingClasses.map(c => c.name));
         const newClasses = classesToCreate.filter(c => !existingNames.has(c.name));
@@ -692,44 +726,21 @@ async function generateClassesFromCurriculum() {
         if (newClasses.length === 0) {
             showToast('All classes already exist', 'info');
             hideLoading();
-            return [];
+            return;
         }
         
-        // Show confirmation with categorized list
-        const groupedByLevel = {};
-        newClasses.forEach(c => {
-            if (!groupedByLevel[c.level]) groupedByLevel[c.level] = [];
-            groupedByLevel[c.level].push(c.name);
-        });
+        // STEP 7: Show confirmation with totals
+        const primaryCount = newClasses.filter(c => c.grade.includes('PP') || c.grade.includes('Grade 1') || c.grade.includes('Grade 2') || c.grade.includes('Grade 3') || c.grade.includes('Grade 4') || c.grade.includes('Grade 5') || c.grade.includes('Grade 6') || c.grade.includes('Grade 7') || c.grade.includes('Grade 8') || c.grade.includes('Grade 9')).length;
+        const secondaryCount = newClasses.filter(c => c.grade.includes('Grade 10') || c.grade.includes('Grade 11') || c.grade.includes('Grade 12')).length;
         
-        const levelNames = {
-            pre_primary: '🎨 Pre-Primary (PP1-PP2)',
-            lower_primary: '📚 Lower Primary (Grade 1-3)',
-            upper_primary: '📖 Upper Primary (Grade 4-6)',
-            junior_secondary: '🔬 Junior Secondary (Grade 7-9)',
-            senior_secondary: '🎓 Senior Secondary (Grade 10-12)',
-            primary: '📚 Primary (Standard 1-8)',
-            secondary: '🏫 Secondary (Form 1-4)',
-            elementary: '🎨 Elementary (K-5)',
-            middle: '📚 Middle School (Grade 6-9)',
-            high: '🎓 High School (Grade 10-12)',
-            lower_secondary: '📖 Lower Secondary (Year 7-9)',
-            upper_secondary: '🎓 Upper Secondary (Year 10-13)'
-        };
-        
-        let confirmMessage = `Generate ${newClasses.length} new classes based on ${curriculum.toUpperCase()} curriculum:\n\n`;
-        for (const [level, classes] of Object.entries(groupedByLevel)) {
-            confirmMessage += `\n${levelNames[level] || level}:\n`;
-            confirmMessage += classes.map(c => `  • ${c}`).join('\n');
-        }
-        confirmMessage += `\n\nProceed?`;
+        const confirmMessage = `Generate ${newClasses.length} new classes?\n\n📚 Curriculum: ${curriculum.toUpperCase()}\n🏫 School Level: ${schoolLevel}\n📊 Streams: ${streamCount} (${streamNames.join(', ') || 'None'})\n\n📖 Primary: ${primaryCount} classes\n🎓 Secondary: ${secondaryCount} classes\n\nProceed?`;
         
         if (!confirm(confirmMessage)) {
             hideLoading();
-            return [];
+            return;
         }
         
-        // Create the classes
+        // STEP 8: Create the classes
         let created = 0;
         let failed = 0;
         
@@ -738,13 +749,13 @@ async function generateClassesFromCurriculum() {
                 await api.admin.createClass({
                     name: classData.name,
                     grade: classData.grade,
-                    stream: null,
+                    stream: classData.stream,
                     academicYear: new Date().getFullYear().toString()
                 });
                 created++;
-                console.log(`✅ Created class: ${classData.name}`);
+                console.log(`✅ Created: ${classData.name}`);
             } catch (error) {
-                console.error(`Failed to create ${classData.name}:`, error);
+                console.error(`❌ Failed: ${classData.name}`, error);
                 failed++;
             }
         }
@@ -755,16 +766,13 @@ async function generateClassesFromCurriculum() {
             showToast(`✅ Created ${created} classes${failed > 0 ? `, ${failed} failed` : ''}`, 'success');
             await showDashboardSection('classes');
         } else {
-            showToast('Failed to create classes. Check console for errors.', 'error');
+            showToast('Failed to create classes', 'error');
         }
         
-        return classesToCreate;
-        
     } catch (error) {
-        console.error('Error generating classes:', error);
+        console.error('Error:', error);
         showToast(error.message || 'Failed to generate classes', 'error');
         hideLoading();
-        return [];
     }
 }
 
