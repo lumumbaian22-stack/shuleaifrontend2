@@ -539,87 +539,143 @@ const CURRICULUM_STRUCTURE = {
 async function generateClassesFromCurriculum() {
     showLoading();
     try {
-        // First, ensure school settings are loaded
-        const school = getCurrentSchool();
+        // Load school settings
         const settings = await loadSchoolSettings();
         
-        // Get curriculum from settings - this is your actual school curriculum
-        const curriculum = settings?.curriculum || school?.system || 'cbc';
-        const schoolLevel = settings?.schoolLevel || 'secondary';
+        // Get curriculum from settings
+        const curriculum = settings?.curriculum || 'cbc';
+        const schoolLevel = settings?.schoolLevel || 'both'; // 'primary', 'secondary', or 'both'
         
         console.log('📚 Generating classes for:', { curriculum, schoolLevel });
-        console.log('🏫 School settings:', settings);
         
-        // Get subjects for this curriculum
-        const curriculumInfo = CURRICULUMS[curriculum];
-        if (!curriculumInfo) {
-            showToast(`Curriculum "${curriculum}" not found`, 'error');
-            hideLoading();
-            return [];
-        }
-        
-        // Define classes based on curriculum and level
+        // Define classes based on curriculum and school level
         let classesToCreate = [];
         
         if (curriculum === 'cbc') {
-            // CBC Curriculum
+            // ============ CBC CURRICULUM ============
+            
+            // PRIMARY SCHOOL (PP1 to Grade 9) - This is the complete primary cycle
             if (schoolLevel === 'primary' || schoolLevel === 'both') {
+                // Pre-Primary
                 classesToCreate.push(
-                    ...['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'].map(name => ({
-                        name: name,
-                        grade: name,
-                        stream: null
-                    }))
+                    { name: 'PP1', grade: 'PP1', level: 'pre_primary' },
+                    { name: 'PP2', grade: 'PP2', level: 'pre_primary' }
                 );
+                
+                // Lower Primary (Grade 1-3)
+                for (let i = 1; i <= 3; i++) {
+                    classesToCreate.push({
+                        name: `Grade ${i}`,
+                        grade: `Grade ${i}`,
+                        level: 'lower_primary'
+                    });
+                }
+                
+                // Upper Primary (Grade 4-6)
+                for (let i = 4; i <= 6; i++) {
+                    classesToCreate.push({
+                        name: `Grade ${i}`,
+                        grade: `Grade ${i}`,
+                        level: 'upper_primary'
+                    });
+                }
+                
+                // Junior Secondary (Grade 7-9) - Still part of primary school
+                for (let i = 7; i <= 9; i++) {
+                    classesToCreate.push({
+                        name: `Grade ${i}`,
+                        grade: `Grade ${i}`,
+                        level: 'junior_secondary'
+                    });
+                }
             }
+            
+            // SECONDARY SCHOOL (Grade 10-12) - Senior Secondary
             if (schoolLevel === 'secondary' || schoolLevel === 'both') {
-                classesToCreate.push(
-                    ...['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'].map(name => ({
-                        name: name,
-                        grade: name,
-                        stream: null
-                    }))
-                );
+                for (let i = 10; i <= 12; i++) {
+                    classesToCreate.push({
+                        name: `Grade ${i}`,
+                        grade: `Grade ${i}`,
+                        level: 'senior_secondary'
+                    });
+                }
             }
-        } 
-        else if (curriculum === '844') {
-            // 8-4-4 Curriculum
+            
+        } else if (curriculum === '844') {
+            // ============ 8-4-4 CURRICULUM ============
+            
+            // PRIMARY (Standard 1-8)
             if (schoolLevel === 'primary' || schoolLevel === 'both') {
-                classesToCreate.push(
-                    ...['Standard 1', 'Standard 2', 'Standard 3', 'Standard 4', 'Standard 5', 'Standard 6', 'Standard 7', 'Standard 8'].map(name => ({
-                        name: name,
-                        grade: name,
-                        stream: null
-                    }))
-                );
+                for (let i = 1; i <= 8; i++) {
+                    classesToCreate.push({
+                        name: `Standard ${i}`,
+                        grade: `Standard ${i}`,
+                        level: 'primary'
+                    });
+                }
             }
+            
+            // SECONDARY (Form 1-4)
             if (schoolLevel === 'secondary' || schoolLevel === 'both') {
-                classesToCreate.push(
-                    ...['Form 1', 'Form 2', 'Form 3', 'Form 4'].map(name => ({
-                        name: name,
-                        grade: name,
-                        stream: null
-                    }))
-                );
+                for (let i = 1; i <= 4; i++) {
+                    classesToCreate.push({
+                        name: `Form ${i}`,
+                        grade: `Form ${i}`,
+                        level: 'secondary'
+                    });
+                }
             }
-        }
-        else if (curriculum === 'british') {
-            // British Curriculum
-            const allClasses = ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5', 'Year 6', 'Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12', 'Year 13'];
-            classesToCreate = allClasses.map(name => ({
-                name: name,
-                grade: name,
-                stream: null
-            }));
-        }
-        else if (curriculum === 'american') {
-            // American Curriculum
-            const allClasses = ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
-            classesToCreate = allClasses.map(name => ({
-                name: name,
-                grade: name,
-                stream: null
-            }));
+            
+        } else if (curriculum === 'british') {
+            // ============ BRITISH CURRICULUM ============
+            
+            // PRIMARY (Year 1-9) - Primary and Lower Secondary
+            if (schoolLevel === 'primary' || schoolLevel === 'both') {
+                for (let i = 1; i <= 9; i++) {
+                    classesToCreate.push({
+                        name: `Year ${i}`,
+                        grade: `Year ${i}`,
+                        level: i <= 6 ? 'primary' : 'lower_secondary'
+                    });
+                }
+            }
+            
+            // SECONDARY (Year 10-13)
+            if (schoolLevel === 'secondary' || schoolLevel === 'both') {
+                for (let i = 10; i <= 13; i++) {
+                    classesToCreate.push({
+                        name: `Year ${i}`,
+                        grade: `Year ${i}`,
+                        level: 'upper_secondary'
+                    });
+                }
+            }
+            
+        } else if (curriculum === 'american') {
+            // ============ AMERICAN CURRICULUM ============
+            
+            // ELEMENTARY & MIDDLE SCHOOL (K-9)
+            if (schoolLevel === 'primary' || schoolLevel === 'both') {
+                classesToCreate.push({ name: 'Kindergarten', grade: 'Kindergarten', level: 'elementary' });
+                for (let i = 1; i <= 9; i++) {
+                    classesToCreate.push({
+                        name: `Grade ${i}`,
+                        grade: `Grade ${i}`,
+                        level: i <= 5 ? 'elementary' : 'middle'
+                    });
+                }
+            }
+            
+            // HIGH SCHOOL (10-12)
+            if (schoolLevel === 'secondary' || schoolLevel === 'both') {
+                for (let i = 10; i <= 12; i++) {
+                    classesToCreate.push({
+                        name: `Grade ${i}`,
+                        grade: `Grade ${i}`,
+                        level: 'high'
+                    });
+                }
+            }
         }
         
         if (classesToCreate.length === 0) {
@@ -639,8 +695,34 @@ async function generateClassesFromCurriculum() {
             return [];
         }
         
-        // Show confirmation
-        const confirmMessage = `Generate ${newClasses.length} new classes based on ${curriculumInfo.name}?\n\n${newClasses.slice(0, 15).map(c => `• ${c.name}`).join('\n')}${newClasses.length > 15 ? `\n... and ${newClasses.length - 15} more` : ''}`;
+        // Show confirmation with categorized list
+        const groupedByLevel = {};
+        newClasses.forEach(c => {
+            if (!groupedByLevel[c.level]) groupedByLevel[c.level] = [];
+            groupedByLevel[c.level].push(c.name);
+        });
+        
+        const levelNames = {
+            pre_primary: '🎨 Pre-Primary (PP1-PP2)',
+            lower_primary: '📚 Lower Primary (Grade 1-3)',
+            upper_primary: '📖 Upper Primary (Grade 4-6)',
+            junior_secondary: '🔬 Junior Secondary (Grade 7-9)',
+            senior_secondary: '🎓 Senior Secondary (Grade 10-12)',
+            primary: '📚 Primary (Standard 1-8)',
+            secondary: '🏫 Secondary (Form 1-4)',
+            elementary: '🎨 Elementary (K-5)',
+            middle: '📚 Middle School (Grade 6-9)',
+            high: '🎓 High School (Grade 10-12)',
+            lower_secondary: '📖 Lower Secondary (Year 7-9)',
+            upper_secondary: '🎓 Upper Secondary (Year 10-13)'
+        };
+        
+        let confirmMessage = `Generate ${newClasses.length} new classes based on ${curriculum.toUpperCase()} curriculum:\n\n`;
+        for (const [level, classes] of Object.entries(groupedByLevel)) {
+            confirmMessage += `\n${levelNames[level] || level}:\n`;
+            confirmMessage += classes.map(c => `  • ${c}`).join('\n');
+        }
+        confirmMessage += `\n\nProceed?`;
         
         if (!confirm(confirmMessage)) {
             hideLoading();
@@ -656,7 +738,7 @@ async function generateClassesFromCurriculum() {
                 await api.admin.createClass({
                     name: classData.name,
                     grade: classData.grade,
-                    stream: classData.stream,
+                    stream: null,
                     academicYear: new Date().getFullYear().toString()
                 });
                 created++;
