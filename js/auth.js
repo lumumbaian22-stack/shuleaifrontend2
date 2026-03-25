@@ -260,6 +260,11 @@ function getCurrentRole() {
 }
 
 // Export auth functions
+// At the end of auth.js
+window.openAuthModal = openAuthModal;
+window.closeAuthModal = closeAuthModal;
+window.handleAuthSubmit = handleAuthSubmit;
+window.verifySchoolCodeInput = verifySchoolCodeInput;
 window.superAdminLogin = superAdminLogin;
 window.adminSignup = adminSignup;
 window.teacherSignup = teacherSignup;
